@@ -258,3 +258,4 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     </header>
   );
 }
+

@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import { 
   MdOutlineAnchor, 
   MdOutlinePeople, 
@@ -137,3 +138,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
