@@ -29,6 +29,187 @@ interface User {
   last_login: string | null;
 }
 
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  full_name: string;
+  role: 'admin' | 'manager' | 'user';
+  is_active: boolean;
+}
+
+// UserForm Component - अलग से बनाया गया है
+const UserForm = ({ 
+  onSubmit, 
+  isEdit, 
+  formData, 
+  formErrors, 
+  formLoading, 
+  setFormData,
+  onCancel 
+}: { 
+  onSubmit: (e: React.FormEvent) => void; 
+  isEdit: boolean; 
+  formData: FormData;
+  formErrors: Record<string, string>;
+  formLoading: boolean;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  onCancel: () => void;
+}) => (
+  <form onSubmit={onSubmit} className="space-y-4">
+    {formErrors.general && (
+      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
+        {formErrors.general}
+      </div>
+    )}
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Username *
+      </label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+          <MdOutlinePerson className="w-5 h-5 text-gray-400" />
+        </div>
+        <input
+          type="text"
+          value={formData.username}
+          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter username"
+          required
+          disabled={isEdit}
+          autoComplete="off"
+        />
+      </div>
+      {isEdit && (
+        <p className="text-xs text-gray-400 mt-1">Username cannot be changed</p>
+      )}
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Email *
+      </label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+          <MdOutlineEmail className="w-5 h-5 text-gray-400" />
+        </div>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter email"
+          required
+          autoComplete="off"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        {isEdit ? 'New Password (optional)' : 'Password *'}
+      </label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+          <MdOutlineLock className="w-5 h-5 text-gray-400" />
+        </div>
+        <input
+          type="password"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder={isEdit ? 'Enter new password (leave blank to keep current)' : 'Enter password'}
+          required={!isEdit}
+          minLength={6}
+          autoComplete="off"
+        />
+      </div>
+      {isEdit ? (
+        <p className="text-xs text-gray-400 mt-1">Leave blank to keep current password</p>
+      ) : (
+        <p className="text-xs text-gray-400 mt-1">Must be at least 6 characters</p>
+      )}
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Full Name
+      </label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+          <MdOutlineBadge className="w-5 h-5 text-gray-400" />
+        </div>
+        <input
+          type="text"
+          value={formData.full_name}
+          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter full name"
+          autoComplete="off"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Role
+      </label>
+      <select
+        value={formData.role}
+        onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'manager' | 'user' })}
+        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="user">User</option>
+        <option value="manager">Manager</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Status
+      </label>
+      <select
+        value={formData.is_active ? 'active' : 'inactive'}
+        onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'active' })}
+        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+
+    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="px-6 py-2 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={formLoading}
+        className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {formLoading ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            {isEdit ? 'Updating...' : 'Creating...'}
+          </>
+        ) : (
+          <>
+            <MdOutlineSave className="w-4 h-4" />
+            {isEdit ? 'Update User' : 'Create User'}
+          </>
+        )}
+      </button>
+    </div>
+  </form>
+);
+
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -44,7 +225,7 @@ export default function UsersManagementPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   // Form states
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     username: '',
     email: '',
     password: '',
@@ -253,161 +434,6 @@ export default function UsersManagementPage() {
       : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
   };
 
-  // User Form Component
-  const UserForm = ({ onSubmit, isEdit }: { onSubmit: (e: React.FormEvent) => void; isEdit: boolean }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      {formErrors.general && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-          {formErrors.general}
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Username *
-        </label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <MdOutlinePerson className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter username"
-            required
-            disabled={isEdit}
-          />
-        </div>
-        {isEdit && (
-          <p className="text-xs text-gray-400 mt-1">Username cannot be changed</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Email *
-        </label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <MdOutlineEmail className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter email"
-            required
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {isEdit ? 'New Password (optional)' : 'Password *'}
-        </label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <MdOutlineLock className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder={isEdit ? 'Enter new password (leave blank to keep current)' : 'Enter password'}
-            required={!isEdit}
-            minLength={6}
-          />
-        </div>
-        {isEdit ? (
-          <p className="text-xs text-gray-400 mt-1">Leave blank to keep current password</p>
-        ) : (
-          <p className="text-xs text-gray-400 mt-1">Must be at least 6 characters</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Full Name
-        </label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <MdOutlineBadge className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={formData.full_name}
-            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter full name"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Role
-        </label>
-        <select
-          value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="user">User</option>
-          <option value="manager">Manager</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Status
-        </label>
-        <select
-          value={formData.is_active ? 'active' : 'inactive'}
-          onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'active' })}
-          className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
-
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
-        <button
-          type="button"
-          onClick={() => {
-            isEdit ? setIsEditModalOpen(false) : setIsCreateModalOpen(false);
-            resetForm();
-          }}
-          className="px-6 py-2 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={formLoading}
-          className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {formLoading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              {isEdit ? 'Updating...' : 'Creating...'}
-            </>
-          ) : (
-            <>
-              <MdOutlineSave className="w-4 h-4" />
-              {isEdit ? 'Update User' : 'Create User'}
-            </>
-          )}
-        </button>
-      </div>
-    </form>
-  );
-
   return (
     <div className="p-8">
       {/* Header */}
@@ -591,7 +617,18 @@ export default function UsersManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              <UserForm onSubmit={handleCreateUser} isEdit={false} />
+              <UserForm 
+                onSubmit={handleCreateUser} 
+                isEdit={false}
+                formData={formData}
+                formErrors={formErrors}
+                formLoading={formLoading}
+                setFormData={setFormData}
+                onCancel={() => {
+                  setIsCreateModalOpen(false);
+                  resetForm();
+                }}
+              />
             </div>
           </div>
         </div>
@@ -617,7 +654,18 @@ export default function UsersManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              <UserForm onSubmit={handleUpdateUser} isEdit={true} />
+              <UserForm 
+                onSubmit={handleUpdateUser} 
+                isEdit={true}
+                formData={formData}
+                formErrors={formErrors}
+                formLoading={formLoading}
+                setFormData={setFormData}
+                onCancel={() => {
+                  setIsEditModalOpen(false);
+                  resetForm();
+                }}
+              />
             </div>
           </div>
         </div>
@@ -706,3 +754,4 @@ export default function UsersManagementPage() {
     </div>
   );
 }
+

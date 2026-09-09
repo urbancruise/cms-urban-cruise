@@ -11,13 +11,12 @@ const protectedRoutes = [
 ];
 
 // Auth routes (redirect to dashboard if already logged in)
+// REMOVED: '/register' from auth routes
 const authRoutes = [
   '/login',
-  '/register',
   '/forgot-password',
   '/reset-password',
   '/api/auth/login',
-  '/api/auth/register',
   '/api/auth/forgot-password',
   '/api/auth/reset-password'
 ];
@@ -104,13 +103,6 @@ export const runtime = 'nodejs';
 // ✅ Configure which routes to run middleware on
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|public|images|fonts).*)',
   ],
 };
