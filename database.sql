@@ -178,3 +178,4 @@ SELECT
 FROM users u
 LEFT JOIN bookings b ON u.id = b.user_id
 GROUP BY u.id;
+

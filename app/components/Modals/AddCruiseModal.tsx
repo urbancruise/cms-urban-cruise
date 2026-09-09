@@ -29,7 +29,6 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
     console.log("Form data:", formData);
     onClose();
   };
@@ -37,7 +36,6 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
@@ -56,9 +54,7 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Cruise Image
@@ -160,7 +156,6 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
             </select>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
             <button
               type="button"

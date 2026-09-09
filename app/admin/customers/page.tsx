@@ -31,7 +31,6 @@ export default function CustomersPage() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Customers</h1>
@@ -43,7 +42,6 @@ export default function CustomersPage() {
         </button>
       </div>
 
-      {/* Search */}
       <div className="flex-1 relative mb-6">
         <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -55,7 +53,6 @@ export default function CustomersPage() {
         />
       </div>
 
-      {/* Customers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCustomers.map((customer) => (
           <div key={customer.id} className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow">

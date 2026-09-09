@@ -41,7 +41,6 @@ export default function CruisesPage() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Cruises</h1>
@@ -56,7 +55,6 @@ export default function CruisesPage() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -86,7 +84,6 @@ export default function CruisesPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -150,7 +147,6 @@ export default function CruisesPage() {
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
         <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-800">
           <p className="text-sm text-gray-500 dark:text-gray-400">Showing {filteredCruises.length} of {cruises.length} cruises</p>
           <div className="flex gap-2">
@@ -167,7 +163,6 @@ export default function CruisesPage() {
         </div>
       </div>
 
-      {/* Add Cruise Modal */}
       <AddCruiseModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 

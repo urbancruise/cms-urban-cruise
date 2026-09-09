@@ -55,7 +55,6 @@ export default function BookingsPage() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Bookings</h1>
@@ -71,7 +70,6 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -100,7 +98,6 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Bookings Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredBookings.map((booking) => {
           const StatusIcon = getStatusIcon(booking.status);
@@ -148,7 +145,6 @@ export default function BookingsPage() {
         })}
       </div>
 
-      {/* Empty State */}
       {filteredBookings.length === 0 && (
         <div className="text-center py-12">
           <MdOutlineCalendarToday className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />

@@ -40,7 +40,6 @@ export default function ReviewsPage() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reviews</h1>
@@ -51,7 +50,6 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -74,7 +72,6 @@ export default function ReviewsPage() {
         </select>
       </div>
 
-      {/* Reviews List */}
       <div className="space-y-4">
         {filteredReviews.map((review) => (
           <div key={review.id} className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">

@@ -26,15 +26,12 @@ export default function SettingsPage() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your CMS settings and preferences</p>
       </div>
 
-      {/* Settings Layout */}
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar */}
         <div className="lg:w-64 flex-shrink-0">
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
             {tabs.map((tab) => {
@@ -58,7 +55,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1">
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">

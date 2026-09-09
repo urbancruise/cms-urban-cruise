@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MdOutlineEmail, MdOutlineLock, MdOutlinePerson, MdOutlineBadge } from 'react-icons/md';
+import { 
+  MdOutlineEmail, 
+  MdOutlineLock, 
+  MdOutlinePerson, 
+  MdOutlineBadge,
+  MdOutlineVisibility,
+  MdOutlineVisibilityOff
+} from 'react-icons/md';
+import PasswordStrength from '@/app/components/Auth/PasswordStrength';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,24 +22,123 @@ export default function RegisterPage() {
     confirmPassword: '',
     full_name: ''
   });
-  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<{
+    username?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    general?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
 
+  // Validation functions
+  const validateUsername = (value: string) => {
+    if (!value || value.trim().length === 0) {
+      return 'Username is required';
+    }
+    if (value.trim().length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (value.trim().length > 50) {
+      return 'Username must be less than 50 characters';
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+      return 'Username can only contain letters, numbers, and underscores';
+    }
+    return null;
+  };
+
+  const validateEmail = (value: string) => {
+    if (!value || value.trim().length === 0) {
+      return 'Email is required';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  };
+
+  const validatePassword = (value: string) => {
+    if (!value || value.length === 0) {
+      return 'Password is required';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    
+    const hasUpperCase = /[A-Z]/.test(value);
+    const hasLowerCase = /[a-z]/.test(value);
+    const hasNumber = /[0-9]/.test(value);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
+    
+    if (!hasUpperCase || !hasLowerCase) {
+      return 'Password must contain both uppercase and lowercase letters';
+    }
+    if (!hasNumber) {
+      return 'Password must contain at least one number';
+    }
+    if (!hasSpecialChar) {
+      return 'Password must contain at least one special character';
+    }
+    return null;
+  };
+
+  const validateConfirmPassword = (value: string) => {
+    if (!value || value.length === 0) {
+      return 'Please confirm your password';
+    }
+    if (value !== formData.password) {
+      return 'Passwords do not match';
+    }
+    return null;
+  };
+
+  const validateForm = () => {
+    const newErrors: {
+      username?: string;
+      email?: string;
+      password?: string;
+      confirmPassword?: string;
+    } = {};
+
+    const usernameError = validateUsername(formData.username);
+    if (usernameError) newErrors.username = usernameError;
+
+    const emailError = validateEmail(formData.email);
+    if (emailError) newErrors.email = emailError;
+
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) newErrors.password = passwordError;
+
+    const confirmError = validateConfirmPassword(formData.confirmPassword);
+    if (confirmError) newErrors.confirmPassword = confirmError;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+    // Clear error for this field
+    if (errors[name as keyof typeof errors]) {
+      setErrors({ ...errors, [name]: undefined });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setErrors({});
     setLoading(true);
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    // Validate form
+    if (!validateForm()) {
       setLoading(false);
       return;
     }
@@ -43,26 +150,46 @@ export default function RegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
+          username: formData.username.trim(),
+          email: formData.email.trim(),
           password: formData.password,
-          full_name: formData.full_name || formData.username
+          full_name: formData.full_name.trim() || formData.username.trim()
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        if (data.error) {
+          // Map backend errors to specific fields
+          if (data.error.toLowerCase().includes('username')) {
+            setErrors({ username: data.error });
+          } else if (data.error.toLowerCase().includes('email')) {
+            setErrors({ email: data.error });
+          } else {
+            setErrors({ general: data.error });
+          }
+        } else {
+          setErrors({ general: 'Registration failed. Please try again.' });
+        }
+        return;
       }
 
-      // Redirect to login page on success
       router.push('/login?registered=true');
     } catch (err: any) {
-      setError(err.message || 'An error occurred during registration');
+      setErrors({ general: err.message || 'An error occurred during registration' });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   return (
@@ -81,9 +208,9 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {error && (
+          {errors.general && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-              {error}
+              {errors.general}
             </div>
           )}
 
@@ -101,11 +228,16 @@ export default function RegisterPage() {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className={`w-full pl-10 pr-4 py-3 border ${
+                    errors.username ? 'border-red-500' : 'border-gray-200 dark:border-gray-800'
+                  } rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                   placeholder="Choose a username"
                   required
                 />
               </div>
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username}</p>
+              )}
             </div>
 
             <div>
@@ -121,11 +253,16 @@ export default function RegisterPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className={`w-full pl-10 pr-4 py-3 border ${
+                    errors.email ? 'border-red-500' : 'border-gray-200 dark:border-gray-800'
+                  } rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                   placeholder="Enter your email"
                   required
                 />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+              )}
             </div>
 
             <div>
@@ -156,16 +293,35 @@ export default function RegisterPage() {
                   <MdOutlineLock className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Create a password (min 6 characters)"
+                  className={`w-full pl-10 pr-12 py-3 border ${
+                    errors.password ? 'border-red-500' : 'border-gray-200 dark:border-gray-800'
+                  } rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                  placeholder="Create a password"
                   required
-                  minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <MdOutlineVisibilityOff className="w-5 h-5" />
+                  ) : (
+                    <MdOutlineVisibility className="w-5 h-5" />
+                  )}
+                </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
+              )}
+              
+              {/* Password Strength Indicator */}
+              <PasswordStrength password={formData.password} />
             </div>
 
             <div>
@@ -177,16 +333,32 @@ export default function RegisterPage() {
                   <MdOutlineLock className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className={`w-full pl-10 pr-12 py-3 border ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-200 dark:border-gray-800'
+                  } rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
                   placeholder="Confirm your password"
                   required
-                  minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={toggleConfirmPasswordVisibility}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <MdOutlineVisibilityOff className="w-5 h-5" />
+                  ) : (
+                    <MdOutlineVisibility className="w-5 h-5" />
+                  )}
+                </button>
               </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
+              )}
             </div>
 
             <button
