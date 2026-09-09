@@ -4,29 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   MdOutlineExplore, 
-  MdOutlineCalendarToday, 
-  MdOutlinePeople, 
-  MdOutlineSettings,
-  MdOutlineAnchor,
-  MdOutlineDescription,
   MdOutlineBarChart,
   MdOutlineLogout,
   MdOutlineClose,
   MdOutlinePerson,
-  MdOutlineGroup // Add this for Users icon
+  MdOutlineGroup
 } from "react-icons/md";
 import { useAuth } from "@/app/context/AuthContext";
 
+// Updated menu items - Removed Cruises, Bookings, Customers, Reviews, Settings
 const menuItems = [
   { icon: MdOutlineExplore, label: "Dashboard", href: "/admin" },
-  { icon: MdOutlineAnchor, label: "Cruises", href: "/admin/cruises" },
-  { icon: MdOutlineCalendarToday, label: "Bookings", href: "/admin/bookings" },
-  { icon: MdOutlinePeople, label: "Customers", href: "/admin/customers" },
-  { icon: MdOutlineDescription, label: "Reviews", href: "/admin/reviews" },
   { icon: MdOutlineBarChart, label: "Analytics", href: "/admin/analytics" },
-  { icon: MdOutlineGroup, label: "Users", href: "/admin/users" }, // Add this
+  { icon: MdOutlineGroup, label: "Users", href: "/admin/users" },
   { icon: MdOutlinePerson, label: "Profile", href: "/admin/profile" },
-  { icon: MdOutlineSettings, label: "Settings", href: "/admin/settings" },
 ];
 
 interface SidebarProps {
@@ -74,7 +65,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-            <MdOutlineAnchor className="w-6 h-6 text-white" />
+            <span className="text-xl font-bold text-white">UC</span>
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white">Urban Cruise</h1>

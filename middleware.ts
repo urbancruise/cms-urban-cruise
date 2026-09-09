@@ -11,7 +11,6 @@ const protectedRoutes = [
 ];
 
 // Auth routes (redirect to dashboard if already logged in)
-// REMOVED: '/register' from auth routes
 const authRoutes = [
   '/login',
   '/forgot-password',
@@ -28,13 +27,13 @@ export function middleware(request: NextRequest) {
   console.log('Middleware - Path:', pathname);
   console.log('Middleware - Has Token:', !!token);
 
-  // ✅ ROOT ROUTE - Show landing page (NO REDIRECT)
+  // ROOT ROUTE - Show landing page (NO REDIRECT)
   if (pathname === '/') {
     console.log('Root route - showing landing page');
     return NextResponse.next();
   }
 
-  // ✅ Allow static files and public assets
+  // Allow static files and public assets
   if (pathname.startsWith('/_next') || 
       pathname.startsWith('/favicon.ico') || 
       pathname.startsWith('/public') ||
@@ -61,7 +60,7 @@ export function middleware(request: NextRequest) {
     return pathname === route;
   });
 
-  // ✅ Verify token for protected routes
+  // Verify token for protected routes
   if (isProtectedRoute) {
     if (!token) {
       console.log('Protected route - No token, redirecting to login');
@@ -80,7 +79,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // ✅ Redirect to dashboard if already logged in on auth routes
+  // Redirect to dashboard if already logged in on auth routes
   if (isAuthRoute && token) {
     try {
       jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
@@ -93,14 +92,14 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // ✅ For all other routes, continue
+  // For all other routes, continue
   return NextResponse.next();
 }
 
-// ✅ Force Node.js runtime instead of Edge
+// Force Node.js runtime instead of Edge
 export const runtime = 'nodejs';
 
-// ✅ Configure which routes to run middleware on
+// Configure which routes to run middleware on
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|public|images|fonts).*)',

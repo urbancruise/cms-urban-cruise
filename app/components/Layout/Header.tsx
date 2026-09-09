@@ -52,13 +52,10 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     router.push('/login');
   };
 
-  console.log('Header user data:', user); // Debug log
-
   const notifications = [
-    { id: 1, title: "New booking received", time: "5 minutes ago", type: "booking" },
-    { id: 2, title: "Cruise review from Sarah", time: "1 hour ago", type: "review" },
+    { id: 1, title: "New user registered", time: "5 minutes ago", type: "user" },
+    { id: 2, title: "New booking received", time: "1 hour ago", type: "booking" },
     { id: 3, title: "Payment confirmed for #1234", time: "3 hours ago", type: "payment" },
-    { id: 4, title: "New customer registered", time: "5 hours ago", type: "customer" },
   ];
 
   const toggleDarkMode = () => {
@@ -66,7 +63,6 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     document.documentElement.classList.toggle('dark');
   };
 
-  // Get user info with fallbacks
   const displayName = user?.full_name || user?.username || 'User';
   const displayEmail = user?.email || 'user@urbancruise.com';
   const displayRole = user?.role || 'User';
@@ -162,7 +158,6 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                     >
                       <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
                         notification.type === 'booking' ? 'bg-blue-500' :
-                        notification.type === 'review' ? 'bg-purple-500' :
                         notification.type === 'payment' ? 'bg-green-500' :
                         'bg-yellow-500'
                       }`} />
@@ -232,14 +227,6 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                     <MdOutlineDashboard className="w-4 h-4 text-gray-500" />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Dashboard</span>
                   </Link>
-                  <Link
-                    href="/admin/settings"
-                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    onClick={() => setIsProfileOpen(false)}
-                  >
-                    <MdOutlineSettings className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Settings</span>
-                  </Link>
                 </div>
                 <div className="border-t border-gray-200 dark:border-gray-700 py-2">
                   <button
@@ -273,4 +260,3 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     </header>
   );
 }
-

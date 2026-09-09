@@ -16,7 +16,6 @@ function AdminLayoutContent({
   const router = useRouter();
 
   useEffect(() => {
-    // If not loading and no user, redirect to login
     if (!loading && !user) {
       router.push('/login');
     }
@@ -76,4 +75,3 @@ export default function AdminLayout({
     </AuthProvider>
   );
 }
-
