@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activity';
 
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
@@ -9,7 +10,7 @@ async function requireAdmin(request: NextRequest) {
   const decoded = jwt.verify(
     token,
     process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string; roles?: string[] };
+  ) as { userId: number; role: string; roles?: string[]; username?: string };
 
   const isAdmin =
     decoded.role === 'admin' ||
@@ -31,15 +32,13 @@ function parsePermissions(raw: any): string[] {
   }
 }
 
-// ============================================
-// PUT - Update role
-// ============================================
+// PUT update role
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin(request);
+    const decoded = await requireAdmin(request);
     const { id } = await params;
     const roleId = parseInt(id);
 
@@ -51,7 +50,7 @@ export async function PUT(
     const { name, description, permissions, is_active } = body;
 
     const [existingRows] = await pool.query(
-      'SELECT is_system, slug FROM roles WHERE id = ?',
+      'SELECT is_system, slug, name, description, permissions, is_active FROM roles WHERE id = ?',
       [roleId]
     );
     const existing = (existingRows as any[])[0];
@@ -59,7 +58,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    // ✅ Only Admin role cannot be renamed
     if (existing.slug === 'admin' && name) {
       return NextResponse.json(
         { error: 'Cannot rename the Admin role' },
@@ -88,20 +86,50 @@ export async function PUT(
     }
 
     if (fields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
     }
 
     values.push(roleId);
-    await pool.query(
-      `UPDATE roles SET ${fields.join(', ')} WHERE id = ?`,
-      values
-    );
+    await pool.query(`UPDATE roles SET ${fields.join(', ')} WHERE id = ?`, values);
 
-    const [updatedRows] = await pool.query(
-      'SELECT * FROM roles WHERE id = ?',
-      [roleId]
-    );
+    const [updatedRows] = await pool.query('SELECT * FROM roles WHERE id = ?', [
+      roleId,
+    ]);
     const updatedRole = (updatedRows as any[])[0];
+
+    // ✅ Log activity
+    await logActivity({
+      actor: {
+        userId: decoded.userId,
+        userName: decoded.username || `User #${decoded.userId}`,
+      },
+      action: 'update',
+      entityType: 'role',
+      entityId: roleId,
+      entityName: name || existing.name,
+      changes: {
+        before: {
+          name: existing.name,
+          description: existing.description,
+          permissions: parsePermissions(existing.permissions),
+          is_active: Boolean(existing.is_active),
+        },
+        after: {
+          name: name || existing.name,
+          description: description ?? existing.description,
+          permissions:
+            permissions !== undefined
+              ? permissions
+              : parsePermissions(existing.permissions),
+          is_active:
+            is_active !== undefined ? is_active : Boolean(existing.is_active),
+        },
+      },
+      request,
+    });
 
     return NextResponse.json({
       success: true,
@@ -118,20 +146,20 @@ export async function PUT(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Update role error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-// ============================================
-// DELETE - Delete role
-// Only protects 'admin' role; Manager/User/custom can all be deleted
-// ============================================
+// DELETE role
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin(request);
+    const decoded = await requireAdmin(request);
     const { id } = await params;
     const roleId = parseInt(id);
 
@@ -148,7 +176,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    // ✅ Only block deleting the Admin role
     if (role.slug === 'admin') {
       return NextResponse.json(
         { error: 'Cannot delete the Admin role' },
@@ -156,7 +183,6 @@ export async function DELETE(
       );
     }
 
-    // Check if any users are assigned
     const [users] = await pool.query(
       'SELECT COUNT(*) as count FROM user_roles WHERE role_id = ?',
       [roleId]
@@ -173,6 +199,20 @@ export async function DELETE(
 
     await pool.query('DELETE FROM roles WHERE id = ?', [roleId]);
 
+    // ✅ Log activity
+    await logActivity({
+      actor: {
+        userId: decoded.userId,
+        userName: decoded.username || `User #${decoded.userId}`,
+      },
+      action: 'delete',
+      entityType: 'role',
+      entityId: roleId,
+      entityName: role.name,
+      changes: { deleted: true },
+      request,
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Role deleted successfully',
@@ -182,7 +222,9 @@ export async function DELETE(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Delete role error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-

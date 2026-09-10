@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -18,7 +18,8 @@ import {
   MdOutlineLocationCity,
   MdOutlinePerson,
   MdOutlineAdminPanelSettings,
-} from 'react-icons/md';
+  MdOutlineHistory,
+} from "react-icons/md";
 
 interface Role {
   id: number;
@@ -33,7 +34,7 @@ interface Role {
 
 interface Toast {
   id: number;
-  type: 'success' | 'error';
+  type: "success" | "error";
   message: string;
 }
 
@@ -42,47 +43,53 @@ interface Toast {
 // ============================================
 const AVAILABLE_PERMISSIONS = [
   {
-    key: 'dashboard.view',
-    label: 'Dashboard',
+    key: "dashboard.view",
+    label: "Dashboard",
     icon: MdOutlineDashboard,
-    desc: 'View dashboard overview',
+    desc: "View dashboard overview",
   },
   {
-    key: 'analytics.view',
-    label: 'Analytics',
+    key: "analytics.view",
+    label: "Analytics",
     icon: MdOutlineBarChart,
-    desc: 'View analytics and reports',
+    desc: "View analytics and reports",
   },
   {
-    key: 'users.view',
-    label: 'Users',
+    key: "activity.view",
+    label: "Activity Log",
+    icon: MdOutlineHistory,
+    desc: "View activity history",
+  },
+  {
+    key: "users.view",
+    label: "Users",
     icon: MdOutlineGroup,
-    desc: 'Manage users',
+    desc: "Manage users",
   },
   {
-    key: 'roles.view',
-    label: 'Roles',
+    key: "roles.view",
+    label: "Roles",
     icon: MdOutlineAdminPanelSettings,
-    desc: 'Manage roles',
+    desc: "Manage roles",
   },
   {
-    key: 'cities.view',
-    label: 'Cities',
+    key: "cities.view",
+    label: "Cities",
     icon: MdOutlineLocationCity,
-    desc: 'Manage cities',
+    desc: "Manage cities",
   },
   {
-    key: 'profile.view',
-    label: 'Profile',
+    key: "profile.view",
+    label: "Profile",
     icon: MdOutlinePerson,
-    desc: 'View own profile',
+    desc: "View own profile",
   },
 ];
 
 const emptyForm = {
-  name: '',
-  slug: '',
-  description: '',
+  name: "",
+  slug: "",
+  description: "",
   permissions: [] as string[],
   is_active: true,
 };
@@ -94,16 +101,16 @@ export default function RolesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState(emptyForm);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
+  const [deleteError, setDeleteError] = useState("");
 
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const pushToast = (type: 'success' | 'error', message: string) => {
+  const pushToast = (type: "success" | "error", message: string) => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
@@ -114,12 +121,12 @@ export default function RolesPage() {
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/roles');
+      const res = await fetch("/api/admin/roles");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load roles');
+      if (!res.ok) throw new Error(data.error || "Failed to load roles");
       setRoles(data.roles || []);
     } catch (e: any) {
-      pushToast('error', e.message || 'Failed to load roles');
+      pushToast("error", e.message || "Failed to load roles");
     } finally {
       setLoading(false);
     }
@@ -135,8 +142,8 @@ export default function RolesPage() {
   const handleNameChange = (name: string) => {
     const slug = name
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
     setFormData((prev) => ({
       ...prev,
       name,
@@ -170,7 +177,7 @@ export default function RolesPage() {
   const openCreate = () => {
     setEditingRole(null);
     setFormData(emptyForm);
-    setFormError('');
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -179,35 +186,35 @@ export default function RolesPage() {
     setFormData({
       name: role.name,
       slug: role.slug,
-      description: role.description || '',
+      description: role.description || "",
       permissions: Array.isArray(role.permissions) ? role.permissions : [],
       is_active: role.is_active,
     });
-    setFormError('');
+    setFormError("");
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setFormError('');
+    setFormError("");
     try {
       const url = editingRole
         ? `/api/admin/roles/${editingRole.id}`
-        : '/api/admin/roles';
-      const method = editingRole ? 'PUT' : 'POST';
+        : "/api/admin/roles";
+      const method = editingRole ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save role');
+      if (!res.ok) throw new Error(data.error || "Failed to save role");
       await fetchRoles();
       setIsModalOpen(false);
       pushToast(
-        'success',
-        editingRole ? 'Role updated successfully' : 'Role created successfully'
+        "success",
+        editingRole ? "Role updated successfully" : "Role created successfully",
       );
     } catch (e: any) {
       setFormError(e.message);
@@ -221,21 +228,21 @@ export default function RolesPage() {
   // ============================================
   const openDeleteModal = (role: Role) => {
     setDeletingRole(role);
-    setDeleteError('');
+    setDeleteError("");
   };
 
   const confirmDelete = async () => {
     if (!deletingRole) return;
     setDeleteLoading(true);
-    setDeleteError('');
+    setDeleteError("");
     try {
       const res = await fetch(`/api/admin/roles/${deletingRole.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete role');
+      if (!res.ok) throw new Error(data.error || "Failed to delete role");
       await fetchRoles();
-      pushToast('success', `Role "${deletingRole.name}" deleted`);
+      pushToast("success", `Role "${deletingRole.name}" deleted`);
       setDeletingRole(null);
     } catch (e: any) {
       setDeleteError(e.message);
@@ -250,7 +257,7 @@ export default function RolesPage() {
   };
 
   // ✅ Only Admin role is protected now
-  const isProtectedRole = (role: Role) => role.slug === 'admin';
+  const isProtectedRole = (role: Role) => role.slug === "admin";
 
   return (
     <div className="p-8">
@@ -260,12 +267,12 @@ export default function RolesPage() {
           <div
             key={t.id}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border min-w-[260px] ${
-              t.type === 'success'
-                ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300'
-                : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300'
+              t.type === "success"
+                ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300"
+                : "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300"
             }`}
           >
-            {t.type === 'success' ? (
+            {t.type === "success" ? (
               <MdOutlineCheckCircle className="w-5 h-5 flex-shrink-0" />
             ) : (
               <MdOutlineError className="w-5 h-5 flex-shrink-0" />
@@ -385,11 +392,11 @@ export default function RolesPage() {
                         <span
                           className={`text-xs px-2 py-1 rounded-full ${
                             role.is_active
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                           }`}
                         >
-                          {role.is_active ? 'Active' : 'Inactive'}
+                          {role.is_active ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -437,7 +444,7 @@ export default function RolesPage() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingRole ? 'Edit Role' : 'Add New Role'}
+                  {editingRole ? "Edit Role" : "Add New Role"}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Set name, slug, and menu permissions
@@ -470,9 +477,9 @@ export default function RolesPage() {
                     className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                     placeholder="e.g., Content Editor"
                     required
-                    disabled={editingRole?.slug === 'admin'}
+                    disabled={editingRole?.slug === "admin"}
                   />
-                  {editingRole?.slug === 'admin' && (
+                  {editingRole?.slug === "admin" && (
                     <p className="text-xs text-gray-400 mt-1">
                       Admin role cannot be renamed
                     </p>
@@ -503,11 +510,11 @@ export default function RolesPage() {
                     Status
                   </label>
                   <select
-                    value={formData.is_active ? 'active' : 'inactive'}
+                    value={formData.is_active ? "active" : "inactive"}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        is_active: e.target.value === 'active',
+                        is_active: e.target.value === "active",
                       })
                     }
                     className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -540,7 +547,8 @@ export default function RolesPage() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                     <MdOutlineSecurity className="w-4 h-4" />
-                    Menu Access Permissions ({formData.permissions.length} selected)
+                    Menu Access Permissions ({formData.permissions.length}{" "}
+                    selected)
                   </label>
                   <div className="flex gap-2">
                     <button
@@ -575,8 +583,8 @@ export default function RolesPage() {
                         key={perm.key}
                         className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                           checked
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                            : "border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
                         }`}
                       >
                         <input
@@ -616,7 +624,7 @@ export default function RolesPage() {
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
                 >
                   <MdOutlineSave className="w-4 h-4" />
-                  {saving ? 'Saving...' : editingRole ? 'Update' : 'Create'}
+                  {saving ? "Saving..." : editingRole ? "Update" : "Create"}
                 </button>
               </div>
             </form>
@@ -656,7 +664,7 @@ export default function RolesPage() {
                 <button
                   onClick={() => {
                     setDeletingRole(null);
-                    setDeleteError('');
+                    setDeleteError("");
                   }}
                   disabled={deleteLoading}
                   className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium disabled:opacity-50"
@@ -688,4 +696,3 @@ export default function RolesPage() {
     </div>
   );
 }
-

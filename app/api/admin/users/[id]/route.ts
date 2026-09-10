@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activity';
 
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
@@ -10,7 +11,7 @@ async function requireAdmin(request: NextRequest) {
   const decoded = jwt.verify(
     token,
     process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string; roles?: string[] };
+  ) as { userId: number; role: string; roles?: string[]; username?: string };
 
   const isAdmin =
     decoded.role === 'admin' ||
@@ -22,9 +23,7 @@ async function requireAdmin(request: NextRequest) {
   return decoded;
 }
 
-// ============================================
 // GET single user
-// ============================================
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -72,20 +71,21 @@ export async function GET(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Get user error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-// ============================================
 // PUT - update user
-// ============================================
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const connection = await pool.getConnection();
   try {
-    await requireAdmin(request);
+    const decoded = await requireAdmin(request);
     const { id } = await params;
     const userId = parseInt(id);
 
@@ -105,14 +105,17 @@ export async function PUT(
       city_ids,
     } = body;
 
+    // Fetch before state
     const [existingUsers] = await connection.query(
-      'SELECT id FROM users WHERE id = ?',
+      `SELECT id, username, email, full_name, role_id, is_active FROM users WHERE id = ?`,
       [userId]
     );
-    if ((existingUsers as any[]).length === 0) {
+    const existingArr = existingUsers as any[];
+    if (existingArr.length === 0) {
       connection.release();
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+    const before = existingArr[0];
 
     if (username || email) {
       const [checkUsers] = await connection.query(
@@ -125,9 +128,15 @@ export async function PUT(
         connection.release();
         const c = check[0];
         if (c.username === username)
-          return NextResponse.json({ error: 'Username is already taken' }, { status: 409 });
+          return NextResponse.json(
+            { error: 'Username is already taken' },
+            { status: 409 }
+          );
         if (c.email === email)
-          return NextResponse.json({ error: 'Email is already registered' }, { status: 409 });
+          return NextResponse.json(
+            { error: 'Email is already registered' },
+            { status: 409 }
+          );
       }
     }
 
@@ -203,7 +212,9 @@ export async function PUT(
       }
 
       if (Array.isArray(role_ids)) {
-        await connection.query('DELETE FROM user_roles WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM user_roles WHERE user_id = ?', [
+          userId,
+        ]);
         const valuesArr = role_ids.map((rid: number) => [userId, rid]);
         await connection.query(
           'INSERT INTO user_roles (user_id, role_id) VALUES ?',
@@ -212,7 +223,9 @@ export async function PUT(
       }
 
       if (Array.isArray(city_ids)) {
-        await connection.query('DELETE FROM user_cities WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM user_cities WHERE user_id = ?', [
+          userId,
+        ]);
         if (city_ids.length > 0) {
           const cityValues = city_ids.map((cid: number) => [userId, cid]);
           await connection.query(
@@ -246,6 +259,34 @@ export async function PUT(
       updated.cities = cityRows;
       updated.city_ids = (cityRows as any[]).map((c) => c.id);
 
+      // ✅ Log activity
+      await logActivity({
+        actor: {
+          userId: decoded.userId,
+          userName: decoded.username || `User #${decoded.userId}`,
+        },
+        action: 'update',
+        entityType: 'user',
+        entityId: userId,
+        entityName: username || before.username,
+        changes: {
+          before: {
+            username: before.username,
+            email: before.email,
+            full_name: before.full_name,
+            is_active: Boolean(before.is_active),
+          },
+          after: {
+            username: username || before.username,
+            email: email || before.email,
+            full_name: full_name ?? before.full_name,
+            is_active:
+              is_active !== undefined ? is_active : Boolean(before.is_active),
+          },
+        },
+        request,
+      });
+
       return NextResponse.json({
         success: true,
         message: 'User updated successfully',
@@ -260,15 +301,16 @@ export async function PUT(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Update user error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   } finally {
     connection.release();
   }
 }
 
-// ============================================
 // DELETE user
-// ============================================
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -283,7 +325,7 @@ export async function DELETE(
     }
 
     const [existingUsers] = await pool.query(
-      'SELECT id, role FROM users WHERE id = ?',
+      'SELECT id, username, role FROM users WHERE id = ?',
       [userId]
     );
     const existing = existingUsers as any[];
@@ -305,6 +347,20 @@ export async function DELETE(
 
     await pool.query('DELETE FROM users WHERE id = ?', [userId]);
 
+    // ✅ Log activity
+    await logActivity({
+      actor: {
+        userId: decoded.userId,
+        userName: decoded.username || `User #${decoded.userId}`,
+      },
+      action: 'delete',
+      entityType: 'user',
+      entityId: userId,
+      entityName: existing[0].username,
+      changes: { deleted: true },
+      request,
+    });
+
     return NextResponse.json({
       success: true,
       message: 'User deleted successfully',
@@ -314,7 +370,9 @@ export async function DELETE(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Delete user error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-

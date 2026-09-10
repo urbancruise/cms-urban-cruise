@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activity';
 
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
@@ -9,7 +10,7 @@ async function requireAdmin(request: NextRequest) {
   const decoded = jwt.verify(
     token,
     process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string; roles?: string[] };
+  ) as { userId: number; role: string; roles?: string[]; username?: string };
 
   const isAdmin =
     decoded.role === 'admin' ||
@@ -21,7 +22,6 @@ async function requireAdmin(request: NextRequest) {
   return decoded;
 }
 
-// Helper to safely parse permissions from MySQL JSON
 function parsePermissions(raw: any): string[] {
   try {
     if (Array.isArray(raw)) return raw;
@@ -32,9 +32,7 @@ function parsePermissions(raw: any): string[] {
   }
 }
 
-// ============================================
-// GET - List all roles
-// ============================================
+// GET all roles
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
@@ -58,16 +56,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Get roles error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-// ============================================
-// POST - Create a new role with permissions
-// ============================================
+// POST create role
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    const decoded = await requireAdmin(request);
 
     const body = await request.json();
     const { name, slug, description, permissions, is_active } = body;
@@ -81,7 +80,10 @@ export async function POST(request: NextRequest) {
 
     if (!/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
-        { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
+        {
+          error:
+            'Slug must contain only lowercase letters, numbers, and hyphens',
+        },
         { status: 400 }
       );
     }
@@ -118,6 +120,26 @@ export async function POST(request: NextRequest) {
     );
     const role = (newRoleRows as any[])[0];
 
+    // ✅ Log activity
+    await logActivity({
+      actor: {
+        userId: decoded.userId,
+        userName: decoded.username || `User #${decoded.userId}`,
+      },
+      action: 'create',
+      entityType: 'role',
+      entityId: insertResult.insertId,
+      entityName: name,
+      changes: {
+        name,
+        slug,
+        description: description || null,
+        permissions: permsArray,
+        is_active: is_active !== false,
+      },
+      request,
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -136,7 +158,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Create role error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-

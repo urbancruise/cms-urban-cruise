@@ -300,3 +300,65 @@ UPDATE roles SET permissions = JSON_ARRAY(
 -- Verify
 SELECT id, name, slug, permissions FROM roles;
 
+USE urban_cruise;
+
+-- ============================================
+-- Notifications table
+-- ============================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  message TEXT,
+  entity_type VARCHAR(50),
+  entity_id INT,
+  actor_id INT,
+  actor_name VARCHAR(100),
+  link VARCHAR(255),
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_read (user_id, is_read),
+  INDEX idx_created (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Activity Log
+-- ============================================
+CREATE TABLE IF NOT EXISTS activity_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  user_name VARCHAR(100),
+  action VARCHAR(50) NOT NULL,
+  entity_type VARCHAR(50) NOT NULL,
+  entity_id INT,
+  entity_name VARCHAR(200),
+  changes JSON,
+  ip_address VARCHAR(45),
+  user_agent VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_entity (entity_type, entity_id),
+  INDEX idx_user (user_id),
+  INDEX idx_created (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Add activity.view permission to roles
+-- ============================================
+UPDATE roles SET permissions = JSON_ARRAY(
+  'dashboard.view','analytics.view','users.view','roles.view',
+  'cities.view','profile.view','activity.view'
+) WHERE slug = 'admin';
+
+UPDATE roles SET permissions = JSON_ARRAY(
+  'dashboard.view','analytics.view','users.view',
+  'cities.view','profile.view','activity.view'
+) WHERE slug = 'manager';
+
+UPDATE roles SET permissions = JSON_ARRAY(
+  'dashboard.view','profile.view'
+) WHERE slug = 'user';
+
+SELECT id, name, slug, permissions FROM roles;
+

@@ -11,10 +11,10 @@ import {
   MdOutlineGroup,
   MdOutlineSecurity,
   MdOutlineLocationCity,
+  MdOutlineHistory,
 } from "react-icons/md";
 import { useAuth } from "@/app/context/AuthContext";
 
-// ✅ Each menu item declares its required permission
 const menuItems = [
   {
     icon: MdOutlineExplore,
@@ -27,6 +27,12 @@ const menuItems = [
     label: "Analytics",
     href: "/admin/analytics",
     perm: "analytics.view",
+  },
+  {
+    icon: MdOutlineHistory,
+    label: "Activity",
+    href: "/admin/activity",
+    perm: "activity.view",
   },
   {
     icon: MdOutlineGroup,
@@ -64,8 +70,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const { user, logout, hasPermission } = useAuth();
 
   const getInitials = (name: string) => {
-    if (!name) return '?';
-    const parts = name.split(' ');
+    if (!name) return "?";
+    const parts = name.split(" ");
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
@@ -74,26 +80,25 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role?.toLowerCase()) {
-      case 'admin':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      case 'manager':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case "admin":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+      case "manager":
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
       default:
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
     }
   };
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    router.push("/login");
   };
 
-  const displayName = user?.full_name || user?.username || 'User';
-  const displayEmail = user?.email || 'user@urbancruise.com';
-  const displayRole = user?.role || 'User';
+  const displayName = user?.full_name || user?.username || "User";
+  const displayEmail = user?.email || "user@urbancruise.com";
+  const displayRole = user?.role || "User";
   const displayInitials = getInitials(displayName);
 
-  // ✅ Filter menu items by permission
   const visibleItems = menuItems.filter((item) => hasPermission(item.perm));
 
   return (
@@ -107,7 +112,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <h1 className="text-lg font-bold text-gray-900 dark:text-white">
               Urban Cruise
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">CMS Panel</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              CMS Panel
+            </p>
           </div>
         </div>
         <button
@@ -126,7 +133,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
         ) : (
           visibleItems.map((item) => {
             const isActive =
-              pathname === item.href || pathname?.startsWith(item.href + '/');
+              pathname === item.href ||
+              (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
+
             return (
               <Link
                 key={item.href}
@@ -192,4 +201,3 @@ export default function Sidebar({ onClose }: SidebarProps) {
     </aside>
   );
 }
-

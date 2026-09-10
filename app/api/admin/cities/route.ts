@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activity';
 
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
@@ -9,7 +10,7 @@ async function requireAdmin(request: NextRequest) {
   const decoded = jwt.verify(
     token,
     process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string };
+  ) as { userId: number; role: string; username?: string };
 
   if (decoded.role !== 'admin') {
     throw { status: 403, message: 'Access denied. Admin only.' };
@@ -17,9 +18,7 @@ async function requireAdmin(request: NextRequest) {
   return decoded;
 }
 
-// ============================================
-// GET - List cities (supports ?active=true & ?search=)
-// ============================================
+// GET
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
@@ -48,22 +47,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Get cities error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-// ============================================
-// POST - Create city
-// ============================================
+// POST create
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    const decoded = await requireAdmin(request);
 
     const body = await request.json();
     const { name, state, country, code, description, is_active } = body;
 
     if (!name) {
-      return NextResponse.json({ error: 'City name is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'City name is required' },
+        { status: 400 }
+      );
     }
 
     const [existing] = await pool.query(
@@ -95,6 +98,26 @@ export async function POST(request: NextRequest) {
       insertResult.insertId,
     ]);
 
+    // ✅ Log activity
+    await logActivity({
+      actor: {
+        userId: decoded.userId,
+        userName: decoded.username || `User #${decoded.userId}`,
+      },
+      action: 'create',
+      entityType: 'city',
+      entityId: insertResult.insertId,
+      entityName: name,
+      changes: {
+        name,
+        state: state || null,
+        country: country || 'India',
+        code: code || null,
+        is_active: is_active !== false,
+      },
+      request,
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -108,7 +131,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Create city error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-

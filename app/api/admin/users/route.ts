@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activity';
 
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
@@ -10,7 +11,7 @@ async function requireAdmin(request: NextRequest) {
   const decoded = jwt.verify(
     token,
     process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string; roles?: string[] };
+  ) as { userId: number; role: string; roles?: string[]; username?: string };
 
   const isAdmin =
     decoded.role === 'admin' ||
@@ -23,7 +24,7 @@ async function requireAdmin(request: NextRequest) {
 }
 
 // ============================================
-// GET - all users with roles + cities
+// GET - all users
 // ============================================
 export async function GET(request: NextRequest) {
   try {
@@ -61,7 +62,11 @@ export async function GET(request: NextRequest) {
       const roleMap: Record<number, any[]> = {};
       (roleRows as any[]).forEach((row) => {
         if (!roleMap[row.user_id]) roleMap[row.user_id] = [];
-        roleMap[row.user_id].push({ id: row.id, name: row.name, slug: row.slug });
+        roleMap[row.user_id].push({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+        });
       });
 
       const cityMap: Record<number, any[]> = {};
@@ -94,17 +99,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Get users error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
 // ============================================
-// POST - create user (multi-role + multi-city)
+// POST - create user
 // ============================================
 export async function POST(request: NextRequest) {
   const connection = await pool.getConnection();
   try {
-    await requireAdmin(request);
+    const decoded = await requireAdmin(request);
 
     const body = await request.json();
     const {
@@ -176,10 +184,16 @@ export async function POST(request: NextRequest) {
       connection.release();
       const found = existing[0];
       if (found.username === username) {
-        return NextResponse.json({ error: 'Username is already taken' }, { status: 409 });
+        return NextResponse.json(
+          { error: 'Username is already taken' },
+          { status: 409 }
+        );
       }
       if (found.email === email) {
-        return NextResponse.json({ error: 'Email is already registered' }, { status: 409 });
+        return NextResponse.json(
+          { error: 'Email is already registered' },
+          { status: 409 }
+        );
       }
     }
 
@@ -248,6 +262,27 @@ export async function POST(request: NextRequest) {
       created.cities = createdCities;
       created.city_ids = (createdCities as any[]).map((c) => c.id);
 
+      // ✅ Log activity + notify
+      await logActivity({
+        actor: {
+          userId: decoded.userId,
+          userName: decoded.username || `User #${decoded.userId}`,
+        },
+        action: 'create',
+        entityType: 'user',
+        entityId: newUserId,
+        entityName: username,
+        changes: {
+          username,
+          email,
+          full_name: full_name || username,
+          role_ids,
+          city_ids: city_ids || [],
+          is_active: is_active !== undefined ? is_active : true,
+        },
+        request,
+      });
+
       return NextResponse.json(
         { success: true, message: 'User created successfully', user: created },
         { status: 201 }
@@ -261,9 +296,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('Create user error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   } finally {
     connection.release();
   }
 }
-
