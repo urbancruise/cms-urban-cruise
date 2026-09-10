@@ -9,12 +9,27 @@ async function requireAdmin(request: NextRequest) {
   const decoded = jwt.verify(
     token,
     process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string };
+  ) as { userId: number; role: string; roles?: string[] };
 
-  if (decoded.role !== 'admin') {
+  const isAdmin =
+    decoded.role === 'admin' ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes('admin'));
+
+  if (!isAdmin) {
     throw { status: 403, message: 'Access denied. Admin only.' };
   }
   return decoded;
+}
+
+// Helper to safely parse permissions from MySQL JSON
+function parsePermissions(raw: any): string[] {
+  try {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') return JSON.parse(raw);
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 // ============================================
@@ -30,9 +45,9 @@ export async function GET(request: NextRequest) {
        ORDER BY is_system DESC, name ASC`
     );
 
-    // Convert MySQL TINYINT (0/1) to real booleans so React doesn't render 0 as text
     const roles = (rows as any[]).map((r) => ({
       ...r,
+      permissions: parsePermissions(r.permissions),
       is_system: Boolean(r.is_system),
       is_active: Boolean(r.is_active),
     }));
@@ -48,7 +63,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ============================================
-// POST - Create a new role
+// POST - Create a new role with permissions
 // ============================================
 export async function POST(request: NextRequest) {
   try {
@@ -82,6 +97,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const permsArray = Array.isArray(permissions) ? permissions : [];
+
     const [result] = await pool.query(
       `INSERT INTO roles (name, slug, description, permissions, is_active, is_system)
        VALUES (?, ?, ?, ?, ?, FALSE)`,
@@ -89,18 +106,17 @@ export async function POST(request: NextRequest) {
         name,
         slug,
         description || null,
-        JSON.stringify(permissions || []),
+        JSON.stringify(permsArray),
         is_active !== false ? 1 : 0,
       ]
     );
 
     const insertResult = result as any;
-    const [newRole] = await pool.query(
+    const [newRoleRows] = await pool.query(
       'SELECT * FROM roles WHERE id = ?',
       [insertResult.insertId]
     );
-
-    const role = (newRole as any[])[0];
+    const role = (newRoleRows as any[])[0];
 
     return NextResponse.json(
       {
@@ -108,6 +124,7 @@ export async function POST(request: NextRequest) {
         message: 'Role created successfully',
         role: {
           ...role,
+          permissions: parsePermissions(role.permissions),
           is_system: Boolean(role.is_system),
           is_active: Boolean(role.is_active),
         },
@@ -122,3 +139,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

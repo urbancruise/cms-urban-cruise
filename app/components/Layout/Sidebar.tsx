@@ -14,13 +14,44 @@ import {
 } from "react-icons/md";
 import { useAuth } from "@/app/context/AuthContext";
 
+// ✅ Each menu item declares its required permission
 const menuItems = [
-  { icon: MdOutlineExplore, label: "Dashboard", href: "/admin" },
-  { icon: MdOutlineBarChart, label: "Analytics", href: "/admin/analytics" },
-  { icon: MdOutlineGroup, label: "Users", href: "/admin/users" },
-  { icon: MdOutlineSecurity, label: "Roles", href: "/admin/roles" },
-  { icon: MdOutlineLocationCity, label: "Cities", href: "/admin/cities" },
-  { icon: MdOutlinePerson, label: "Profile", href: "/admin/profile" },
+  {
+    icon: MdOutlineExplore,
+    label: "Dashboard",
+    href: "/admin",
+    perm: "dashboard.view",
+  },
+  {
+    icon: MdOutlineBarChart,
+    label: "Analytics",
+    href: "/admin/analytics",
+    perm: "analytics.view",
+  },
+  {
+    icon: MdOutlineGroup,
+    label: "Users",
+    href: "/admin/users",
+    perm: "users.view",
+  },
+  {
+    icon: MdOutlineSecurity,
+    label: "Roles",
+    href: "/admin/roles",
+    perm: "roles.view",
+  },
+  {
+    icon: MdOutlineLocationCity,
+    label: "Cities",
+    href: "/admin/cities",
+    perm: "cities.view",
+  },
+  {
+    icon: MdOutlinePerson,
+    label: "Profile",
+    href: "/admin/profile",
+    perm: "profile.view",
+  },
 ];
 
 interface SidebarProps {
@@ -30,7 +61,7 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -62,6 +93,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const displayRole = user?.role || 'User';
   const displayInitials = getInitials(displayName);
 
+  // ✅ Filter menu items by permission
+  const visibleItems = menuItems.filter((item) => hasPermission(item.perm));
+
   return (
     <aside className="h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
@@ -85,37 +119,43 @@ export default function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname?.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group
-                ${
-                  isActive
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                    : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                }
-              `}
-            >
-              <item.icon
-                className={`w-5 h-5 ${
-                  isActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-                }`}
-              />
-              <span className="font-medium text-sm">{item.label}</span>
-              {isActive && (
-                <div className="ml-auto w-1.5 h-8 bg-blue-600 rounded-full" />
-              )}
-            </Link>
-          );
-        })}
+        {visibleItems.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4">
+            No menu access. Contact admin.
+          </p>
+        ) : (
+          visibleItems.map((item) => {
+            const isActive =
+              pathname === item.href || pathname?.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group
+                  ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                      : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                  }
+                `}
+              >
+                <item.icon
+                  className={`w-5 h-5 ${
+                    isActive
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                  }`}
+                />
+                <span className="font-medium text-sm">{item.label}</span>
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-8 bg-blue-600 rounded-full" />
+                )}
+              </Link>
+            );
+          })
+        )}
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">
@@ -152,3 +192,4 @@ export default function Sidebar({ onClose }: SidebarProps) {
     </aside>
   );
 }
+

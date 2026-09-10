@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 
+function parsePermissions(raw: any): string[] {
+  try {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') return JSON.parse(raw);
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
@@ -30,9 +40,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Account is deactivated' }, { status: 403 });
     }
 
-    // Roles
+    // Fetch roles + permissions
     const [roleRows] = await pool.query(
-      `SELECT r.id, r.name, r.slug
+      `SELECT r.id, r.name, r.slug, r.permissions
        FROM user_roles ur
        JOIN roles r ON r.id = ur.role_id
        WHERE ur.user_id = ? AND r.is_active = 1`,
@@ -45,7 +55,27 @@ export async function GET(request: NextRequest) {
 
     const primaryRole = roleSlugs.includes('admin') ? 'admin' : roleSlugs[0] || 'user';
 
-    // Cities
+    // ✅ Merge permissions from all roles
+    const permissionSet = new Set<string>();
+    roles.forEach((r) => {
+      parsePermissions(r.permissions).forEach((p) => permissionSet.add(p));
+    });
+
+    let permissions: string[] = Array.from(permissionSet);
+
+    // Admin always gets all permissions
+    if (roleSlugs.includes('admin')) {
+      permissions = [
+        'dashboard.view',
+        'analytics.view',
+        'users.view',
+        'roles.view',
+        'cities.view',
+        'profile.view',
+      ];
+    }
+
+    // Fetch cities
     const [cityRows] = await pool.query(
       `SELECT c.id, c.name, c.state, c.code
        FROM user_cities uc
@@ -61,6 +91,7 @@ export async function GET(request: NextRequest) {
           role: primaryRole,
           roles: roleSlugs,
           role_ids: roles.map((r) => r.id),
+          permissions,
           cities: cityRows,
           city_ids: (cityRows as any[]).map((c) => c.id),
         },
@@ -75,3 +106,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

@@ -21,8 +21,18 @@ async function requireAdmin(request: NextRequest) {
   return decoded;
 }
 
+function parsePermissions(raw: any): string[] {
+  try {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') return JSON.parse(raw);
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 // ============================================
-// PUT - update role
+// PUT - Update role
 // ============================================
 export async function PUT(
   request: NextRequest,
@@ -41,16 +51,18 @@ export async function PUT(
     const { name, description, permissions, is_active } = body;
 
     const [existingRows] = await pool.query(
-      'SELECT is_system FROM roles WHERE id = ?',
+      'SELECT is_system, slug FROM roles WHERE id = ?',
       [roleId]
     );
     const existing = (existingRows as any[])[0];
     if (!existing) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
-    if (existing.is_system && name) {
+
+    // ✅ Only Admin role cannot be renamed
+    if (existing.slug === 'admin' && name) {
       return NextResponse.json(
-        { error: 'Cannot rename a system role' },
+        { error: 'Cannot rename the Admin role' },
         { status: 400 }
       );
     }
@@ -68,7 +80,7 @@ export async function PUT(
     }
     if (permissions !== undefined) {
       fields.push('permissions = ?');
-      values.push(JSON.stringify(permissions));
+      values.push(JSON.stringify(Array.isArray(permissions) ? permissions : []));
     }
     if (is_active !== undefined) {
       fields.push('is_active = ?');
@@ -96,6 +108,7 @@ export async function PUT(
       message: 'Role updated successfully',
       role: {
         ...updatedRole,
+        permissions: parsePermissions(updatedRole.permissions),
         is_system: Boolean(updatedRole.is_system),
         is_active: Boolean(updatedRole.is_active),
       },
@@ -110,7 +123,8 @@ export async function PUT(
 }
 
 // ============================================
-// DELETE - delete role (checks user_roles)
+// DELETE - Delete role
+// Only protects 'admin' role; Manager/User/custom can all be deleted
 // ============================================
 export async function DELETE(
   request: NextRequest,
@@ -133,14 +147,16 @@ export async function DELETE(
     if (!role) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
-    if (role.is_system) {
+
+    // ✅ Only block deleting the Admin role
+    if (role.slug === 'admin') {
       return NextResponse.json(
-        { error: 'Cannot delete a system role' },
+        { error: 'Cannot delete the Admin role' },
         { status: 400 }
       );
     }
 
-    // Check user_roles assignment
+    // Check if any users are assigned
     const [users] = await pool.query(
       'SELECT COUNT(*) as count FROM user_roles WHERE role_id = ?',
       [roleId]
@@ -148,7 +164,9 @@ export async function DELETE(
     const count = (users as any[])[0].count;
     if (count > 0) {
       return NextResponse.json(
-        { error: `Cannot delete role. ${count} user(s) are assigned to it.` },
+        {
+          error: `Cannot delete role. ${count} user(s) are assigned to it. Please reassign them first.`,
+        },
         { status: 400 }
       );
     }
@@ -167,3 +185,4 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

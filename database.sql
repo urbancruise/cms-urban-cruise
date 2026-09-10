@@ -7,7 +7,6 @@
 
 -- Create database
 CREATE DATABASE IF NOT EXISTS urban_cruise;
-USE urban_cruise;
 
 -- ============================================
 -- Users Table
@@ -280,3 +279,24 @@ FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id
 GROUP BY u.id;
+
+-- Ensure permissions column exists (it should from earlier migration)
+-- If not, add it:
+ALTER TABLE roles ADD COLUMN permissions JSON DEFAULT NULL;
+
+-- Seed permissions for existing system roles
+UPDATE roles SET permissions = JSON_ARRAY(
+  'dashboard.view','analytics.view','users.view','roles.view','cities.view','profile.view'
+) WHERE slug = 'admin';
+
+UPDATE roles SET permissions = JSON_ARRAY(
+  'dashboard.view','analytics.view','users.view','cities.view','profile.view'
+) WHERE slug = 'manager';
+
+UPDATE roles SET permissions = JSON_ARRAY(
+  'dashboard.view','profile.view'
+) WHERE slug = 'user';
+
+-- Verify
+SELECT id, name, slug, permissions FROM roles;
+

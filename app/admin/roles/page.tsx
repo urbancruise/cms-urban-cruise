@@ -12,6 +12,12 @@ import {
   MdOutlineWarning,
   MdOutlineCheckCircle,
   MdOutlineError,
+  MdOutlineDashboard,
+  MdOutlineBarChart,
+  MdOutlineGroup,
+  MdOutlineLocationCity,
+  MdOutlinePerson,
+  MdOutlineAdminPanelSettings,
 } from 'react-icons/md';
 
 interface Role {
@@ -19,7 +25,7 @@ interface Role {
   name: string;
   slug: string;
   description: string | null;
-  permissions: any;
+  permissions: string[];
   is_system: boolean;
   is_active: boolean;
   created_at: string;
@@ -31,10 +37,53 @@ interface Toast {
   message: string;
 }
 
+// ============================================
+// Available permissions
+// ============================================
+const AVAILABLE_PERMISSIONS = [
+  {
+    key: 'dashboard.view',
+    label: 'Dashboard',
+    icon: MdOutlineDashboard,
+    desc: 'View dashboard overview',
+  },
+  {
+    key: 'analytics.view',
+    label: 'Analytics',
+    icon: MdOutlineBarChart,
+    desc: 'View analytics and reports',
+  },
+  {
+    key: 'users.view',
+    label: 'Users',
+    icon: MdOutlineGroup,
+    desc: 'Manage users',
+  },
+  {
+    key: 'roles.view',
+    label: 'Roles',
+    icon: MdOutlineAdminPanelSettings,
+    desc: 'Manage roles',
+  },
+  {
+    key: 'cities.view',
+    label: 'Cities',
+    icon: MdOutlineLocationCity,
+    desc: 'Manage cities',
+  },
+  {
+    key: 'profile.view',
+    label: 'Profile',
+    icon: MdOutlinePerson,
+    desc: 'View own profile',
+  },
+];
+
 const emptyForm = {
   name: '',
   slug: '',
   description: '',
+  permissions: [] as string[],
   is_active: true,
 };
 
@@ -42,19 +91,16 @@ export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Create / Edit modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Delete modal
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  // Toast
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const pushToast = (type: 'success' | 'error', message: string) => {
@@ -98,6 +144,29 @@ export default function RolesPage() {
     }));
   };
 
+  const togglePermission = (perm: string) => {
+    setFormData((prev) => {
+      const has = prev.permissions.includes(perm);
+      return {
+        ...prev,
+        permissions: has
+          ? prev.permissions.filter((p) => p !== perm)
+          : [...prev.permissions, perm],
+      };
+    });
+  };
+
+  const selectAllPermissions = () => {
+    setFormData((prev) => ({
+      ...prev,
+      permissions: AVAILABLE_PERMISSIONS.map((p) => p.key),
+    }));
+  };
+
+  const clearAllPermissions = () => {
+    setFormData((prev) => ({ ...prev, permissions: [] }));
+  };
+
   const openCreate = () => {
     setEditingRole(null);
     setFormData(emptyForm);
@@ -111,6 +180,7 @@ export default function RolesPage() {
       name: role.name,
       slug: role.slug,
       description: role.description || '',
+      permissions: Array.isArray(role.permissions) ? role.permissions : [],
       is_active: role.is_active,
     });
     setFormError('');
@@ -174,9 +244,17 @@ export default function RolesPage() {
     }
   };
 
+  const getPermissionLabel = (key: string) => {
+    const p = AVAILABLE_PERMISSIONS.find((x) => x.key === key);
+    return p?.label || key;
+  };
+
+  // ✅ Only Admin role is protected now
+  const isProtectedRole = (role: Role) => role.slug === 'admin';
+
   return (
     <div className="p-8">
-      {/* Toast container */}
+      {/* Toast */}
       <div className="fixed top-4 right-4 z-[100] space-y-2">
         {toasts.map((t) => (
           <div
@@ -204,7 +282,7 @@ export default function RolesPage() {
             Roles Management
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Create and manage user roles ({roles.length} total)
+            Create roles with custom permissions ({roles.length} total)
           </p>
         </div>
         <div className="flex gap-2">
@@ -242,7 +320,7 @@ export default function RolesPage() {
                     Slug
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                    Description
+                    Permissions
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Status
@@ -274,9 +352,10 @@ export default function RolesPage() {
                           <span className="font-medium text-gray-900 dark:text-white">
                             {role.name}
                           </span>
-                          {Boolean(role.is_system) && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                              System
+                          {/* Show System badge for protected roles */}
+                          {isProtectedRole(role) && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                              Protected
                             </span>
                           )}
                         </div>
@@ -284,8 +363,23 @@ export default function RolesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                         {role.slug}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                        {role.description || '—'}
+                      <td className="px-6 py-4">
+                        {role.permissions && role.permissions.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-md">
+                            {role.permissions.map((p) => (
+                              <span
+                                key={p}
+                                className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+                              >
+                                {getPermissionLabel(p)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            No permissions
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -308,7 +402,8 @@ export default function RolesPage() {
                             <MdOutlineEdit className="w-4 h-4 text-gray-500 hover:text-blue-600" />
                           </button>
 
-                          {!role.is_system ? (
+                          {/* ✅ Only Admin role gets locked delete; all others get active delete */}
+                          {!isProtectedRole(role) ? (
                             <button
                               onClick={() => openDeleteModal(role)}
                               className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -319,7 +414,7 @@ export default function RolesPage() {
                           ) : (
                             <div
                               className="p-1.5 opacity-40 cursor-not-allowed"
-                              title="System roles cannot be deleted"
+                              title="Admin role cannot be deleted"
                             >
                               <MdOutlineDelete className="w-4 h-4 text-gray-400" />
                             </div>
@@ -338,11 +433,16 @@ export default function RolesPage() {
       {/* ==================== Create / Edit Modal ==================== */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {editingRole ? 'Edit Role' : 'Add New Role'}
-              </h2>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingRole ? 'Edit Role' : 'Add New Role'}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Set name, slug, and menu permissions
+                </p>
+              </div>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
@@ -357,7 +457,7 @@ export default function RolesPage() {
                 </div>
               )}
 
-              {/* ============ Row 1: Role Name + Slug ============ */}
+              {/* Row 1: Name + Slug */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -370,11 +470,11 @@ export default function RolesPage() {
                     className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                     placeholder="e.g., Content Editor"
                     required
-                    disabled={editingRole?.is_system}
+                    disabled={editingRole?.slug === 'admin'}
                   />
-                  {editingRole?.is_system && (
+                  {editingRole?.slug === 'admin' && (
                     <p className="text-xs text-gray-400 mt-1">
-                      System roles cannot be renamed
+                      Admin role cannot be renamed
                     </p>
                   )}
                 </div>
@@ -396,8 +496,8 @@ export default function RolesPage() {
                 </div>
               </div>
 
-              {/* ============ Row 2: Status + (empty placeholder) ============ */}
-              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
+              {/* Row 2: Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Status
@@ -416,11 +516,10 @@ export default function RolesPage() {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
-                {/* Right column intentionally left empty for balance */}
                 <div className="hidden sm:block" />
               </div>
 
-              {/* ============ Row 3: Description (full width) ============ */}
+              {/* Row 3: Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
@@ -431,9 +530,76 @@ export default function RolesPage() {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
+                  rows={2}
                   placeholder="What can this role do?"
                 />
+              </div>
+
+              {/* ==================== PERMISSIONS ==================== */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <MdOutlineSecurity className="w-4 h-4" />
+                    Menu Access Permissions ({formData.permissions.length} selected)
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllPermissions}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-xs text-gray-300">|</span>
+                    <button
+                      type="button"
+                      onClick={clearAllPermissions}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Select which menu items users with this role can see in the
+                  admin panel.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {AVAILABLE_PERMISSIONS.map((perm) => {
+                    const Icon = perm.icon;
+                    const checked = formData.permissions.includes(perm.key);
+                    return (
+                      <label
+                        key={perm.key}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          checked
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePermission(perm.key)}
+                          className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {perm.label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {perm.desc}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
@@ -458,7 +624,7 @@ export default function RolesPage() {
         </div>
       )}
 
-      {/* ==================== Delete Confirmation Modal ==================== */}
+      {/* ==================== Delete Modal ==================== */}
       {deletingRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl">
@@ -477,7 +643,7 @@ export default function RolesPage() {
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
                 This action cannot be undone. Users assigned to this role will
-                not be deleted but will lose their role.
+                lose their permissions.
               </p>
 
               {deleteError && (

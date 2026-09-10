@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 
 interface City {
   id: number;
@@ -17,6 +23,7 @@ interface User {
   role: string;
   roles: string[];
   role_ids?: number[];
+  permissions: string[];
   cities?: City[];
   city_ids?: number[];
   is_active: boolean;
@@ -30,6 +37,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  hasPermission: (perm: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,19 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      console.log('Fetching user from /api/auth/me...');
       const response = await fetch('/api/auth/me');
-      console.log('API response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('User data received:', data.user);
         setUser(data.user);
       } else {
-        console.log('Failed to fetch user, status:', response.status);
-        if (response.status === 401) {
-          setUser(null);
-        }
+        if (response.status === 401) setUser(null);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -80,8 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchUser();
   };
 
+  const hasPermission = (perm: string) => {
+    if (!user) return false;
+    if (user.roles?.includes('admin')) return true;
+    return user.permissions?.includes(perm) ?? false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, setUser, loading, logout, refreshUser, hasPermission }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -94,3 +103,4 @@ export function useAuth() {
   }
   return context;
 }
+
