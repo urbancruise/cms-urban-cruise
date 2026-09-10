@@ -2,12 +2,23 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+interface City {
+  id: number;
+  name: string;
+  state: string | null;
+  code: string | null;
+}
+
 interface User {
   id: number;
   username: string;
   email: string;
   full_name: string;
   role: string;
+  roles: string[];
+  role_ids?: number[];
+  cities?: City[];
+  city_ids?: number[];
   is_active: boolean;
   created_at: string;
   last_login: string | null;
@@ -32,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Fetching user from /api/auth/me...');
       const response = await fetch('/api/auth/me');
       console.log('API response status:', response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('User data received:', data.user);
@@ -83,4 +94,3 @@ export function useAuth() {
   }
   return context;
 }
-

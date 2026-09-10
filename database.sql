@@ -179,3 +179,104 @@ FROM users u
 LEFT JOIN bookings b ON u.id = b.user_id
 GROUP BY u.id;
 
+-- ============================================
+-- Dynamic Roles Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL,
+  slug VARCHAR(50) UNIQUE NOT NULL,
+  description TEXT,
+  permissions JSON DEFAULT NULL,
+  is_system BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_slug (slug),
+  INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Cities Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS cities (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  state VARCHAR(100),
+  country VARCHAR(100) DEFAULT 'India',
+  code VARCHAR(20),
+  description TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_city (name, state, country),
+  INDEX idx_name (name),
+  INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Seed Default Roles
+-- ============================================
+INSERT INTO roles (name, slug, description, is_system, permissions) VALUES
+('Admin', 'admin', 'Full system access', TRUE, JSON_ARRAY('all')),
+('Manager', 'manager', 'Manage cruises and bookings', TRUE, JSON_ARRAY('cruises.read', 'cruises.write', 'bookings.read', 'bookings.write')),
+('User', 'user', 'Regular user access', TRUE, JSON_ARRAY('cruises.read', 'bookings.own'))
+ON DUPLICATE KEY UPDATE name = name;
+
+-- ============================================
+-- Seed Default Cities
+-- ============================================
+INSERT INTO cities (name, state, country, code) VALUES
+('Mumbai', 'Maharashtra', 'India', 'BOM'),
+('Delhi', 'Delhi', 'India', 'DEL'),
+('Bangalore', 'Karnataka', 'India', 'BLR'),
+('Chennai', 'Tamil Nadu', 'India', 'MAA'),
+('Kolkata', 'West Bengal', 'India', 'CCU'),
+('Goa', 'Goa', 'India', 'GOI')
+ON DUPLICATE KEY UPDATE name = name;
+
+-- ============================================
+-- Add role_id column to users
+-- ============================================
+ALTER TABLE users ADD COLUMN role_id INT NULL AFTER role;
+
+-- Populate role_id from existing role enum values
+UPDATE users u
+JOIN roles r ON r.slug = u.role
+SET u.role_id = r.id
+WHERE u.role_id IS NULL;
+
+-- Add FK constraint (ignore if already exists)
+ALTER TABLE users
+ADD CONSTRAINT fk_users_role
+FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
+
+-- ============================================
+-- user_roles junction table (many-to-many)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  role_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_role (user_id, role_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+  INDEX idx_user (user_id),
+  INDEX idx_role (role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Backfill from existing users.role_id
+-- ============================================
+INSERT IGNORE INTO user_roles (user_id, role_id)
+SELECT id, role_id FROM users WHERE role_id IS NOT NULL;
+
+-- ============================================
+-- Verify
+-- ============================================
+SELECT u.username, GROUP_CONCAT(r.name) AS roles
+FROM users u
+LEFT JOIN user_roles ur ON ur.user_id = u.id
+LEFT JOIN roles r ON r.id = ur.role_id
+GROUP BY u.id;

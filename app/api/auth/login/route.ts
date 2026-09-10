@@ -4,16 +4,12 @@ import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import pool from '@/lib/db';
 
-// Validation functions
 const validateIdentifier = (identifier: string) => {
   if (!identifier || identifier.trim().length === 0) {
     return { valid: false, error: 'Email or username is required' };
   }
   if (identifier.length < 2) {
     return { valid: false, error: 'Email or username must be at least 2 characters' };
-  }
-  if (identifier.length > 100) {
-    return { valid: false, error: 'Email or username must be less than 100 characters' };
   }
   return { valid: true };
 };
@@ -25,17 +21,6 @@ const validatePassword = (password: string) => {
   if (password.length < 6) {
     return { valid: false, error: 'Password must be at least 6 characters' };
   }
-  if (password.length > 100) {
-    return { valid: false, error: 'Password must be less than 100 characters' };
-  }
-  return { valid: true };
-};
-
-const validateEmail = (email: string) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return { valid: false, error: 'Please enter a valid email address' };
-  }
   return { valid: true };
 };
 
@@ -44,63 +29,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { identifier, password } = body;
 
-    console.log('Login attempt:', { identifier });
-
-    // Validate identifier
     const identifierValidation = validateIdentifier(identifier);
     if (!identifierValidation.valid) {
-      return NextResponse.json(
-        { error: identifierValidation.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: identifierValidation.error }, { status: 400 });
     }
 
-    // Validate password
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return NextResponse.json(
-        { error: passwordValidation.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
     }
 
-    // Check if identifier is email or username
     const isEmail = identifier.includes('@');
-    
-    // Validate email format if it's an email
-    if (isEmail) {
-      const emailValidation = validateEmail(identifier);
-      if (!emailValidation.valid) {
-        return NextResponse.json(
-          { error: emailValidation.error },
-          { status: 400 }
-        );
-      }
-    }
-
     const queryField = isEmail ? 'email' : 'username';
 
     const [rows] = await pool.query(
-      `SELECT id, username, email, password_hash, full_name, role, is_active 
-       FROM users 
-       WHERE ${queryField} = ?`,
+      `SELECT id, username, email, password_hash, full_name, role, role_id, is_active
+       FROM users WHERE ${queryField} = ?`,
       [identifier]
     );
 
     const users = rows as any[];
-
     if (users.length === 0) {
-      console.log('User not found');
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
     const user = users[0];
-    console.log('User found:', { username: user.username, role: user.role });
 
-    // Check if account is active
     if (!user.is_active) {
       return NextResponse.json(
         { error: 'Account is deactivated. Please contact support.' },
@@ -108,48 +62,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    console.log('Password valid:', isPasswordValid);
-
     if (!isPasswordValid) {
-      // Add delay to prevent timing attacks
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Update last login
-    await pool.query(
-      'UPDATE users SET last_login = NOW() WHERE id = ?',
+    // ✅ Fetch ALL roles
+    const [roleRows] = await pool.query(
+      `SELECT r.id, r.name, r.slug
+       FROM user_roles ur
+       JOIN roles r ON r.id = ur.role_id
+       WHERE ur.user_id = ? AND r.is_active = 1`,
       [user.id]
     );
+    const userRoles = roleRows as any[];
 
-    // Generate JWT token
+    let roleSlugs: string[] = userRoles.map((r) => r.slug);
+    if (roleSlugs.length === 0 && user.role) roleSlugs = [user.role];
+
+    const primaryRole = roleSlugs.includes('admin') ? 'admin' : roleSlugs[0] || 'user';
+
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         username: user.username,
-        role: user.role
+        role: primaryRole,
+        roles: roleSlugs,
       },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
-
-    console.log('Token generated:', token ? 'Yes' : 'No');
 
     const cookie = serialize('token', token, {
       httpOnly: true,
       secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      maxAge: 60 * 60 * 24 * 7,
     });
-
-    console.log('Cookie set:', cookie ? 'Yes' : 'No');
 
     const { password_hash, ...userWithoutPassword } = user;
 
@@ -157,16 +111,17 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: 'Login successful',
-        user: userWithoutPassword,
+        user: {
+          ...userWithoutPassword,
+          role: primaryRole,
+          roles: roleSlugs,
+        },
       },
       {
         status: 200,
-        headers: {
-          'Set-Cookie': cookie
-        }
+        headers: { 'Set-Cookie': cookie },
       }
     );
-
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
