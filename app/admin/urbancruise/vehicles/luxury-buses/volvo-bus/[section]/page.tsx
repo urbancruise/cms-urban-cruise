@@ -8,3 +8,4 @@ export default async function VolvoBusSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Volvo Bus" section={section} />;
 }
+

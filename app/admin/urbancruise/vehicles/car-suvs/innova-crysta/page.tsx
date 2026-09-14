@@ -74,3 +74,4 @@ export default function InnovaCrystaPage() {
     </div>
   );
 }
+

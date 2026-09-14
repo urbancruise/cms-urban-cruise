@@ -8,3 +8,4 @@ export default async function MiniBusSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Mini Bus" section={section} />;
 }
+

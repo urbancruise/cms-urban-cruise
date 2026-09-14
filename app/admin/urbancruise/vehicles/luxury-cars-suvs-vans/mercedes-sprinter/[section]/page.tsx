@@ -8,3 +8,4 @@ export default async function MercedesSprinterSectionPage({ params }: PageProps)
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Mercedes Sprinter" section={section} />;
 }
+

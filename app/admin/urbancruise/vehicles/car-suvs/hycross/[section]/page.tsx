@@ -8,3 +8,4 @@ export default async function HycrossSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Hycross" section={section} />;
 }
+

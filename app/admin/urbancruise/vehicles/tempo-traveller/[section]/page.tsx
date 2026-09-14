@@ -8,3 +8,4 @@ export default async function TempoTravellerSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Tempo Traveller" section={section} />;
 }
+

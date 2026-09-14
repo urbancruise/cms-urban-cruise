@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import {
   MdOutlineExplore,
   MdOutlineBarChart,
@@ -17,6 +23,7 @@ import {
   MdOutlineDirectionsCar,
 } from "react-icons/md";
 import { useAuth } from "@/app/context/AuthContext";
+import Image from "next/image";
 
 type IconComponent = ComponentType<{ className?: string }>;
 
@@ -32,10 +39,7 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-/* =========================================================
-   WEBSITE HOME SECTIONS
-========================================================= */
-
+//  WEBSITE HOME SECTIONS
 const homeSections: MenuItem[] = [
   { label: "Hero", href: "/admin/urbancruise/home/hero" },
   {
@@ -95,7 +99,7 @@ const vehicleSections = (
     compare?: boolean;
     prices?: boolean;
     discover?: boolean;
-  } = {}
+  } = {},
 ): MenuItem[] => [
   { label: "Hero", href: `${basePath}/hero` },
   {
@@ -174,17 +178,14 @@ const createVehicle = (
     compare?: boolean;
     prices?: boolean;
     discover?: boolean;
-  } = {}
+  } = {},
 ): MenuItem => ({
   label,
   href: basePath,
   children: vehicleSections(basePath, options),
 });
 
-/* =========================================================
-   MENU
-========================================================= */
-
+//  MENU
 const menuItems: MenuItem[] = [
   {
     icon: MdOutlineExplore,
@@ -256,17 +257,17 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Ertiga",
                 "/admin/urbancruise/vehicles/car-suvs/ertiga",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Innova Crysta",
                 "/admin/urbancruise/vehicles/car-suvs/innova-crysta",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Hycross",
                 "/admin/urbancruise/vehicles/car-suvs/hycross",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
             ],
           },
@@ -278,17 +279,17 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Luxury Cars & SUVs",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/luxury-cars-suvs",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Mercedes Sprinter",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/mercedes-sprinter",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Luxury Vans",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/luxury-vans",
-                { prices: true, discover: true }
+                { prices: true, discover: true },
               ),
             ],
           },
@@ -300,12 +301,12 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Tempo Traveller",
                 "/admin/urbancruise/vehicles/tempo-traveller",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Maharaja Tempo Traveller",
                 "/admin/urbancruise/vehicles/tempo-traveller/maharaja",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -314,11 +315,11 @@ const menuItems: MenuItem[] = [
             label: "Urbania",
             href: "/admin/urbancruise/vehicles/urbania",
             children: [
-              createVehicle(
-                "Urbania",
-                "/admin/urbancruise/vehicles/urbania",
-                { compare: true, prices: true, discover: true }
-              ),
+              createVehicle("Urbania", "/admin/urbancruise/vehicles/urbania", {
+                compare: true,
+                prices: true,
+                discover: true,
+              }),
             ],
           },
 
@@ -329,7 +330,7 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Mini Bus",
                 "/admin/urbancruise/vehicles/mini-bus",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -341,27 +342,27 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Luxury Bus",
                 "/admin/urbancruise/vehicles/luxury-buses",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Volvo Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/volvo-bus",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Bharat Benz Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/bharat-benz-bus",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Bus With Washroom",
                 "/admin/urbancruise/vehicles/luxury-buses/bus-with-washroom",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Sleeper | Semi Sleeper Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/sleeper-semi-sleeper-bus",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -378,10 +379,7 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-/* =========================================================
-   HELPERS
-========================================================= */
-
+//  HELPERS
 const isPathActive = (pathname: string | null, href: string): boolean => {
   if (!pathname) return false;
 
@@ -394,21 +392,18 @@ const isPathActive = (pathname: string | null, href: string): boolean => {
 
 const hasActiveDescendant = (
   item: MenuItem,
-  pathname: string | null
+  pathname: string | null,
 ): boolean => {
   if (!item.children?.length) return false;
 
   return item.children.some(
     (child) =>
       isPathActive(pathname, child.href) ||
-      hasActiveDescendant(child, pathname)
+      hasActiveDescendant(child, pathname),
   );
 };
 
-/* =========================================================
-   SIDEBAR
-========================================================= */
-
+//  SIDEBAR
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -420,24 +415,19 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setOpenDropdowns((prev) =>
       prev.includes(href)
         ? prev.filter((item) => item !== href)
-        : [...prev, href]
+        : [...prev, href],
     );
   };
 
   const openDropdown = (href: string) => {
-    setOpenDropdowns((prev) =>
-      prev.includes(href) ? prev : [...prev, href]
-    );
+    setOpenDropdowns((prev) => (prev.includes(href) ? prev : [...prev, href]));
   };
 
   const closeDropdown = (href: string) => {
     setOpenDropdowns((prev) => prev.filter((item) => item !== href));
   };
 
-  /* -------------------------------------------------------
-     Automatically open every parent of the active route.
-  ------------------------------------------------------- */
-
+  //  Automatically open every parent of the active route.
   useEffect(() => {
     const activeParents: string[] = [];
 
@@ -460,7 +450,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
     if (activeParents.length) {
       setOpenDropdowns((prev) =>
-        Array.from(new Set([...prev, ...activeParents]))
+        Array.from(new Set([...prev, ...activeParents])),
       );
     }
   }, [pathname]);
@@ -508,17 +498,11 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   const visibleItems = useMemo(
     () => menuItems.filter((item) => !item.perm || hasPermission(item.perm)),
-    [hasPermission]
+    [hasPermission],
   );
 
-  /* -------------------------------------------------------
-     Recursive node renderer
-  ------------------------------------------------------- */
-
-  const renderNode = (
-    node: MenuItem,
-    depth = 0
-  ): ReactNode => {
+  //  Recursive node renderer
+  const renderNode = (node: MenuItem, depth = 0): ReactNode => {
     const hasChildren = Boolean(node.children?.length);
     const isActive = isPathActive(pathname, node.href);
     const isDescendantActive = hasActiveDescendant(node, pathname);
@@ -535,9 +519,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <button
             type="button"
             aria-expanded={isOpen}
-            aria-current={
-              isActive || isDescendantActive ? "page" : undefined
-            }
+            aria-current={isActive || isDescendantActive ? "page" : undefined}
             onClick={() => toggleDropdown(node.href)}
             className={`
               w-full flex items-center gap-2 rounded-lg
@@ -579,13 +561,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <span
               className={`
                 font-medium truncate text-left
-                ${
-                  depth === 0
-                    ? "text-sm"
-                    : depth === 1
-                      ? "text-sm"
-                      : "text-xs"
-                }
+                ${depth === 0 ? "text-sm" : depth === 1 ? "text-sm" : "text-xs"}
               `}
             >
               {node.label}
@@ -618,9 +594,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   ${depth === 0 ? "space-y-1 mt-1" : "space-y-0.5"}
                 `}
               >
-                {node.children?.map((child) =>
-                  renderNode(child, depth + 1)
-                )}
+                {node.children?.map((child) => renderNode(child, depth + 1))}
               </div>
             </div>
           </div>
@@ -674,13 +648,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
         <span
           className={`
             font-medium truncate
-            ${
-              depth === 0
-                ? "text-sm"
-                : depth === 1
-                  ? "text-sm"
-                  : "text-xs"
-            }
+            ${depth === 0 ? "text-sm" : depth === 1 ? "text-sm" : "text-xs"}
           `}
         >
           {node.label}
@@ -698,14 +666,23 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
-            <span className="text-xl font-bold text-white">UC</span>
+          {/* Logo */}
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden bg-white">
+            <Image
+              src="/images/UCLogo.png"
+              alt="Urban Cruise Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
 
           <div className="min-w-0">
             <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">
               Urban Cruise
             </h1>
+
             <p className="text-xs text-gray-500 dark:text-gray-400">
               CMS Panel
             </p>
@@ -758,7 +735,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
             <span
               className={`text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 ${getRoleBadgeColor(
-                displayRole
+                displayRole,
               )}`}
             >
               {displayRole}

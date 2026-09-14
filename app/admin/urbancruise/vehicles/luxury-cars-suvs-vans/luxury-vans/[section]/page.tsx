@@ -8,3 +8,4 @@ export default async function LuxuryVansSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Luxury Vans" section={section} />;
 }
+

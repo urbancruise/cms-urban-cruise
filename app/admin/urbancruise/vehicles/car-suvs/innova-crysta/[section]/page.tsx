@@ -8,3 +8,4 @@ export default async function InnovaCrystaSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Innova Crysta" section={section} />;
 }
+

@@ -8,3 +8,4 @@ export default async function UrbaniaSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Urbania" section={section} />;
 }
+

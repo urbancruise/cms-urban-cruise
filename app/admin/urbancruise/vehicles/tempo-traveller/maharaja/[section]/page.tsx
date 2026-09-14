@@ -8,3 +8,4 @@ export default async function MaharajaSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Maharaja Tempo Traveller" section={section} />;
 }
+

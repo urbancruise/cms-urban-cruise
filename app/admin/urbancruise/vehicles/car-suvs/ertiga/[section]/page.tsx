@@ -8,3 +8,4 @@ export default async function ErtigaSectionPage({ params }: PageProps) {
   const { section } = await params;
   return <VehicleSectionPage vehicleName="Ertiga" section={section} />;
 }
+

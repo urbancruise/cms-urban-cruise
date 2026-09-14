@@ -194,3 +194,4 @@ export default function ContentCard({
 
   return <div className={baseClasses}>{inner}</div>;
 }
+
