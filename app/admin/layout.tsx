@@ -17,46 +17,48 @@ function AdminLayoutContent({
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, loading, router]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="h-screen flex items-center justify-center bg-uc-bg">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>
+          <div className="w-16 h-16 border-4 border-uc-teal border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-uc-text-muted">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-black">
-      <div className={`fixed inset-y-0 left-0 z-50 transform ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
+    <div className="h-screen w-screen overflow-hidden flex bg-uc-bg">
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 transform ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 lg:static lg:z-auto transition-transform duration-300 ease-in-out`}
+      >
         <Sidebar onClose={() => setIsSidebarOpen(false)} />
       </div>
 
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      <div className="flex-1 lg:ml-64 min-h-screen">
-        <Header 
+      {/* Main column */}
+      <div className="flex-1 flex flex-col h-screen min-w-0">
+        <Header
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           isSidebarOpen={isSidebarOpen}
         />
-        <main className="p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-uc-bg">
           {children}
         </main>
       </div>
@@ -75,4 +77,3 @@ export default function AdminLayout({
     </AuthProvider>
   );
 }
-

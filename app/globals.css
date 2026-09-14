@@ -1,46 +1,143 @@
 @import "tailwindcss";
 
+/* ============================================
+   URBAN CRUISE — WHITE THEME
+   Light-mode only. Clean, modern, brand-aligned.
+   ============================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand palette */
+  --uc-navy: #0B2545;
+  --uc-navy-light: #13315C;
+  --uc-navy-dark: #071A33;
+
+  --uc-teal: #0E7C7B;
+  --uc-teal-light: #14A3A1;
+  --uc-teal-dark: #095857;
+
+  --uc-gold: #E8B54D;
+  --uc-gold-light: #F4CB6F;
+  --uc-gold-dark: #C9962E;
+
+  --uc-sky: #4A90D9;
+  --uc-coral: #E76F51;
+
+  /* ── Surfaces (all white / near-white) ── */
+  --uc-bg: #FFFFFF;           /* page background — pure white */
+  --uc-surface: #FFFFFF;      /* cards, panels — pure white */
+  --uc-surface-alt: #F8FAFC;  /* subtle off-white for headers/hover */
+  --uc-border: #E5E9F0;       /* soft cool-grey border */
+  --uc-border-strong: #CBD5E1;
+
+  /* ── Text ── */
+  --uc-text: #0F172A;         /* near-black for headings */
+  --uc-text-muted: #64748B;   /* grey for secondary text */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-uc-navy: var(--uc-navy);
+  --color-uc-navy-light: var(--uc-navy-light);
+  --color-uc-navy-dark: var(--uc-navy-dark);
+  --color-uc-teal: var(--uc-teal);
+  --color-uc-teal-light: var(--uc-teal-light);
+  --color-uc-teal-dark: var(--uc-teal-dark);
+  --color-uc-gold: var(--uc-gold);
+  --color-uc-gold-light: var(--uc-gold-light);
+  --color-uc-gold-dark: var(--uc-gold-dark);
+  --color-uc-sky: var(--uc-sky);
+  --color-uc-coral: var(--uc-coral);
+  --color-uc-bg: var(--uc-bg);
+  --color-uc-surface: var(--uc-surface);
+  --color-uc-surface-alt: var(--uc-surface-alt);
+  --color-uc-border: var(--uc-border);
+  --color-uc-border-strong: var(--uc-border-strong);
+  --color-uc-text: var(--uc-text);
+  --color-uc-text-muted: var(--uc-text-muted);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Force light mode — ignore system dark preference */
+html {
+  color-scheme: light;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--uc-bg);
+  color: var(--uc-text);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar */
+/* ── Custom scrollbar ── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #F8FAFC;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #CBD5E1;
   border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #94A3B8;
 }
 
+/* ── Brand gradients (for avatars, hero bits) ── */
+.uc-gradient {
+  background: linear-gradient(135deg, var(--uc-navy) 0%, var(--uc-teal) 100%);
+}
+.uc-gradient-gold {
+  background: linear-gradient(135deg, var(--uc-gold) 0%, var(--uc-coral) 100%);
+}
+.uc-text-gradient {
+  background: linear-gradient(135deg, var(--uc-navy) 0%, var(--uc-teal) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Skeleton shimmer (light-mode friendly) ── */
+@keyframes uc-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.uc-skeleton {
+  background: linear-gradient(
+    90deg,
+    #F1F5F9 25%,
+    #E2E8F0 50%,
+    #F1F5F9 75%
+  );
+  background-size: 200% 100%;
+  animation: uc-shimmer 1.5s infinite;
+}
+
+/* ── Card elevation helper ── */
+.uc-card {
+  background: var(--uc-surface);
+  border: 1px solid var(--uc-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.uc-card:hover {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { logActivity } from '@/lib/activity';
 
+// Auth
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   if (!token) throw { status: 401, message: 'Not authenticated' };
@@ -22,6 +23,7 @@ async function requireAdmin(request: NextRequest) {
   return decoded;
 }
 
+// Helpers
 function parsePermissions(raw: any): string[] {
   try {
     if (Array.isArray(raw)) return raw;
@@ -32,7 +34,7 @@ function parsePermissions(raw: any): string[] {
   }
 }
 
-// PUT update role
+// PUT — update role
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,46 +42,88 @@ export async function PUT(
   try {
     const decoded = await requireAdmin(request);
     const { id } = await params;
-    const roleId = parseInt(id);
+    const roleId = parseInt(id, 10);
 
     if (isNaN(roleId)) {
       return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { name, description, permissions, is_active } = body;
+    // ── Parse body safely ──
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 }
+      );
+    }
 
-    const [existingRows] = await pool.query(
-      'SELECT is_system, slug, name, description, permissions, is_active FROM roles WHERE id = ?',
+    const { name, slug, description, permissions, is_active } = body;
+
+    // ── Load existing role ──
+    const [existingRows] = (await pool.query(
+      `SELECT id, name, slug, description, permissions, is_system, is_active
+       FROM roles WHERE id = ?`,
       [roleId]
-    );
+    )) as any;
+
     const existing = (existingRows as any[])[0];
     if (!existing) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    if (existing.slug === 'admin' && name) {
+    // ── Guard: don't rename the Admin role ──
+    if (existing.slug === 'admin' && name && name !== existing.name) {
       return NextResponse.json(
         { error: 'Cannot rename the Admin role' },
         { status: 400 }
       );
     }
 
+    // ── Guard: slug is immutable, but if it *is* changing, check uniqueness ──
+    if (slug && slug !== existing.slug) {
+      // Reject silently ignoring slug change (safer than 400)
+      // OR validate it — but for now we don't allow slug changes at all.
+      // The frontend disables the slug field when editing, so ignore any
+      // stray slug in the payload rather than erroring out.
+    }
+
+    // ── Guard: name uniqueness (only if name is changing) ──
+    if (name && name !== existing.name) {
+      const [nameCheck] = (await pool.query(
+        `SELECT id FROM roles WHERE name = ? AND id != ?`,
+        [name, roleId]
+      )) as any;
+      if ((nameCheck as any[]).length > 0) {
+        return NextResponse.json(
+          { error: 'A role with this name already exists' },
+          { status: 409 }
+        );
+      }
+    }
+
+    // ── Build update fields ──
     const fields: string[] = [];
     const values: any[] = [];
 
-    if (name) {
+    if (name !== undefined && name !== null && name !== '') {
       fields.push('name = ?');
       values.push(name);
     }
+
     if (description !== undefined) {
       fields.push('description = ?');
-      values.push(description);
+      values.push(description || null);
     }
+
+    // Always write permissions if provided (even empty array = clear all)
     if (permissions !== undefined) {
+      const permsArray = Array.isArray(permissions) ? permissions : [];
       fields.push('permissions = ?');
-      values.push(JSON.stringify(Array.isArray(permissions) ? permissions : []));
+      values.push(JSON.stringify(permsArray));
     }
+
     if (is_active !== undefined) {
       fields.push('is_active = ?');
       values.push(is_active ? 1 : 0);
@@ -93,43 +137,52 @@ export async function PUT(
     }
 
     values.push(roleId);
-    await pool.query(`UPDATE roles SET ${fields.join(', ')} WHERE id = ?`, values);
+    await pool.query(
+      `UPDATE roles SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
 
-    const [updatedRows] = await pool.query('SELECT * FROM roles WHERE id = ?', [
-      roleId,
-    ]);
+    // ── Fetch updated role ──
+    const [updatedRows] = (await pool.query(
+      `SELECT * FROM roles WHERE id = ?`,
+      [roleId]
+    )) as any;
     const updatedRole = (updatedRows as any[])[0];
 
-    // ✅ Log activity
-    await logActivity({
-      actor: {
-        userId: decoded.userId,
-        userName: decoded.username || `User #${decoded.userId}`,
-      },
-      action: 'update',
-      entityType: 'role',
-      entityId: roleId,
-      entityName: name || existing.name,
-      changes: {
-        before: {
-          name: existing.name,
-          description: existing.description,
-          permissions: parsePermissions(existing.permissions),
-          is_active: Boolean(existing.is_active),
+    // ── Log activity ──
+    try {
+      await logActivity({
+        actor: {
+          userId: decoded.userId,
+          userName: decoded.username || `User #${decoded.userId}`,
         },
-        after: {
-          name: name || existing.name,
-          description: description ?? existing.description,
-          permissions:
-            permissions !== undefined
-              ? permissions
-              : parsePermissions(existing.permissions),
-          is_active:
-            is_active !== undefined ? is_active : Boolean(existing.is_active),
+        action: 'update',
+        entityType: 'role',
+        entityId: roleId,
+        entityName: name || existing.name,
+        changes: {
+          before: {
+            name: existing.name,
+            description: existing.description,
+            permissions: parsePermissions(existing.permissions),
+            is_active: Boolean(existing.is_active),
+          },
+          after: {
+            name: name || existing.name,
+            description: description ?? existing.description,
+            permissions:
+              permissions !== undefined
+                ? permissions
+                : parsePermissions(existing.permissions),
+            is_active:
+              is_active !== undefined ? is_active : Boolean(existing.is_active),
+          },
         },
-      },
-      request,
-    });
+        request,
+      });
+    } catch (logErr) {
+      console.error('Log activity failed (non-fatal):', logErr);
+    }
 
     return NextResponse.json({
       success: true,
@@ -147,13 +200,13 @@ export async function PUT(
     }
     console.error('Update role error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (err?.message || 'unknown') },
       { status: 500 }
     );
   }
 }
 
-// DELETE role
+// DELETE — delete role
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -161,16 +214,16 @@ export async function DELETE(
   try {
     const decoded = await requireAdmin(request);
     const { id } = await params;
-    const roleId = parseInt(id);
+    const roleId = parseInt(id, 10);
 
     if (isNaN(roleId)) {
       return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 });
     }
 
-    const [rows] = await pool.query(
+    const [rows] = (await pool.query(
       'SELECT is_system, slug, name FROM roles WHERE id = ?',
       [roleId]
-    );
+    )) as any;
     const role = (rows as any[])[0];
     if (!role) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
@@ -183,10 +236,10 @@ export async function DELETE(
       );
     }
 
-    const [users] = await pool.query(
+    const [users] = (await pool.query(
       'SELECT COUNT(*) as count FROM user_roles WHERE role_id = ?',
       [roleId]
-    );
+    )) as any;
     const count = (users as any[])[0].count;
     if (count > 0) {
       return NextResponse.json(
@@ -199,19 +252,22 @@ export async function DELETE(
 
     await pool.query('DELETE FROM roles WHERE id = ?', [roleId]);
 
-    // ✅ Log activity
-    await logActivity({
-      actor: {
-        userId: decoded.userId,
-        userName: decoded.username || `User #${decoded.userId}`,
-      },
-      action: 'delete',
-      entityType: 'role',
-      entityId: roleId,
-      entityName: role.name,
-      changes: { deleted: true },
-      request,
-    });
+    try {
+      await logActivity({
+        actor: {
+          userId: decoded.userId,
+          userName: decoded.username || `User #${decoded.userId}`,
+        },
+        action: 'delete',
+        entityType: 'role',
+        entityId: roleId,
+        entityName: role.name,
+        changes: { deleted: true },
+        request,
+      });
+    } catch (logErr) {
+      console.error('Log activity failed (non-fatal):', logErr);
+    }
 
     return NextResponse.json({
       success: true,
@@ -223,9 +279,8 @@ export async function DELETE(
     }
     console.error('Delete role error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (err?.message || 'unknown') },
       { status: 500 }
     );
   }
 }
-

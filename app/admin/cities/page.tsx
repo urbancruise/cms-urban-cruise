@@ -139,24 +139,24 @@ export default function CitiesPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-slate-900">
             Cities Management
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-slate-500 mt-1">
             Manage cruise destination cities ({cities.length} total)
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={fetchCities}
-            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             title="Refresh"
           >
-            <MdOutlineRefresh className="w-5 h-5" />
+            <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-sm"
           >
             <MdOutlineAdd className="w-4 h-4" /> Add City
           </button>
@@ -164,80 +164,83 @@ export default function CitiesPage() {
       </div>
 
       <div className="mb-6 relative">
-        <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
           placeholder="Search cities by name, state, or code..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
         />
       </div>
 
       {loading ? (
         <div className="flex justify-center h-64 items-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-gray-500 dark:text-gray-400">
+            <div className="col-span-full py-12 text-center text-slate-400">
               No cities found. Click "Add City" to create one.
             </div>
           ) : (
             filtered.map((city) => (
               <div
                 key={city.id}
-                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-                      <MdOutlineLocationOn className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="w-10 h-10 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-center">
+                      <MdOutlineLocationOn className="w-5 h-5 text-teal-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-slate-900">
                         {city.name}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-slate-500">
                         {city.state || '—'}, {city.country}
                       </p>
                     </div>
                   </div>
                   <span
-                    className={`text-xs px-2 py-1 rounded-full ${
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${
                       city.is_active
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
                   >
                     {city.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
                 {city.code && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Code: <span className="font-mono font-medium">{city.code}</span>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Code:{' '}
+                    <span className="font-mono font-medium text-slate-700">
+                      {city.code}
+                    </span>
                   </p>
                 )}
                 {city.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                  <p className="text-sm text-slate-600 mb-3 line-clamp-2">
                     {city.description}
                   </p>
                 )}
-                <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     onClick={() => openEdit(city)}
-                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-teal-50 rounded-lg transition-colors"
                     title="Edit"
                   >
-                    <MdOutlineEdit className="w-4 h-4 text-gray-500 hover:text-blue-600" />
+                    <MdOutlineEdit className="w-4 h-4 text-slate-400 hover:text-teal-600" />
                   </button>
                   <button
                     onClick={() => handleDelete(city)}
-                    className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete"
                   >
-                    <MdOutlineDelete className="w-4 h-4 text-gray-500 hover:text-red-600" />
+                    <MdOutlineDelete className="w-4 h-4 text-slate-400 hover:text-red-600" />
                   </button>
                 </div>
               </div>
@@ -247,30 +250,29 @@ export default function CitiesPage() {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+              <h2 className="text-xl font-bold text-slate-900">
                 {editing ? 'Edit City' : 'Add New City'}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <MdOutlineClose className="w-5 h-5 text-gray-500" />
+                <MdOutlineClose className="w-5 h-5 text-slate-500" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {formError && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
                   {formError}
                 </div>
               )}
 
-              {/* ============ Row 1: City Name + Code ============ */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     City Name *
                   </label>
                   <input
@@ -279,13 +281,13 @@ export default function CitiesPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="e.g., Mumbai"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Airport / Port Code
                   </label>
                   <input
@@ -297,17 +299,16 @@ export default function CitiesPage() {
                         code: e.target.value.toUpperCase(),
                       })
                     }
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="e.g., BOM"
                     maxLength={10}
                   />
                 </div>
               </div>
 
-              {/* ============ Row 2: State + Country ============ */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     State
                   </label>
                   <input
@@ -316,12 +317,12 @@ export default function CitiesPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, state: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                     placeholder="e.g., Maharashtra"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Country
                   </label>
                   <input
@@ -330,38 +331,32 @@ export default function CitiesPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, country: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               </div>
 
-              {/* ============ Row 3: Status ============ */}
-              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.is_active ? 'active' : 'inactive'}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        is_active: e.target.value === 'active',
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                {/* Right column intentionally left empty for balance */}
-                <div className="hidden sm:block" />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={formData.is_active ? 'active' : 'inactive'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      is_active: e.target.value === 'active',
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
 
-              {/* ============ Row 4: Description (full width) ============ */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Description
                 </label>
                 <textarea
@@ -369,24 +364,24 @@ export default function CitiesPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   rows={2}
                   placeholder="Optional notes about this city"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
+                  className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium text-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 shadow-sm"
                 >
                   <MdOutlineSave className="w-4 h-4" />
                   {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
@@ -399,4 +394,3 @@ export default function CitiesPage() {
     </div>
   );
 }
-

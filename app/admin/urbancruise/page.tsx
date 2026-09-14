@@ -1,9 +1,6 @@
 'use client';
 
-import {
-  MdOutlineHome,
-  MdOutlineDirectionsCar,
-} from 'react-icons/md';
+import { MdOutlineHome, MdOutlineDirectionsCar } from 'react-icons/md';
 import ContentCard from './_components/ContentCard';
 
 export default function UrbanCruisePage() {
@@ -30,10 +27,10 @@ export default function UrbanCruisePage() {
   return (
     <div className="p-6 md:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-3xl font-bold text-slate-900">
           Urban Cruise Website
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-slate-500 mt-1">
           Manage your website content, pages, and sections
         </p>
       </div>
@@ -55,4 +52,3 @@ export default function UrbanCruisePage() {
     </div>
   );
 }
-

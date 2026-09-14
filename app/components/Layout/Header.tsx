@@ -5,7 +5,6 @@ import {
   MdOutlineNotifications,
   MdOutlineMenu,
   MdOutlineClose,
-  MdOutlinePerson,
   MdOutlineLogout,
   MdOutlineDashboard,
   MdOutlineAccountCircle,
@@ -149,27 +148,27 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+    <header className="flex-shrink-0 bg-white border-b border-slate-200 z-30">
       <div className="px-6 h-16 flex items-center justify-between">
         {/* Left */}
         <div className="flex items-center gap-4">
           <button
             onClick={toggleSidebar}
-            className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
             aria-label="Toggle sidebar"
           >
             {isSidebarOpen ? (
-              <MdOutlineClose className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <MdOutlineClose className="w-5 h-5 text-slate-600" />
             ) : (
-              <MdOutlineMenu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <MdOutlineMenu className="w-5 h-5 text-slate-600" />
             )}
           </button>
 
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-slate-900">
               {getPageTitle()}
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+            <p className="text-xs text-slate-500 hidden sm:block">
               Welcome back, {displayName}
             </p>
           </div>
@@ -181,9 +180,9 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
           <div className="relative">
             <button
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors relative"
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors relative"
             >
-              <MdOutlineNotifications className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <MdOutlineNotifications className="w-5 h-5 text-slate-600" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {unreadCount > 99 ? "99+" : unreadCount}
@@ -197,14 +196,14 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   className="fixed inset-0 z-40"
                   onClick={() => setIsNotificationsOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
-                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-50">
+                  <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-slate-900">
                         Notifications
                       </h3>
                       {unreadCount > 0 && (
-                        <span className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
+                        <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full font-medium">
                           {unreadCount} new
                         </span>
                       )}
@@ -213,7 +212,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllRead}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                          className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
                           title="Mark all read"
                         >
                           <MdOutlineDoneAll className="w-3.5 h-3.5" /> All read
@@ -234,12 +233,12 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   <div className="max-h-96 overflow-y-auto">
                     {notifLoading && notifications.length === 0 ? (
                       <div className="flex justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
                       </div>
                     ) : notifications.length === 0 ? (
                       <div className="py-10 text-center">
-                        <MdOutlineNotificationsActive className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        <MdOutlineNotificationsActive className="w-10 h-10 mx-auto text-slate-300" />
+                        <p className="text-sm text-slate-500 mt-2">
                           No notifications yet
                         </p>
                       </div>
@@ -247,10 +246,8 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                       notifications.map((n) => (
                         <div
                           key={n.id}
-                          className={`group relative flex items-start gap-3 p-4 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors ${
-                            !n.is_read
-                              ? "bg-blue-50/50 dark:bg-blue-900/10"
-                              : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className={`group relative flex items-start gap-3 p-4 border-b border-slate-100 last:border-0 transition-colors ${
+                            !n.is_read ? "bg-teal-50/50" : "hover:bg-slate-50"
                           }`}
                         >
                           <button
@@ -265,40 +262,38 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                           >
                             <div
                               className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                                !n.is_read
-                                  ? "bg-blue-500"
-                                  : "bg-gray-300 dark:bg-gray-600"
+                                !n.is_read ? "bg-teal-500" : "bg-slate-300"
                               }`}
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              <p className="text-sm font-medium text-slate-900">
                                 {n.title}
                               </p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                              <p className="text-xs text-slate-600 mt-0.5">
                                 {n.message}
                               </p>
-                              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                              <p className="text-[11px] text-slate-400 mt-1">
                                 {timeAgo(n.created_at)}
                               </p>
                             </div>
                           </button>
                           <button
                             onClick={() => deleteOne(n.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-all flex-shrink-0"
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded transition-all flex-shrink-0"
                             title="Delete"
                           >
-                            <MdOutlineClose className="w-3.5 h-3.5 text-gray-500" />
+                            <MdOutlineClose className="w-3.5 h-3.5 text-slate-500" />
                           </button>
                         </div>
                       ))
                     )}
                   </div>
 
-                  <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-center">
+                  <div className="p-3 border-t border-slate-200 text-center bg-slate-50">
                     <Link
                       href="/admin/activity"
                       onClick={() => setIsNotificationsOpen(false)}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-sm text-teal-600 hover:text-teal-700 font-medium"
                     >
                       View all activity history →
                     </Link>
@@ -312,16 +307,16 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-2 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
                 {displayInitials}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <p className="text-sm font-medium text-slate-900">
                   {displayName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                <p className="text-xs text-slate-500 capitalize">
                   {displayRole}
                 </p>
               </div>
@@ -333,20 +328,20 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   className="fixed inset-0 z-40"
                   onClick={() => setIsProfileOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-50">
+                  <div className="p-4 border-b border-slate-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
                         {displayInitials}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">
+                        <p className="font-medium text-slate-900 truncate">
                           {displayName}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-xs text-slate-500 truncate">
                           {displayEmail}
                         </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 capitalize">
+                        <p className="text-xs text-teal-600 capitalize font-medium">
                           {displayRole}
                         </p>
                       </div>
@@ -355,34 +350,32 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   <div className="py-2">
                     <Link
                       href="/admin/profile"
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 transition-colors"
                       onClick={() => setIsProfileOpen(false)}
                     >
-                      <MdOutlineAccountCircle className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                      <MdOutlineAccountCircle className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">
                         My Profile
                       </span>
                     </Link>
                     <Link
                       href="/admin"
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 transition-colors"
                       onClick={() => setIsProfileOpen(false)}
                     >
-                      <MdOutlineDashboard className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                      <MdOutlineDashboard className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">
                         Dashboard
                       </span>
                     </Link>
                   </div>
-                  <div className="border-t border-gray-200 dark:border-gray-700 py-2">
+                  <div className="border-t border-slate-200 py-2">
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full"
+                      className="flex items-center gap-3 px-4 py-2 hover:bg-red-50 transition-colors w-full"
                     >
                       <MdOutlineLogout className="w-4 h-4 text-red-500" />
-                      <span className="text-sm text-red-600 dark:text-red-400">
-                        Logout
-                      </span>
+                      <span className="text-sm text-red-600">Logout</span>
                     </button>
                   </div>
                 </div>
@@ -394,4 +387,3 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     </header>
   );
 }
-

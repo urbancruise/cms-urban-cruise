@@ -39,18 +39,14 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-//  WEBSITE HOME SECTIONS
+// ============================================================
+// WEBSITE HOME SECTIONS
+// ============================================================
 const homeSections: MenuItem[] = [
   { label: "Hero", href: "/admin/urbancruise/home/hero" },
-  {
-    label: "Get a Quick Call",
-    href: "/admin/urbancruise/home/get-a-quick-call",
-  },
+  { label: "Get a Quick Call", href: "/admin/urbancruise/home/get-a-quick-call" },
   { label: "About", href: "/admin/urbancruise/home/about" },
-  {
-    label: "How It Works",
-    href: "/admin/urbancruise/home/how-it-works",
-  },
+  { label: "How It Works", href: "/admin/urbancruise/home/how-it-works" },
   {
     label: "We Offer Best Services",
     href: "/admin/urbancruise/home/we-offer-best-services",
@@ -67,10 +63,7 @@ const homeSections: MenuItem[] = [
     label: "Why Choose Urban Cruise",
     href: "/admin/urbancruise/home/why-choose-urban-cruise",
   },
-  {
-    label: "Testimonials",
-    href: "/admin/urbancruise/home/testimonials",
-  },
+  { label: "Testimonials", href: "/admin/urbancruise/home/testimonials" },
   { label: "FAQs", href: "/admin/urbancruise/home/faqs" },
   {
     label: "Service Locations",
@@ -86,31 +79,21 @@ const homeSections: MenuItem[] = [
   },
 ];
 
-/* =========================================================
-   VEHICLE PAGE BUILDER
-
-   Keeping these routes in one place prevents the old problem
-   where every vehicle accidentally pointed to /ertiga/*.
-========================================================= */
-
+// ============================================================
+// VEHICLE PAGE BUILDER
+// ============================================================
 const vehicleSections = (
   basePath: string,
   options: {
     compare?: boolean;
     prices?: boolean;
     discover?: boolean;
-  } = {},
+  } = {}
 ): MenuItem[] => [
   { label: "Hero", href: `${basePath}/hero` },
-  {
-    label: "Get a Quick Call",
-    href: `${basePath}/get-a-quick-call`,
-  },
+  { label: "Get a Quick Call", href: `${basePath}/get-a-quick-call` },
   { label: "About", href: `${basePath}/about` },
-  {
-    label: "How It Works",
-    href: `${basePath}/how-it-works`,
-  },
+  { label: "How It Works", href: `${basePath}/how-it-works` },
   {
     label: "We Offer Best Services",
     href: `${basePath}/we-offer-best-services`,
@@ -128,12 +111,7 @@ const vehicleSections = (
       ]
     : []),
   ...(options.prices
-    ? [
-        {
-          label: "Prices & Charges",
-          href: `${basePath}/prices-charges`,
-        },
-      ]
+    ? [{ label: "Prices & Charges", href: `${basePath}/prices-charges` }]
     : []),
   {
     label: "Looking for other Vehicle",
@@ -157,18 +135,12 @@ const vehicleSections = (
       ]
     : []),
   { label: "FAQs", href: `${basePath}/faqs` },
-  {
-    label: "Service Locations",
-    href: `${basePath}/service-locations`,
-  },
+  { label: "Service Locations", href: `${basePath}/service-locations` },
   {
     label: "Our Trusted Partners",
     href: `${basePath}/our-trusted-partners`,
   },
-  {
-    label: "Download Our App",
-    href: `${basePath}/download-our-app`,
-  },
+  { label: "Download Our App", href: `${basePath}/download-our-app` },
 ];
 
 const createVehicle = (
@@ -178,14 +150,16 @@ const createVehicle = (
     compare?: boolean;
     prices?: boolean;
     discover?: boolean;
-  } = {},
+  } = {}
 ): MenuItem => ({
   label,
   href: basePath,
   children: vehicleSections(basePath, options),
 });
 
-//  MENU
+// ============================================================
+// MENU
+// ============================================================
 const menuItems: MenuItem[] = [
   {
     icon: MdOutlineExplore,
@@ -223,11 +197,6 @@ const menuItems: MenuItem[] = [
     href: "/admin/cities",
     perm: "cities.view",
   },
-
-  /* -------------------------------------------------------
-     URBAN CRUISE WEBSITE
-  ------------------------------------------------------- */
-
   {
     icon: MdOutlinePublic,
     label: "Urban Cruise Website",
@@ -240,11 +209,6 @@ const menuItems: MenuItem[] = [
         href: "/admin/urbancruise/home",
         children: homeSections,
       },
-
-      /* ---------------------------------------------------
-         OUR VEHICLES
-      --------------------------------------------------- */
-
       {
         icon: MdOutlineDirectionsCar,
         label: "Our Vehicles",
@@ -257,21 +221,20 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Ertiga",
                 "/admin/urbancruise/vehicles/car-suvs/ertiga",
-                { compare: true, discover: true },
+                { compare: true, discover: true }
               ),
               createVehicle(
                 "Innova Crysta",
                 "/admin/urbancruise/vehicles/car-suvs/innova-crysta",
-                { compare: true, discover: true },
+                { compare: true, discover: true }
               ),
               createVehicle(
                 "Hycross",
                 "/admin/urbancruise/vehicles/car-suvs/hycross",
-                { compare: true, discover: true },
+                { compare: true, discover: true }
               ),
             ],
           },
-
           {
             label: "Luxury Cars, SUVs, Vans",
             href: "/admin/urbancruise/vehicles/luxury-cars-suvs-vans",
@@ -279,21 +242,20 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Luxury Cars & SUVs",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/luxury-cars-suvs",
-                { compare: true, discover: true },
+                { compare: true, discover: true }
               ),
               createVehicle(
                 "Mercedes Sprinter",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/mercedes-sprinter",
-                { compare: true, discover: true },
+                { compare: true, discover: true }
               ),
               createVehicle(
                 "Luxury Vans",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/luxury-vans",
-                { prices: true, discover: true },
+                { prices: true, discover: true }
               ),
             ],
           },
-
           {
             label: "Tempo Traveller",
             href: "/admin/urbancruise/vehicles/tempo-traveller",
@@ -301,28 +263,26 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Tempo Traveller",
                 "/admin/urbancruise/vehicles/tempo-traveller",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
               createVehicle(
                 "Maharaja Tempo Traveller",
                 "/admin/urbancruise/vehicles/tempo-traveller/maharaja",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
             ],
           },
-
           {
             label: "Urbania",
             href: "/admin/urbancruise/vehicles/urbania",
             children: [
-              createVehicle("Urbania", "/admin/urbancruise/vehicles/urbania", {
-                compare: true,
-                prices: true,
-                discover: true,
-              }),
+              createVehicle(
+                "Urbania",
+                "/admin/urbancruise/vehicles/urbania",
+                { compare: true, prices: true, discover: true }
+              ),
             ],
           },
-
           {
             label: "Mini Bus",
             href: "/admin/urbancruise/vehicles/mini-bus",
@@ -330,11 +290,10 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Mini Bus",
                 "/admin/urbancruise/vehicles/mini-bus",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
             ],
           },
-
           {
             label: "Luxury Buses",
             href: "/admin/urbancruise/vehicles/luxury-buses",
@@ -342,27 +301,27 @@ const menuItems: MenuItem[] = [
               createVehicle(
                 "Luxury Bus",
                 "/admin/urbancruise/vehicles/luxury-buses",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
               createVehicle(
                 "Volvo Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/volvo-bus",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
               createVehicle(
                 "Bharat Benz Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/bharat-benz-bus",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
               createVehicle(
                 "Bus With Washroom",
                 "/admin/urbancruise/vehicles/luxury-buses/bus-with-washroom",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
               createVehicle(
                 "Sleeper | Semi Sleeper Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/sleeper-semi-sleeper-bus",
-                { compare: true, prices: true, discover: true },
+                { compare: true, prices: true, discover: true }
               ),
             ],
           },
@@ -370,7 +329,6 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-
   {
     icon: MdOutlinePerson,
     label: "Profile",
@@ -379,31 +337,30 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-//  HELPERS
+// ============================================================
+// HELPERS
+// ============================================================
 const isPathActive = (pathname: string | null, href: string): boolean => {
   if (!pathname) return false;
-
-  // /admin is an exact route. Without this exception it would
-  // incorrectly become active on every /admin/* page.
   if (href === "/admin") return pathname === "/admin";
-
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
 const hasActiveDescendant = (
   item: MenuItem,
-  pathname: string | null,
+  pathname: string | null
 ): boolean => {
   if (!item.children?.length) return false;
-
   return item.children.some(
     (child) =>
       isPathActive(pathname, child.href) ||
-      hasActiveDescendant(child, pathname),
+      hasActiveDescendant(child, pathname)
   );
 };
 
-//  SIDEBAR
+// ============================================================
+// SIDEBAR
+// ============================================================
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -415,7 +372,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setOpenDropdowns((prev) =>
       prev.includes(href)
         ? prev.filter((item) => item !== href)
-        : [...prev, href],
+        : [...prev, href]
     );
   };
 
@@ -427,21 +384,19 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setOpenDropdowns((prev) => prev.filter((item) => item !== href));
   };
 
-  //  Automatically open every parent of the active route.
+  // Auto-open parents of active route
   useEffect(() => {
     const activeParents: string[] = [];
 
     const walk = (nodes: MenuItem[]) => {
       nodes.forEach((node) => {
         if (!node.children?.length) return;
-
         if (
           isPathActive(pathname, node.href) ||
           hasActiveDescendant(node, pathname)
         ) {
           activeParents.push(node.href);
         }
-
         walk(node.children);
       });
     };
@@ -450,35 +405,29 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
     if (activeParents.length) {
       setOpenDropdowns((prev) =>
-        Array.from(new Set([...prev, ...activeParents])),
+        Array.from(new Set([...prev, ...activeParents]))
       );
     }
   }, [pathname]);
 
   const getInitials = (name: string): string => {
     const cleanName = name.trim();
-
     if (!cleanName) return "?";
-
     const parts = cleanName.split(/\s+/);
-
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
-
     return cleanName.substring(0, 2).toUpperCase();
   };
 
   const getRoleBadgeColor = (role: string): string => {
     switch (role?.toLowerCase()) {
       case "admin":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-
+        return "bg-red-50 text-red-700 border border-red-200";
       case "manager":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
-
+        return "bg-amber-50 text-amber-700 border border-amber-200";
       default:
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+        return "bg-teal-50 text-teal-700 border border-teal-200";
     }
   };
 
@@ -498,15 +447,23 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   const visibleItems = useMemo(
     () => menuItems.filter((item) => !item.perm || hasPermission(item.perm)),
-    [hasPermission],
+    [hasPermission]
   );
 
-  //  Recursive node renderer
+  // ============================================================
+  // Recursive node renderer
+  // ============================================================
   const renderNode = (node: MenuItem, depth = 0): ReactNode => {
     const hasChildren = Boolean(node.children?.length);
     const isActive = isPathActive(pathname, node.href);
     const isDescendantActive = hasActiveDescendant(node, pathname);
     const isOpen = openDropdowns.includes(node.href);
+
+    const activeStyle = "bg-teal-50 text-teal-700";
+    const inactiveStyle =
+      "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+    const activeIcon = "text-teal-600";
+    const inactiveIcon = "text-slate-400 group-hover:text-slate-600";
 
     if (hasChildren) {
       return (
@@ -524,12 +481,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
             className={`
               w-full flex items-center gap-2 rounded-lg
               transition-all duration-200 group
-              ${depth === 0 ? "px-4 py-3" : "px-3 py-2"}
-              ${
-                isActive || isDescendantActive
-                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-              }
+              ${depth === 0 ? "px-3 py-2.5" : "px-3 py-2"}
+              ${isActive || isDescendantActive ? activeStyle : inactiveStyle}
             `}
           >
             {node.icon && (
@@ -538,8 +491,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   ${depth === 0 ? "w-5 h-5" : "w-4 h-4"}
                   ${
                     isActive || isDescendantActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                      ? activeIcon
+                      : inactiveIcon
                   }
                 `}
               />
@@ -551,8 +504,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   w-1.5 h-1.5 rounded-full flex-shrink-0
                   ${
                     isActive || isDescendantActive
-                      ? "bg-blue-600 dark:bg-blue-400"
-                      : "bg-current opacity-40"
+                      ? "bg-teal-600"
+                      : "bg-slate-300"
                   }
                 `}
               />
@@ -574,8 +527,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 ${isOpen ? "rotate-180" : ""}
                 ${
                   isActive || isDescendantActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-400"
+                    ? "text-teal-600"
+                    : "text-slate-400"
                 }
               `}
             />
@@ -584,13 +537,17 @@ export default function Sidebar({ onClose }: SidebarProps) {
           <div
             className={`
               grid transition-[grid-template-rows,opacity] duration-300 ease-in-out
-              ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}
+              ${
+                isOpen
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0"
+              }
             `}
           >
             <div className="overflow-hidden">
               <div
                 className={`
-                  ml-3 pl-3 border-l-2 border-gray-200 dark:border-gray-700
+                  ml-3 pl-3 border-l-2 border-slate-100
                   ${depth === 0 ? "space-y-1 mt-1" : "space-y-0.5"}
                 `}
               >
@@ -611,23 +568,15 @@ export default function Sidebar({ onClose }: SidebarProps) {
         className={`
           flex items-center gap-2 rounded-lg
           transition-all duration-200 group
-          ${depth === 0 ? "px-4 py-3" : "px-3 py-1.5"}
-          ${
-            isActive
-              ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-              : "text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-          }
+          ${depth === 0 ? "px-3 py-2.5" : "px-3 py-1.5"}
+          ${isActive ? activeStyle : inactiveStyle}
         `}
       >
         {node.icon ? (
           <node.icon
             className={`
               ${depth === 0 ? "w-5 h-5" : "w-4 h-4"}
-              ${
-                isActive
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-              }
+              ${isActive ? activeIcon : inactiveIcon}
             `}
           />
         ) : (
@@ -635,11 +584,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <span
               className={`
                 w-1.5 h-1.5 rounded-full flex-shrink-0
-                ${
-                  isActive
-                    ? "bg-blue-600 dark:bg-blue-400"
-                    : "bg-current opacity-40"
-                }
+                ${isActive ? "bg-teal-600" : "bg-slate-300"}
               `}
             />
           )
@@ -655,19 +600,18 @@ export default function Sidebar({ onClose }: SidebarProps) {
         </span>
 
         {isActive && depth === 0 && (
-          <div className="ml-auto w-1.5 h-8 bg-blue-600 rounded-full" />
+          <div className="ml-auto w-1.5 h-6 bg-teal-600 rounded-full" />
         )}
       </Link>
     );
   };
 
   return (
-    <aside className="h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+    <aside className="h-screen w-64 bg-white border-r border-slate-200 flex flex-col">
+      {/* Header / Logo */}
+      <div className="p-5 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          {/* Logo */}
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden bg-white">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 overflow-hidden bg-white border border-slate-200">
             <Image
               src="/images/UCLogo.png"
               alt="Urban Cruise Logo"
@@ -679,13 +623,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+            <h1 className="text-base font-bold text-slate-900 truncate">
               Urban Cruise
             </h1>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              CMS Panel
-            </p>
+            <p className="text-xs text-slate-500">CMS Panel</p>
           </div>
         </div>
 
@@ -694,20 +635,20 @@ export default function Sidebar({ onClose }: SidebarProps) {
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            className="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="lg:hidden p-1 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            <MdOutlineClose className="w-5 h-5 text-gray-500" />
+            <MdOutlineClose className="w-5 h-5 text-slate-500" />
           </button>
         )}
       </div>
 
       {/* Navigation */}
       <nav
-        className="flex-1 p-4 space-y-1 overflow-y-auto"
+        className="flex-1 p-3 space-y-0.5 overflow-y-auto"
         aria-label="Admin navigation"
       >
         {visibleItems.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-4">
+          <p className="text-xs text-slate-400 text-center py-4">
             No menu access. Contact admin.
           </p>
         ) : (
@@ -716,26 +657,22 @@ export default function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* User / Logout */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
-          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-            <span className="text-white font-semibold text-sm">
+      <div className="p-3 border-t border-slate-200 flex-shrink-0">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors group">
+          <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+            <span className="text-white font-semibold text-xs">
               {displayInitials}
             </span>
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            <p className="text-sm font-medium text-slate-900 truncate">
               {displayName}
             </p>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {displayEmail}
-            </p>
-
+            <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 ${getRoleBadgeColor(
-                displayRole,
+              className={`text-[10px] px-1.5 py-0.5 rounded-full inline-block mt-0.5 font-medium ${getRoleBadgeColor(
+                displayRole
               )}`}
             >
               {displayRole}
@@ -747,13 +684,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
             onClick={handleLogout}
             title="Logout"
             aria-label="Logout"
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
           >
-            <MdOutlineLogout className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+            <MdOutlineLogout className="w-4 h-4 text-slate-400 group-hover:text-red-600 transition-colors" />
           </button>
         </div>
       </div>
     </aside>
   );
 }
-

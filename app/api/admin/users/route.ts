@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { logActivity } from '@/lib/activity';
 
+// ============================================
+// Auth helper
+// ============================================
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   if (!token) throw { status: 401, message: 'Not authenticated' };
@@ -24,40 +27,86 @@ async function requireAdmin(request: NextRequest) {
 }
 
 // ============================================
-// GET - all users
+// GET - all users (paginated + filtered)
 // ============================================
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
 
-    const [rows] = await pool.query(
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(Number(searchParams.get('limit')) || 10, 100);
+    const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
+    const search = searchParams.get('search')?.trim() || '';
+    const roleSlug = searchParams.get('role') || '';
+    const status = searchParams.get('status') || '';
+
+    const where: string[] = ['1=1'];
+    const params: any[] = [];
+
+    if (search) {
+      where.push(
+        '(u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ?)'
+      );
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+
+    if (status === 'Active') where.push('u.is_active = 1');
+    if (status === 'Inactive') where.push('u.is_active = 0');
+
+    if (roleSlug) {
+      where.push(
+        `EXISTS (
+           SELECT 1 FROM user_roles ur
+           JOIN roles r ON r.id = ur.role_id
+           WHERE ur.user_id = u.id AND r.slug = ?
+         )`
+      );
+      params.push(roleSlug);
+    }
+
+    const whereClause = where.join(' AND ');
+
+    // Total count for pagination
+    const [countRows] = (await pool.query(
+      `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
+      params
+    )) as any;
+    const total = Number((countRows as any)[0]?.total) || 0;
+
+    // Page of users
+    const [rows] = (await pool.query(
       `SELECT u.id, u.username, u.email, u.full_name,
               u.role, u.role_id,
               u.is_active, u.created_at, u.last_login
        FROM users u
-       ORDER BY u.created_at DESC`
-    );
+       WHERE ${whereClause}
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    )) as any;
 
     const users = rows as any[];
 
+    // Hydrate roles + cities for this page only
     if (users.length > 0) {
       const userIds = users.map((u) => u.id);
 
-      const [roleRows] = await pool.query(
+      const [roleRows] = (await pool.query(
         `SELECT ur.user_id, r.id, r.name, r.slug
          FROM user_roles ur
          JOIN roles r ON r.id = ur.role_id
          WHERE ur.user_id IN (?)`,
         [userIds]
-      );
+      )) as any;
 
-      const [cityRows] = await pool.query(
+      const [cityRows] = (await pool.query(
         `SELECT uc.user_id, c.id, c.name, c.state, c.code
          FROM user_cities uc
          JOIN cities c ON c.id = uc.city_id
          WHERE uc.user_id IN (?)`,
         [userIds]
-      );
+      )) as any;
 
       const roleMap: Record<number, any[]> = {};
       (roleRows as any[]).forEach((row) => {
@@ -93,7 +142,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ users }, { status: 200 });
+    return NextResponse.json({ users, total }, { status: 200 });
   } catch (err: any) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -262,7 +311,7 @@ export async function POST(request: NextRequest) {
       created.cities = createdCities;
       created.city_ids = (createdCities as any[]).map((c) => c.id);
 
-      // ✅ Log activity + notify
+      // Log activity + notify
       await logActivity({
         actor: {
           userId: decoded.userId,
@@ -304,4 +353,3 @@ export async function POST(request: NextRequest) {
     connection.release();
   }
 }
-

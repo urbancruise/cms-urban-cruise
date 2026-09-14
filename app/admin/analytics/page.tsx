@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  MdOutlineTrendingUp,
   MdOutlinePeople,
   MdOutlineSecurity,
   MdOutlineLocationCity,
@@ -63,7 +62,7 @@ function BarChart({
 
   if (!hasData) {
     return (
-      <p className="text-sm text-gray-500 text-center py-16">{emptyText}</p>
+      <p className="text-sm text-slate-400 text-center py-16">{emptyText}</p>
     );
   }
 
@@ -78,9 +77,7 @@ function BarChart({
               title={`${m.label}: ${m.count}`}
             />
           </div>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-2">
-            {m.label}
-          </span>
+          <span className="text-[10px] text-slate-400 mt-2">{m.label}</span>
         </div>
       ))}
     </div>
@@ -117,7 +114,7 @@ export default function AnalyticsPage() {
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -125,7 +122,7 @@ export default function AnalyticsPage() {
   if (!data) {
     return (
       <div className="p-8">
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
           {error || "No data available"}
         </div>
       </div>
@@ -133,7 +130,6 @@ export default function AnalyticsPage() {
   }
 
   const totalUsers = data.kpis.totalUsers || 1;
-  const totalCities = data.kpis.totalCities || 1;
 
   const metrics = [
     {
@@ -170,24 +166,22 @@ export default function AnalyticsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Analytics
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <h1 className="text-3xl font-bold text-slate-900">Analytics</h1>
+          <p className="text-slate-500 mt-1">
             Track users, roles and cities activity
           </p>
         </div>
         <button
           onClick={fetchData}
-          className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           title="Refresh"
         >
-          <MdOutlineRefresh className="w-5 h-5" />
+          <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
         </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+        <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           {error}
         </div>
       )}
@@ -197,12 +191,10 @@ export default function AnalyticsPage() {
         {metrics.map((metric) => (
           <div
             key={metric.label}
-            className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800"
+            className="bg-white rounded-xl p-6 shadow-sm border border-slate-200"
           >
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {metric.label}
-              </p>
+              <p className="text-sm text-slate-500">{metric.label}</p>
               <div
                 className={`flex items-center gap-1 text-sm font-medium ${
                   metric.trend === "up" ? "text-green-600" : "text-red-600"
@@ -216,68 +208,58 @@ export default function AnalyticsPage() {
                 )}
               </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {metric.value}
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              {metric.period}
-            </p>
+            <p className="text-2xl font-bold text-slate-900">{metric.value}</p>
+            <p className="text-xs text-slate-400 mt-1">{metric.period}</p>
           </div>
         ))}
       </div>
 
-      {/* Three monthly charts */}
+      {/* Monthly charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
-            <MdOutlinePeople className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <MdOutlinePeople className="w-5 h-5 text-teal-600" />
+            <h2 className="text-lg font-semibold text-slate-900">
               User Signups
             </h2>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Last 12 months
-          </p>
+          <p className="text-xs text-slate-500 mb-4">Last 12 months</p>
           <BarChart
             data={data.monthlyUsers}
-            colorFrom="from-blue-400"
-            colorTo="to-blue-600"
+            colorFrom="from-teal-400"
+            colorTo="to-teal-600"
             emptyText="No user signups in the last 12 months"
           />
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
-            <MdOutlineSecurity className="w-5 h-5 text-orange-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <MdOutlineSecurity className="w-5 h-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Roles Created
             </h2>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Last 12 months
-          </p>
+          <p className="text-xs text-slate-500 mb-4">Last 12 months</p>
           <BarChart
             data={data.monthlyRoles}
-            colorFrom="from-orange-400"
-            colorTo="to-orange-600"
+            colorFrom="from-amber-400"
+            colorTo="to-amber-600"
             emptyText="No roles created in the last 12 months"
           />
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
-            <MdOutlineLocationCity className="w-5 h-5 text-green-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <MdOutlineLocationCity className="w-5 h-5 text-sky-500" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Cities Added
             </h2>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Last 12 months
-          </p>
+          <p className="text-xs text-slate-500 mb-4">Last 12 months</p>
           <BarChart
             data={data.monthlyCities}
-            colorFrom="from-green-400"
-            colorTo="to-green-600"
+            colorFrom="from-sky-400"
+            colorTo="to-sky-600"
             emptyText="No cities added in the last 12 months"
           />
         </div>
@@ -285,16 +267,15 @@ export default function AnalyticsPage() {
 
       {/* Distributions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Users per role */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
-            <MdOutlineSecurity className="w-5 h-5 text-orange-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <MdOutlineSecurity className="w-5 h-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Users per Role
             </h2>
           </div>
           {data.roleDist.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-6">
+            <p className="text-sm text-slate-400 text-center py-6">
               No roles data
             </p>
           ) : (
@@ -303,21 +284,21 @@ export default function AnalyticsPage() {
                 const pct = Math.round((role.count / totalUsers) * 100);
                 const color =
                   role.slug === "admin"
-                    ? "from-red-500 to-red-600"
+                    ? "from-red-400 to-red-500"
                     : role.slug === "manager"
-                    ? "from-yellow-500 to-yellow-600"
-                    : "from-blue-500 to-blue-600";
+                    ? "from-amber-400 to-amber-500"
+                    : "from-teal-400 to-teal-500";
                 return (
                   <div key={role.slug}>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600 dark:text-gray-300 capitalize">
+                      <span className="text-sm text-slate-600 capitalize">
                         {role.name}
                       </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-medium text-slate-900">
                         {role.count} ({pct}%)
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-slate-100 rounded-full h-2">
                       <div
                         className={`bg-gradient-to-r ${color} h-2 rounded-full transition-all`}
                         style={{ width: `${Math.max(pct, 2)}%` }}
@@ -330,16 +311,15 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Users per city */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
-            <MdOutlineLocationCity className="w-5 h-5 text-green-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <MdOutlineLocationCity className="w-5 h-5 text-sky-500" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Users per City
             </h2>
           </div>
           {data.cityDist.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-6">
+            <p className="text-sm text-slate-400 text-center py-6">
               No cities data
             </p>
           ) : (
@@ -349,21 +329,21 @@ export default function AnalyticsPage() {
                 return (
                   <div key={`${c.city}-${c.state}`}>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                      <span className="text-sm text-slate-600">
                         {c.city}
                         {c.state && (
-                          <span className="text-xs text-gray-400 ml-1">
+                          <span className="text-xs text-slate-400 ml-1">
                             ({c.state})
                           </span>
                         )}
                       </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-medium text-slate-900">
                         {c.count} ({pct}%)
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-slate-100 rounded-full h-2">
                       <div
-                        className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all"
+                        className="bg-gradient-to-r from-sky-400 to-sky-500 h-2 rounded-full transition-all"
                         style={{ width: `${Math.max(pct, 2)}%` }}
                       />
                     </div>
@@ -374,64 +354,6 @@ export default function AnalyticsPage() {
           )}
         </div>
       </div>
-
-      {/* Bottom summary */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-            <MdOutlinePeople className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Total Users
-            </p>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {data.kpis.totalUsers}
-            </p>
-            <p
-              className={`text-xs ${
-                data.kpis.growthRate >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {data.kpis.growthRate >= 0 ? "↑" : "↓"}{" "}
-              {Math.abs(data.kpis.growthRate)}% this month
-            </p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 flex items-center gap-4">
-          <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
-            <MdOutlineSecurity className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Total Roles
-            </p>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {data.kpis.totalRoles}
-            </p>
-            <p className="text-xs text-green-600">
-              {data.kpis.activeRoles} active
-            </p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-            <MdOutlineLocationCity className="w-6 h-6 text-green-600 dark:text-green-400" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Total Cities
-            </p>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {data.kpis.totalCities}
-            </p>
-            <p className="text-xs text-green-600">
-              {data.kpis.activeCities} active
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
-
