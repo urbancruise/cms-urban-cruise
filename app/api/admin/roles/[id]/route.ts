@@ -48,7 +48,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 });
     }
 
-    // ── Parse body safely ──
     let body: any;
     try {
       body = await request.json();
@@ -61,7 +60,6 @@ export async function PUT(
 
     const { name, slug, description, permissions, is_active } = body;
 
-    // ── Load existing role ──
     const [existingRows] = (await pool.query(
       `SELECT id, name, slug, description, permissions, is_system, is_active
        FROM roles WHERE id = ?`,
@@ -73,7 +71,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    // ── Guard: don't rename the Admin role ──
+    // Guard: don't rename the Admin role
     if (existing.slug === 'admin' && name && name !== existing.name) {
       return NextResponse.json(
         { error: 'Cannot rename the Admin role' },
@@ -81,15 +79,15 @@ export async function PUT(
       );
     }
 
-    // ── Guard: slug is immutable, but if it *is* changing, check uniqueness ──
+    // Guard: slug is immutable
     if (slug && slug !== existing.slug) {
-      // Reject silently ignoring slug change (safer than 400)
-      // OR validate it — but for now we don't allow slug changes at all.
-      // The frontend disables the slug field when editing, so ignore any
-      // stray slug in the payload rather than erroring out.
+      return NextResponse.json(
+        { error: 'Slug cannot be changed after creation' },
+        { status: 400 }
+      );
     }
 
-    // ── Guard: name uniqueness (only if name is changing) ──
+    // Guard: name uniqueness
     if (name && name !== existing.name) {
       const [nameCheck] = (await pool.query(
         `SELECT id FROM roles WHERE name = ? AND id != ?`,
@@ -103,7 +101,6 @@ export async function PUT(
       }
     }
 
-    // ── Build update fields ──
     const fields: string[] = [];
     const values: any[] = [];
 
@@ -117,7 +114,6 @@ export async function PUT(
       values.push(description || null);
     }
 
-    // Always write permissions if provided (even empty array = clear all)
     if (permissions !== undefined) {
       const permsArray = Array.isArray(permissions) ? permissions : [];
       fields.push('permissions = ?');
@@ -142,14 +138,12 @@ export async function PUT(
       values
     );
 
-    // ── Fetch updated role ──
     const [updatedRows] = (await pool.query(
       `SELECT * FROM roles WHERE id = ?`,
       [roleId]
     )) as any;
     const updatedRole = (updatedRows as any[])[0];
 
-    // ── Log activity ──
     try {
       await logActivity({
         actor: {

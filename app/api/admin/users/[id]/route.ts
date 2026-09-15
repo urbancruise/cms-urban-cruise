@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { logActivity } from '@/lib/activity';
 
+// ============================================
+// Auth
+// ============================================
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   if (!token) throw { status: 401, message: 'Not authenticated' };
@@ -17,13 +20,13 @@ async function requireAdmin(request: NextRequest) {
     decoded.role === 'admin' ||
     (Array.isArray(decoded.roles) && decoded.roles.includes('admin'));
 
-  if (!isAdmin) {
-    throw { status: 403, message: 'Access denied. Admin only.' };
-  }
+  if (!isAdmin) throw { status: 403, message: 'Access denied. Admin only.' };
   return decoded;
 }
 
+// ============================================
 // GET single user
+// ============================================
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,39 +34,51 @@ export async function GET(
   try {
     await requireAdmin(request);
     const { id } = await params;
-    const userId = parseInt(id);
-
+    const userId = parseInt(id, 10);
     if (isNaN(userId)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
-    const [rows] = await pool.query(
+    const [rows] = (await pool.query(
       `SELECT id, username, email, full_name, role, role_id, is_active, created_at, last_login
        FROM users WHERE id = ?`,
       [userId]
-    );
+    )) as any;
     const users = rows as any[];
     if (users.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const [roleRows] = await pool.query(
+    const [roleRows] = (await pool.query(
       `SELECT r.id, r.name, r.slug FROM user_roles ur
        JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ?`,
       [userId]
-    );
-
-    const [cityRows] = await pool.query(
+    )) as any;
+    const [cityRows] = (await pool.query(
       `SELECT c.id, c.name, c.state, c.code FROM user_cities uc
        JOIN cities c ON c.id = uc.city_id WHERE uc.user_id = ?`,
       [userId]
-    );
+    )) as any;
+    const [permRows] = (await pool.query(
+      `SELECT city_id, permission_key FROM user_city_permissions WHERE user_id = ?`,
+      [userId]
+    )) as any;
 
     const user = users[0];
     user.roles = roleRows;
     user.role_ids = (roleRows as any[]).map((r) => r.id);
     user.cities = cityRows;
     user.city_ids = (cityRows as any[]).map((c) => c.id);
+
+    const grouped: Record<number, string[]> = {};
+    (permRows as any[]).forEach((row) => {
+      if (!grouped[row.city_id]) grouped[row.city_id] = [];
+      grouped[row.city_id].push(row.permission_key);
+    });
+    user.city_permissions = Object.entries(grouped).map(([cid, perms]) => ({
+      city_id: Number(cid),
+      permissions: perms,
+    }));
 
     return NextResponse.json({ user }, { status: 200 });
   } catch (err: any) {
@@ -78,7 +93,9 @@ export async function GET(
   }
 }
 
+// ============================================
 // PUT - update user
+// ============================================
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -87,10 +104,8 @@ export async function PUT(
   try {
     const decoded = await requireAdmin(request);
     const { id } = await params;
-    const userId = parseInt(id);
-
+    const userId = parseInt(id, 10);
     if (isNaN(userId)) {
-      connection.release();
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
@@ -103,16 +118,15 @@ export async function PUT(
       is_active,
       password,
       city_ids,
+      city_permissions,
     } = body;
 
-    // Fetch before state
     const [existingUsers] = await connection.query(
       `SELECT id, username, email, full_name, role_id, is_active FROM users WHERE id = ?`,
       [userId]
     );
     const existingArr = existingUsers as any[];
     if (existingArr.length === 0) {
-      connection.release();
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     const before = existingArr[0];
@@ -125,25 +139,25 @@ export async function PUT(
       );
       const check = checkUsers as any[];
       if (check.length > 0) {
-        connection.release();
         const c = check[0];
-        if (c.username === username)
+        if (c.username === username) {
           return NextResponse.json(
             { error: 'Username is already taken' },
             { status: 409 }
           );
-        if (c.email === email)
+        }
+        if (c.email === email) {
           return NextResponse.json(
             { error: 'Email is already registered' },
             { status: 409 }
           );
+        }
       }
     }
 
     let validRoles: any[] = [];
     if (Array.isArray(role_ids)) {
       if (role_ids.length === 0) {
-        connection.release();
         return NextResponse.json(
           { error: 'At least one role is required' },
           { status: 400 }
@@ -155,7 +169,6 @@ export async function PUT(
       );
       validRoles = roleRows as any[];
       if (validRoles.length !== role_ids.length) {
-        connection.release();
         return NextResponse.json(
           { error: 'One or more selected roles are invalid or inactive' },
           { status: 400 }
@@ -164,7 +177,6 @@ export async function PUT(
     }
 
     await connection.beginTransaction();
-
     try {
       const fields: string[] = [];
       const values: any[] = [];
@@ -190,13 +202,11 @@ export async function PUT(
         fields.push('password_hash = ?');
         values.push(hash);
       }
-
       if (validRoles.length > 0) {
         const slugs = validRoles.map((r) => r.slug);
         const primarySlug = slugs.includes('admin') ? 'admin' : slugs[0];
         const primaryId =
           validRoles.find((r) => r.slug === primarySlug)?.id ?? validRoles[0].id;
-
         fields.push('role = ?');
         values.push(primarySlug);
         fields.push('role_id = ?');
@@ -222,21 +232,52 @@ export async function PUT(
         );
       }
 
-      if (Array.isArray(city_ids)) {
+      // ── Cities + permissions ──
+      if (Array.isArray(city_ids) || Array.isArray(city_permissions)) {
+        await connection.query(
+          'DELETE FROM user_city_permissions WHERE user_id = ?',
+          [userId]
+        );
         await connection.query('DELETE FROM user_cities WHERE user_id = ?', [
           userId,
         ]);
-        if (city_ids.length > 0) {
-          const cityValues = city_ids.map((cid: number) => [userId, cid]);
+
+        const cityList: number[] = Array.isArray(city_ids) ? [...city_ids] : [];
+        const permList: { city_id: number; permissions: string[] }[] =
+          Array.isArray(city_permissions) ? city_permissions : [];
+
+        const citySet = new Set<number>(cityList);
+        permList.forEach((cp) => {
+          if (cp.permissions && cp.permissions.length > 0) {
+            citySet.add(cp.city_id);
+          }
+        });
+
+        if (citySet.size > 0) {
+          const cityValues = Array.from(citySet).map((cid) => [userId, cid]);
           await connection.query(
             'INSERT INTO user_cities (user_id, city_id) VALUES ?',
             [cityValues]
+          );
+        }
+
+        const permValues: any[] = [];
+        permList.forEach((cp) => {
+          (cp.permissions || []).forEach((p) => {
+            permValues.push([userId, cp.city_id, p]);
+          });
+        });
+        if (permValues.length > 0) {
+          await connection.query(
+            'INSERT INTO user_city_permissions (user_id, city_id, permission_key) VALUES ?',
+            [permValues]
           );
         }
       }
 
       await connection.commit();
 
+      // Fetch updated
       const [rows] = await connection.query(
         `SELECT id, username, email, full_name, role, role_id, is_active, created_at, last_login
          FROM users WHERE id = ?`,
@@ -252,6 +293,10 @@ export async function PUT(
          JOIN cities c ON c.id = uc.city_id WHERE uc.user_id = ?`,
         [userId]
       );
+      const [permRows] = await connection.query(
+        `SELECT city_id, permission_key FROM user_city_permissions WHERE user_id = ?`,
+        [userId]
+      );
 
       const updated = (rows as any[])[0];
       updated.roles = roleRows;
@@ -259,7 +304,16 @@ export async function PUT(
       updated.cities = cityRows;
       updated.city_ids = (cityRows as any[]).map((c) => c.id);
 
-      // ✅ Log activity
+      const grouped: Record<number, string[]> = {};
+      (permRows as any[]).forEach((row) => {
+        if (!grouped[row.city_id]) grouped[row.city_id] = [];
+        grouped[row.city_id].push(row.permission_key);
+      });
+      updated.city_permissions = Object.entries(grouped).map(([cid, perms]) => ({
+        city_id: Number(cid),
+        permissions: perms,
+      }));
+
       await logActivity({
         actor: {
           userId: decoded.userId,
@@ -310,7 +364,9 @@ export async function PUT(
   }
 }
 
-// DELETE user
+// ============================================
+// DELETE - delete user
+// ============================================
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -318,8 +374,7 @@ export async function DELETE(
   try {
     const decoded = await requireAdmin(request);
     const { id } = await params;
-    const userId = parseInt(id);
-
+    const userId = parseInt(id, 10);
     if (isNaN(userId)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
@@ -347,7 +402,6 @@ export async function DELETE(
 
     await pool.query('DELETE FROM users WHERE id = ?', [userId]);
 
-    // ✅ Log activity
     await logActivity({
       actor: {
         userId: decoded.userId,
@@ -376,4 +430,3 @@ export async function DELETE(
     );
   }
 }
-

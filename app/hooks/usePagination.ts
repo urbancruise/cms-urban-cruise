@@ -8,7 +8,7 @@ export function usePagination(total: number, pageSize = 20) {
 
   useEffect(() => {
     if (page > totalPages) setPage(1);
-  }, [totalPages, page]);
+  }, [totalPages]);
 
   const next = useCallback(
     () => setPage((p) => Math.min(p + 1, totalPages)),

@@ -5,8 +5,8 @@ import {
   useContext,
   useState,
   useEffect,
-  ReactNode,
 } from 'react';
+import type { ReactNode } from 'react';
 
 interface City {
   id: number;
@@ -103,5 +103,3 @@ export function useAuth() {
   }
   return context;
 }
-
-

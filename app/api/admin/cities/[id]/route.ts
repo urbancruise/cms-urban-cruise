@@ -87,7 +87,6 @@ export async function PUT(
     ]);
     const updatedCity = (updated as any[])[0];
 
-    // ✅ Log activity
     await logActivity({
       actor: {
         userId: decoded.userId,
@@ -159,7 +158,6 @@ export async function DELETE(
 
     await pool.query('DELETE FROM cities WHERE id = ?', [cityId]);
 
-    // ✅ Log activity
     await logActivity({
       actor: {
         userId: decoded.userId,
@@ -188,4 +186,3 @@ export async function DELETE(
     );
   }
 }
-

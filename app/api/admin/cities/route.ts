@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
       insertResult.insertId,
     ]);
 
-    // ✅ Log activity
     await logActivity({
       actor: {
         userId: decoded.userId,
@@ -137,4 +136,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

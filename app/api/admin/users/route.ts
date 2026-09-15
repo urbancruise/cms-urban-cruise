@@ -5,7 +5,7 @@ import pool from '@/lib/db';
 import { logActivity } from '@/lib/activity';
 
 // ============================================
-// Auth helper
+// Auth
 // ============================================
 async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
@@ -20,14 +20,12 @@ async function requireAdmin(request: NextRequest) {
     decoded.role === 'admin' ||
     (Array.isArray(decoded.roles) && decoded.roles.includes('admin'));
 
-  if (!isAdmin) {
-    throw { status: 403, message: 'Access denied. Admin only.' };
-  }
+  if (!isAdmin) throw { status: 403, message: 'Access denied. Admin only.' };
   return decoded;
 }
 
 // ============================================
-// GET - all users (paginated + filtered)
+// GET - paginated list
 // ============================================
 export async function GET(request: NextRequest) {
   try {
@@ -50,72 +48,63 @@ export async function GET(request: NextRequest) {
       const term = `%${search}%`;
       params.push(term, term, term);
     }
-
     if (status === 'Active') where.push('u.is_active = 1');
     if (status === 'Inactive') where.push('u.is_active = 0');
-
     if (roleSlug) {
       where.push(
-        `EXISTS (
-           SELECT 1 FROM user_roles ur
-           JOIN roles r ON r.id = ur.role_id
-           WHERE ur.user_id = u.id AND r.slug = ?
-         )`
+        `EXISTS (SELECT 1 FROM user_roles ur
+                 JOIN roles r ON r.id = ur.role_id
+                 WHERE ur.user_id = u.id AND r.slug = ?)`
       );
       params.push(roleSlug);
     }
 
     const whereClause = where.join(' AND ');
 
-    // Total count for pagination
     const [countRows] = (await pool.query(
       `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
       params
     )) as any;
     const total = Number((countRows as any)[0]?.total) || 0;
 
-    // Page of users
     const [rows] = (await pool.query(
       `SELECT u.id, u.username, u.email, u.full_name,
-              u.role, u.role_id,
-              u.is_active, u.created_at, u.last_login
+              u.role, u.role_id, u.is_active, u.created_at, u.last_login
        FROM users u
        WHERE ${whereClause}
        ORDER BY u.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`
     )) as any;
-
     const users = rows as any[];
 
-    // Hydrate roles + cities for this page only
     if (users.length > 0) {
       const userIds = users.map((u) => u.id);
 
       const [roleRows] = (await pool.query(
         `SELECT ur.user_id, r.id, r.name, r.slug
-         FROM user_roles ur
-         JOIN roles r ON r.id = ur.role_id
+         FROM user_roles ur JOIN roles r ON r.id = ur.role_id
          WHERE ur.user_id IN (?)`,
         [userIds]
       )) as any;
 
       const [cityRows] = (await pool.query(
         `SELECT uc.user_id, c.id, c.name, c.state, c.code
-         FROM user_cities uc
-         JOIN cities c ON c.id = uc.city_id
+         FROM user_cities uc JOIN cities c ON c.id = uc.city_id
          WHERE uc.user_id IN (?)`,
+        [userIds]
+      )) as any;
+
+      const [permRows] = (await pool.query(
+        `SELECT user_id, city_id, permission_key
+         FROM user_city_permissions
+         WHERE user_id IN (?)`,
         [userIds]
       )) as any;
 
       const roleMap: Record<number, any[]> = {};
       (roleRows as any[]).forEach((row) => {
         if (!roleMap[row.user_id]) roleMap[row.user_id] = [];
-        roleMap[row.user_id].push({
-          id: row.id,
-          name: row.name,
-          slug: row.slug,
-        });
+        roleMap[row.user_id].push({ id: row.id, name: row.name, slug: row.slug });
       });
 
       const cityMap: Record<number, any[]> = {};
@@ -129,6 +118,14 @@ export async function GET(request: NextRequest) {
         });
       });
 
+      const permMap: Record<number, Record<number, string[]>> = {};
+      (permRows as any[]).forEach((row) => {
+        if (!permMap[row.user_id]) permMap[row.user_id] = {};
+        if (!permMap[row.user_id][row.city_id])
+          permMap[row.user_id][row.city_id] = [];
+        permMap[row.user_id][row.city_id].push(row.permission_key);
+      });
+
       users.forEach((u) => {
         const roles = roleMap[u.id] || [];
         u.roles = roles;
@@ -139,6 +136,12 @@ export async function GET(request: NextRequest) {
 
         u.cities = cityMap[u.id] || [];
         u.city_ids = (cityMap[u.id] || []).map((c) => c.id);
+
+        const userPerms = permMap[u.id] || {};
+        u.city_permissions = Object.entries(userPerms).map(([cid, perms]) => ({
+          city_id: Number(cid),
+          permissions: perms,
+        }));
       });
     }
 
@@ -162,7 +165,6 @@ export async function POST(request: NextRequest) {
   const connection = await pool.getConnection();
   try {
     const decoded = await requireAdmin(request);
-
     const body = await request.json();
     const {
       username,
@@ -172,17 +174,16 @@ export async function POST(request: NextRequest) {
       role_ids,
       is_active,
       city_ids,
+      city_permissions,
     } = body;
 
     if (!username || !email || !password) {
-      connection.release();
       return NextResponse.json(
         { error: 'Username, email, and password are required' },
         { status: 400 }
       );
     }
     if (username.length < 3) {
-      connection.release();
       return NextResponse.json(
         { error: 'Username must be at least 3 characters' },
         { status: 400 }
@@ -190,21 +191,18 @@ export async function POST(request: NextRequest) {
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      connection.release();
       return NextResponse.json(
         { error: 'Please enter a valid email address' },
         { status: 400 }
       );
     }
     if (password.length < 6) {
-      connection.release();
       return NextResponse.json(
         { error: 'Password must be at least 6 characters' },
         { status: 400 }
       );
     }
     if (!Array.isArray(role_ids) || role_ids.length === 0) {
-      connection.release();
       return NextResponse.json(
         { error: 'At least one role is required' },
         { status: 400 }
@@ -217,7 +215,6 @@ export async function POST(request: NextRequest) {
     );
     const validRoles = roleRows as any[];
     if (validRoles.length !== role_ids.length) {
-      connection.release();
       return NextResponse.json(
         { error: 'One or more selected roles are invalid or inactive' },
         { status: 400 }
@@ -230,7 +227,6 @@ export async function POST(request: NextRequest) {
     );
     const existing = existingUsers as any[];
     if (existing.length > 0) {
-      connection.release();
       const found = existing[0];
       if (found.username === username) {
         return NextResponse.json(
@@ -252,7 +248,6 @@ export async function POST(request: NextRequest) {
       validRoles.find((r) => r.slug === primarySlug)?.id ?? validRoles[0].id;
 
     await connection.beginTransaction();
-
     try {
       const passwordHash = await bcrypt.hash(password, 10);
 
@@ -278,16 +273,42 @@ export async function POST(request: NextRequest) {
         [roleValues]
       );
 
-      if (Array.isArray(city_ids) && city_ids.length > 0) {
-        const cityValues = city_ids.map((cid: number) => [newUserId, cid]);
+      // ── Cities + permissions ──
+      const cityList: number[] = Array.isArray(city_ids) ? [...city_ids] : [];
+      const permList: { city_id: number; permissions: string[] }[] =
+        Array.isArray(city_permissions) ? city_permissions : [];
+
+      const citySet = new Set<number>(cityList);
+      permList.forEach((cp) => {
+        if (cp.permissions && cp.permissions.length > 0) {
+          citySet.add(cp.city_id);
+        }
+      });
+
+      if (citySet.size > 0) {
+        const cityValues = Array.from(citySet).map((cid) => [newUserId, cid]);
         await connection.query(
           'INSERT INTO user_cities (user_id, city_id) VALUES ?',
           [cityValues]
         );
       }
 
+      const permValues: any[] = [];
+      permList.forEach((cp) => {
+        (cp.permissions || []).forEach((p) => {
+          permValues.push([newUserId, cp.city_id, p]);
+        });
+      });
+      if (permValues.length > 0) {
+        await connection.query(
+          'INSERT INTO user_city_permissions (user_id, city_id, permission_key) VALUES ?',
+          [permValues]
+        );
+      }
+
       await connection.commit();
 
+      // ── Fetch created user ──
       const [newUserRows] = await connection.query(
         `SELECT id, username, email, full_name, role, role_id, is_active, created_at
          FROM users WHERE id = ?`,
@@ -305,13 +326,26 @@ export async function POST(request: NextRequest) {
          JOIN cities c ON c.id = uc.city_id WHERE uc.user_id = ?`,
         [newUserId]
       );
+      const [createdPerms] = await connection.query(
+        `SELECT city_id, permission_key FROM user_city_permissions
+         WHERE user_id = ?`,
+        [newUserId]
+      );
 
       created.roles = createdRoles;
       created.role_ids = (createdRoles as any[]).map((r) => r.id);
       created.cities = createdCities;
       created.city_ids = (createdCities as any[]).map((c) => c.id);
 
-      // Log activity + notify
+      const grouped: Record<number, string[]> = {};
+      (createdPerms as any[]).forEach((row) => {
+        if (!grouped[row.city_id]) grouped[row.city_id] = [];
+        grouped[row.city_id].push(row.permission_key);
+      });
+      created.city_permissions = Object.entries(grouped).map(
+        ([cid, perms]) => ({ city_id: Number(cid), permissions: perms })
+      );
+
       await logActivity({
         actor: {
           userId: decoded.userId,
@@ -326,7 +360,7 @@ export async function POST(request: NextRequest) {
           email,
           full_name: full_name || username,
           role_ids,
-          city_ids: city_ids || [],
+          city_permissions: permList,
           is_active: is_active !== undefined ? is_active : true,
         },
         request,

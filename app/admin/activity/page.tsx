@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -69,7 +69,7 @@ export default function ActivityPage() {
   const [entityType, setEntityType] = useState("All");
   const [action, setAction] = useState("All");
 
-  useMemo(() => {
+  useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 400);
     return () => clearTimeout(t);
   }, [searchInput]);

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ReactNode, ComponentType } from 'react';
+import type { ReactNode, ComponentType } from 'react';
 import { MdOutlineArrowForward } from 'react-icons/md';
 
 export type CardColor =

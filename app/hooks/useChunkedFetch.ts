@@ -42,7 +42,8 @@ export function useChunkedFetch<T>({
       search.set("offset", String(pageIndex * pageSize));
       return `${endpoint}?${search.toString()}`;
     },
-    [endpoint, pageSize, paramsKey] // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [endpoint, pageSize, paramsKey]
   );
 
   useEffect(() => {

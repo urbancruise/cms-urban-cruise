@@ -465,6 +465,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
     const activeIcon = "text-teal-600";
     const inactiveIcon = "text-slate-400 group-hover:text-slate-600";
 
+    const NodeIcon = node.icon;
+
     if (hasChildren) {
       return (
         <div
@@ -485,8 +487,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
               ${isActive || isDescendantActive ? activeStyle : inactiveStyle}
             `}
           >
-            {node.icon && (
-              <node.icon
+            {NodeIcon && (
+              <NodeIcon
                 className={`
                   ${depth === 0 ? "w-5 h-5" : "w-4 h-4"}
                   ${
@@ -498,7 +500,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
               />
             )}
 
-            {!node.icon && depth > 0 && (
+            {!NodeIcon && depth > 0 && (
               <span
                 className={`
                   w-1.5 h-1.5 rounded-full flex-shrink-0
@@ -572,8 +574,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
           ${isActive ? activeStyle : inactiveStyle}
         `}
       >
-        {node.icon ? (
-          <node.icon
+        {NodeIcon ? (
+          <NodeIcon
             className={`
               ${depth === 0 ? "w-5 h-5" : "w-4 h-4"}
               ${isActive ? activeIcon : inactiveIcon}

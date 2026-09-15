@@ -7,13 +7,15 @@ export default async function Home() {
   const token = cookieStore.get('token')?.value;
 
   if (token) {
+    let valid = false;
     try {
       jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      redirect('/admin');
+      valid = true;
     } catch {
-      redirect('/login');
+      valid = false;
     }
+    redirect(valid ? '/admin' : '/login');
   }
+
   redirect('/login');
 }
-

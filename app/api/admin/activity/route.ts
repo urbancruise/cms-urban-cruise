@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
        FROM activity_log
        WHERE ${whereClause}
        ORDER BY created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
     )) as any;
 
     const [countRows] = (await pool.query(
@@ -102,4 +102,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

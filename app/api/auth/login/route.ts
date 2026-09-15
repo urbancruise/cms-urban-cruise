@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // ✅ Fetch ALL roles
     const [roleRows] = await pool.query(
       `SELECT r.id, r.name, r.slug
        FROM user_roles ur
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
         roles: roleSlugs,
       },
       process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'] }
     );
 
     const cookie = serialize('token', token, {
@@ -130,4 +129,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
