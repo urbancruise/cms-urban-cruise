@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SWRProvider } from "@/lib/swr-config";
+import TopLoader from "@/app/components/UI/TopLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +30,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden bg-uc-bg text-uc-text">
-        {children}
+        <TopLoader />
+        <SWRProvider>{children}</SWRProvider>
       </body>
     </html>
   );
 }
-

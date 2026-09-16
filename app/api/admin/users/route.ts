@@ -1,55 +1,53 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import pool from '@/lib/db';
-import { logActivity } from '@/lib/activity';
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import pool from "@/lib/db";
+import { logActivity } from "@/lib/activity";
+import { rateLimit } from "@/lib/rate-limit";
+import { parseBody, UserCreateSchema } from "@/lib/validators";
 
-// ============================================
-// Auth
-// ============================================
 async function requireAdmin(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
-  if (!token) throw { status: 401, message: 'Not authenticated' };
+  const token = request.cookies.get("token")?.value;
+  if (!token) throw { status: 401, message: "Not authenticated" };
 
   const decoded = jwt.verify(
     token,
-    process.env.JWT_SECRET || 'fallback_secret'
+    process.env.JWT_SECRET || "fallback_secret"
   ) as { userId: number; role: string; roles?: string[]; username?: string };
 
   const isAdmin =
-    decoded.role === 'admin' ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes('admin'));
+    decoded.role === "admin" ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
 
-  if (!isAdmin) throw { status: 403, message: 'Access denied. Admin only.' };
+  if (!isAdmin) throw { status: 403, message: "Access denied. Admin only." };
   return decoded;
 }
 
-// ============================================
-// GET - paginated list
-// ============================================
+// GET
 export async function GET(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
+    if (!rl.ok) return rl.response!;
+
     await requireAdmin(request);
 
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(Number(searchParams.get('limit')) || 10, 100);
-    const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
-    const search = searchParams.get('search')?.trim() || '';
-    const roleSlug = searchParams.get('role') || '';
-    const status = searchParams.get('status') || '';
+    const limit = Math.min(Number(searchParams.get("limit")) || 10, 100);
+    const offset = Math.max(Number(searchParams.get("offset")) || 0, 0);
+    const search = searchParams.get("search")?.trim() || "";
+    const roleSlug = searchParams.get("role") || "";
+    const status = searchParams.get("status") || "";
 
-    const where: string[] = ['1=1'];
+    const where: string[] = ["1=1"];
     const params: any[] = [];
 
     if (search) {
-      where.push(
-        '(u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ?)'
-      );
+      where.push("(u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ?)");
       const term = `%${search}%`;
       params.push(term, term, term);
     }
-    if (status === 'Active') where.push('u.is_active = 1');
-    if (status === 'Inactive') where.push('u.is_active = 0');
+    if (status === "Active") where.push("u.is_active = 1");
+    if (status === "Inactive") where.push("u.is_active = 0");
     if (roleSlug) {
       where.push(
         `EXISTS (SELECT 1 FROM user_roles ur
@@ -59,52 +57,59 @@ export async function GET(request: NextRequest) {
       params.push(roleSlug);
     }
 
-    const whereClause = where.join(' AND ');
+    const whereClause = where.join(" AND ");
 
-    const [countRows] = (await pool.query(
-      `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
-      params
-    )) as any;
-    const total = Number((countRows as any)[0]?.total) || 0;
+    const [[countRows], [rows]] = (await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
+        params
+      ) as any,
+      pool.query(
+        `SELECT u.id, u.username, u.email, u.full_name,
+                u.role, u.role_id, u.is_active, u.created_at, u.last_login
+         FROM users u
+         WHERE ${whereClause}
+         ORDER BY u.created_at DESC
+         LIMIT ${limit} OFFSET ${offset}`,
+        params
+      ) as any,
+    ])) as any;
 
-    const [rows] = (await pool.query(
-      `SELECT u.id, u.username, u.email, u.full_name,
-              u.role, u.role_id, u.is_active, u.created_at, u.last_login
-       FROM users u
-       WHERE ${whereClause}
-       ORDER BY u.created_at DESC
-       LIMIT ${limit} OFFSET ${offset}`
-    )) as any;
     const users = rows as any[];
+    const total = Number((countRows as any)[0]?.total) || 0;
 
     if (users.length > 0) {
       const userIds = users.map((u) => u.id);
 
-      const [roleRows] = (await pool.query(
-        `SELECT ur.user_id, r.id, r.name, r.slug
-         FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-         WHERE ur.user_id IN (?)`,
-        [userIds]
-      )) as any;
-
-      const [cityRows] = (await pool.query(
-        `SELECT uc.user_id, c.id, c.name, c.state, c.code
-         FROM user_cities uc JOIN cities c ON c.id = uc.city_id
-         WHERE uc.user_id IN (?)`,
-        [userIds]
-      )) as any;
-
-      const [permRows] = (await pool.query(
-        `SELECT user_id, city_id, permission_key
-         FROM user_city_permissions
-         WHERE user_id IN (?)`,
-        [userIds]
-      )) as any;
+      const [[roleRows], [cityRows], [permRows]] = (await Promise.all([
+        pool.query(
+          `SELECT ur.user_id, r.id, r.name, r.slug
+           FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+           WHERE ur.user_id IN (?)`,
+          [userIds]
+        ) as any,
+        pool.query(
+          `SELECT uc.user_id, c.id, c.name, c.state, c.code
+           FROM user_cities uc JOIN cities c ON c.id = uc.city_id
+           WHERE uc.user_id IN (?)`,
+          [userIds]
+        ) as any,
+        pool.query(
+          `SELECT user_id, city_id, permission_key
+           FROM user_city_permissions
+           WHERE user_id IN (?)`,
+          [userIds]
+        ) as any,
+      ])) as any;
 
       const roleMap: Record<number, any[]> = {};
       (roleRows as any[]).forEach((row) => {
         if (!roleMap[row.user_id]) roleMap[row.user_id] = [];
-        roleMap[row.user_id].push({ id: row.id, name: row.name, slug: row.slug });
+        roleMap[row.user_id].push({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+        });
       });
 
       const cityMap: Record<number, any[]> = {};
@@ -130,7 +135,7 @@ export async function GET(request: NextRequest) {
         const roles = roleMap[u.id] || [];
         u.roles = roles;
         u.role_ids = roles.map((r) => r.id);
-        const primary = roles.find((r) => r.slug === 'admin') || roles[0];
+        const primary = roles.find((r) => r.slug === "admin") || roles[0];
         u.role_name = primary?.name || u.role;
         u.role_slug = primary?.slug || u.role;
 
@@ -145,27 +150,42 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ users, total }, { status: 200 });
+    return NextResponse.json(
+      { users, total },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, max-age=10, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (err: any) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Get users error:', err);
+    console.error("Get users error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
-// ============================================
-// POST - create user
-// ============================================
+// POST
 export async function POST(request: NextRequest) {
   const connection = await pool.getConnection();
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 30 });
+    if (!rl.ok) return rl.response!;
+
     const decoded = await requireAdmin(request);
+
     const body = await request.json();
+    const parsed = parseBody(UserCreateSchema, body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
     const {
       username,
       email,
@@ -175,39 +195,7 @@ export async function POST(request: NextRequest) {
       is_active,
       city_ids,
       city_permissions,
-    } = body;
-
-    if (!username || !email || !password) {
-      return NextResponse.json(
-        { error: 'Username, email, and password are required' },
-        { status: 400 }
-      );
-    }
-    if (username.length < 3) {
-      return NextResponse.json(
-        { error: 'Username must be at least 3 characters' },
-        { status: 400 }
-      );
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Please enter a valid email address' },
-        { status: 400 }
-      );
-    }
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
-        { status: 400 }
-      );
-    }
-    if (!Array.isArray(role_ids) || role_ids.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one role is required' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     const [roleRows] = await connection.query(
       `SELECT id, slug FROM roles WHERE id IN (?) AND is_active = 1`,
@@ -216,13 +204,13 @@ export async function POST(request: NextRequest) {
     const validRoles = roleRows as any[];
     if (validRoles.length !== role_ids.length) {
       return NextResponse.json(
-        { error: 'One or more selected roles are invalid or inactive' },
+        { error: "One or more selected roles are invalid or inactive" },
         { status: 400 }
       );
     }
 
     const [existingUsers] = await connection.query(
-      'SELECT id, username, email FROM users WHERE username = ? OR email = ?',
+      "SELECT id, username, email FROM users WHERE username = ? OR email = ?",
       [username, email]
     );
     const existing = existingUsers as any[];
@@ -230,20 +218,20 @@ export async function POST(request: NextRequest) {
       const found = existing[0];
       if (found.username === username) {
         return NextResponse.json(
-          { error: 'Username is already taken' },
+          { error: "Username is already taken" },
           { status: 409 }
         );
       }
       if (found.email === email) {
         return NextResponse.json(
-          { error: 'Email is already registered' },
+          { error: "Email is already registered" },
           { status: 409 }
         );
       }
     }
 
     const roleSlugs = validRoles.map((r) => r.slug);
-    const primarySlug = roleSlugs.includes('admin') ? 'admin' : roleSlugs[0];
+    const primarySlug = roleSlugs.includes("admin") ? "admin" : roleSlugs[0];
     const primaryRoleId =
       validRoles.find((r) => r.slug === primarySlug)?.id ?? validRoles[0].id;
 
@@ -269,11 +257,10 @@ export async function POST(request: NextRequest) {
 
       const roleValues = role_ids.map((rid: number) => [newUserId, rid]);
       await connection.query(
-        'INSERT INTO user_roles (user_id, role_id) VALUES ?',
+        "INSERT INTO user_roles (user_id, role_id) VALUES ?",
         [roleValues]
       );
 
-      // ── Cities + permissions ──
       const cityList: number[] = Array.isArray(city_ids) ? [...city_ids] : [];
       const permList: { city_id: number; permissions: string[] }[] =
         Array.isArray(city_permissions) ? city_permissions : [];
@@ -288,7 +275,7 @@ export async function POST(request: NextRequest) {
       if (citySet.size > 0) {
         const cityValues = Array.from(citySet).map((cid) => [newUserId, cid]);
         await connection.query(
-          'INSERT INTO user_cities (user_id, city_id) VALUES ?',
+          "INSERT INTO user_cities (user_id, city_id) VALUES ?",
           [cityValues]
         );
       }
@@ -301,14 +288,13 @@ export async function POST(request: NextRequest) {
       });
       if (permValues.length > 0) {
         await connection.query(
-          'INSERT INTO user_city_permissions (user_id, city_id, permission_key) VALUES ?',
+          "INSERT INTO user_city_permissions (user_id, city_id, permission_key) VALUES ?",
           [permValues]
         );
       }
 
       await connection.commit();
 
-      // ── Fetch created user ──
       const [newUserRows] = await connection.query(
         `SELECT id, username, email, full_name, role, role_id, is_active, created_at
          FROM users WHERE id = ?`,
@@ -327,8 +313,7 @@ export async function POST(request: NextRequest) {
         [newUserId]
       );
       const [createdPerms] = await connection.query(
-        `SELECT city_id, permission_key FROM user_city_permissions
-         WHERE user_id = ?`,
+        `SELECT city_id, permission_key FROM user_city_permissions WHERE user_id = ?`,
         [newUserId]
       );
 
@@ -342,17 +327,18 @@ export async function POST(request: NextRequest) {
         if (!grouped[row.city_id]) grouped[row.city_id] = [];
         grouped[row.city_id].push(row.permission_key);
       });
-      created.city_permissions = Object.entries(grouped).map(
-        ([cid, perms]) => ({ city_id: Number(cid), permissions: perms })
-      );
+      created.city_permissions = Object.entries(grouped).map(([cid, perms]) => ({
+        city_id: Number(cid),
+        permissions: perms,
+      }));
 
       await logActivity({
         actor: {
           userId: decoded.userId,
           userName: decoded.username || `User #${decoded.userId}`,
         },
-        action: 'create',
-        entityType: 'user',
+        action: "create",
+        entityType: "user",
         entityId: newUserId,
         entityName: username,
         changes: {
@@ -367,7 +353,7 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { success: true, message: 'User created successfully', user: created },
+        { success: true, message: "User created successfully", user: created },
         { status: 201 }
       );
     } catch (txErr) {
@@ -378,9 +364,9 @@ export async function POST(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Create user error:', err);
+    console.error("Create user error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   } finally {

@@ -1,40 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import pool from '@/lib/db';
-import { logActivity } from '@/lib/activity';
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import pool from "@/lib/db";
+import { logActivity } from "@/lib/activity";
+import { rateLimit } from "@/lib/rate-limit";
+import { parseBody, RoleCreateSchema } from "@/lib/validators";
 
+// ============================================
+// Auth
+// ============================================
 async function requireAdmin(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
-  if (!token) throw { status: 401, message: 'Not authenticated' };
+  const token = request.cookies.get("token")?.value;
+  if (!token) throw { status: 401, message: "Not authenticated" };
 
   const decoded = jwt.verify(
     token,
-    process.env.JWT_SECRET || 'fallback_secret'
+    process.env.JWT_SECRET || "fallback_secret"
   ) as { userId: number; role: string; roles?: string[]; username?: string };
 
   const isAdmin =
-    decoded.role === 'admin' ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes('admin'));
+    decoded.role === "admin" ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
 
-  if (!isAdmin) {
-    throw { status: 403, message: 'Access denied. Admin only.' };
-  }
+  if (!isAdmin) throw { status: 403, message: "Access denied. Admin only." };
   return decoded;
 }
 
+// ============================================
+// Helpers
+// ============================================
 function parsePermissions(raw: any): string[] {
   try {
     if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'string') return JSON.parse(raw);
+    if (typeof raw === "string") return JSON.parse(raw);
     return [];
   } catch {
     return [];
   }
 }
 
+// ============================================
 // GET all roles
+// ============================================
 export async function GET(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
+    if (!rl.ok) return rl.response!;
+
     await requireAdmin(request);
 
     const [rows] = await pool.query(
@@ -50,51 +61,55 @@ export async function GET(request: NextRequest) {
       is_active: Boolean(r.is_active),
     }));
 
-    return NextResponse.json({ roles }, { status: 200 });
+    return NextResponse.json(
+      { roles },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch (err: any) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Get roles error:', err);
+    console.error("Get roles error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
+// ============================================
 // POST create role
+// ============================================
 export async function POST(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 30 });
+    if (!rl.ok) return rl.response!;
+
     const decoded = await requireAdmin(request);
 
     const body = await request.json();
-    const { name, slug, description, permissions, is_active } = body;
 
-    if (!name || !slug) {
-      return NextResponse.json(
-        { error: 'Name and slug are required' },
-        { status: 400 }
-      );
+    // ✅ Validate input
+    const parsed = parseBody(RoleCreateSchema, body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    if (!/^[a-z0-9-]+$/.test(slug)) {
-      return NextResponse.json(
-        {
-          error:
-            'Slug must contain only lowercase letters, numbers, and hyphens',
-        },
-        { status: 400 }
-      );
-    }
+    const { name, slug, description, permissions, is_active } = parsed.data;
 
+    // Uniqueness check
     const [existing] = await pool.query(
-      'SELECT id FROM roles WHERE name = ? OR slug = ?',
+      "SELECT id FROM roles WHERE name = ? OR slug = ?",
       [name, slug]
     );
     if ((existing as any[]).length > 0) {
       return NextResponse.json(
-        { error: 'Role name or slug already exists' },
+        { error: "Role name or slug already exists" },
         { status: 409 }
       );
     }
@@ -114,20 +129,19 @@ export async function POST(request: NextRequest) {
     );
 
     const insertResult = result as any;
-    const [newRoleRows] = await pool.query(
-      'SELECT * FROM roles WHERE id = ?',
-      [insertResult.insertId]
-    );
+    const [newRoleRows] = await pool.query("SELECT * FROM roles WHERE id = ?", [
+      insertResult.insertId,
+    ]);
     const role = (newRoleRows as any[])[0];
 
-    // ✅ Log activity
+    // Log activity
     await logActivity({
       actor: {
         userId: decoded.userId,
         userName: decoded.username || `User #${decoded.userId}`,
       },
-      action: 'create',
-      entityType: 'role',
+      action: "create",
+      entityType: "role",
       entityId: insertResult.insertId,
       entityName: name,
       changes: {
@@ -143,7 +157,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Role created successfully',
+        message: "Role created successfully",
         role: {
           ...role,
           permissions: parsePermissions(role.permissions),
@@ -157,11 +171,10 @@ export async function POST(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Create role error:', err);
+    console.error("Create role error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
-
+} 

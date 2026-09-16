@@ -1,187 +1,322 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import pool from '@/lib/db';
-import { logActivity } from '@/lib/activity';
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import pool from "@/lib/db";
+import { logActivity } from "@/lib/activity";
+import { rateLimit } from "@/lib/rate-limit";
+import { parseBody, CityUpdateSchema } from "@/lib/validators";
 
+// ============================================
+// Auth
+// ============================================
 async function requireAdmin(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
-  if (!token) throw { status: 401, message: 'Not authenticated' };
+  const token = request.cookies.get("token")?.value;
+  if (!token) throw { status: 401, message: "Not authenticated" };
 
   const decoded = jwt.verify(
     token,
-    process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string; username?: string };
+    process.env.JWT_SECRET || "fallback_secret"
+  ) as { userId: number; role: string; roles?: string[]; username?: string };
 
-  if (decoded.role !== 'admin') {
-    throw { status: 403, message: 'Access denied. Admin only.' };
-  }
+  const isAdmin =
+    decoded.role === "admin" ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
+
+  if (!isAdmin) throw { status: 403, message: "Access denied. Admin only." };
   return decoded;
 }
 
-// PUT
+// ============================================
+// GET single city
+// ============================================
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
+    if (!rl.ok) return rl.response!;
+
+    await requireAdmin(request);
+    const { id } = await params;
+    const cityId = parseInt(id, 10);
+    if (isNaN(cityId)) {
+      return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
+    }
+
+    const [rows] = (await pool.query(
+      `SELECT id, name, state, country, code, description, is_active, created_at, updated_at
+       FROM cities WHERE id = ?`,
+      [cityId]
+    )) as any;
+
+    const city = (rows as any[])[0];
+    if (!city) {
+      return NextResponse.json({ error: "City not found" }, { status: 404 });
+    }
+
+    // Count users assigned to this city
+    const [userCountRows] = (await pool.query(
+      "SELECT COUNT(*) as count FROM user_cities WHERE city_id = ?",
+      [cityId]
+    )) as any;
+
+    return NextResponse.json(
+      {
+        city: {
+          ...city,
+          user_count: Number((userCountRows as any[])[0]?.count) || 0,
+        },
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
+        },
+      }
+    );
+  } catch (err: any) {
+    if (err.status) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    console.error("Get city error:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================
+// PUT — update city
+// ============================================
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 30 });
+    if (!rl.ok) return rl.response!;
+
     const decoded = await requireAdmin(request);
     const { id } = await params;
-    const cityId = parseInt(id);
+    const cityId = parseInt(id, 10);
 
     if (isNaN(cityId)) {
-      return NextResponse.json({ error: 'Invalid city ID' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { name, state, country, code, description, is_active } = body;
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
-    const [existingRows] = await pool.query(
-      'SELECT name, state, country, code, description, is_active FROM cities WHERE id = ?',
+    // ✅ Validate input
+    const parsed = parseBody(CityUpdateSchema, body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const { name, state, country, code, description, is_active } = parsed.data;
+
+    // Load existing city
+    const [existingRows] = (await pool.query(
+      "SELECT name, state, country, code, description, is_active FROM cities WHERE id = ?",
       [cityId]
-    );
+    )) as any;
     const existing = (existingRows as any[])[0];
     if (!existing) {
-      return NextResponse.json({ error: 'City not found' }, { status: 404 });
+      return NextResponse.json({ error: "City not found" }, { status: 404 });
+    }
+
+    // Uniqueness check (if name or state changing)
+    if (name || state !== undefined) {
+      const newName = name || existing.name;
+      const newState = state !== undefined ? state : existing.state;
+      const [dupCheck] = (await pool.query(
+        `SELECT id FROM cities
+         WHERE name = ? AND (state = ? OR (state IS NULL AND ? IS NULL)) AND id != ?`,
+        [newName, newState || null, newState || null, cityId]
+      )) as any;
+      if ((dupCheck as any[]).length > 0) {
+        return NextResponse.json(
+          { error: "Another city with this name already exists in this state" },
+          { status: 409 }
+        );
+      }
     }
 
     const fields: string[] = [];
     const values: any[] = [];
 
     if (name) {
-      fields.push('name = ?');
+      fields.push("name = ?");
       values.push(name);
     }
     if (state !== undefined) {
-      fields.push('state = ?');
-      values.push(state);
+      fields.push("state = ?");
+      values.push(state || null);
     }
     if (country) {
-      fields.push('country = ?');
+      fields.push("country = ?");
       values.push(country);
     }
     if (code !== undefined) {
-      fields.push('code = ?');
-      values.push(code);
+      fields.push("code = ?");
+      values.push(code || null);
     }
     if (description !== undefined) {
-      fields.push('description = ?');
-      values.push(description);
+      fields.push("description = ?");
+      values.push(description || null);
     }
     if (is_active !== undefined) {
-      fields.push('is_active = ?');
+      fields.push("is_active = ?");
       values.push(is_active ? 1 : 0);
     }
 
     if (fields.length === 0) {
       return NextResponse.json(
-        { error: 'No fields to update' },
+        { error: "No fields to update" },
         { status: 400 }
       );
     }
 
     values.push(cityId);
-    await pool.query(`UPDATE cities SET ${fields.join(', ')} WHERE id = ?`, values);
+    await pool.query(
+      `UPDATE cities SET ${fields.join(", ")} WHERE id = ?`,
+      values
+    );
 
-    const [updated] = await pool.query('SELECT * FROM cities WHERE id = ?', [
+    const [updated] = await pool.query("SELECT * FROM cities WHERE id = ?", [
       cityId,
     ]);
     const updatedCity = (updated as any[])[0];
 
-    await logActivity({
-      actor: {
-        userId: decoded.userId,
-        userName: decoded.username || `User #${decoded.userId}`,
-      },
-      action: 'update',
-      entityType: 'city',
-      entityId: cityId,
-      entityName: name || existing.name,
-      changes: {
-        before: {
-          name: existing.name,
-          state: existing.state,
-          country: existing.country,
-          code: existing.code,
-          is_active: Boolean(existing.is_active),
+    // Log activity
+    try {
+      await logActivity({
+        actor: {
+          userId: decoded.userId,
+          userName: decoded.username || `User #${decoded.userId}`,
         },
-        after: {
-          name: name || existing.name,
-          state: state ?? existing.state,
-          country: country || existing.country,
-          code: code ?? existing.code,
-          is_active:
-            is_active !== undefined ? is_active : Boolean(existing.is_active),
+        action: "update",
+        entityType: "city",
+        entityId: cityId,
+        entityName: name || existing.name,
+        changes: {
+          before: {
+            name: existing.name,
+            state: existing.state,
+            country: existing.country,
+            code: existing.code,
+            is_active: Boolean(existing.is_active),
+          },
+          after: {
+            name: name || existing.name,
+            state: state ?? existing.state,
+            country: country || existing.country,
+            code: code ?? existing.code,
+            is_active:
+              is_active !== undefined ? is_active : Boolean(existing.is_active),
+          },
         },
-      },
-      request,
-    });
+        request,
+      });
+    } catch (logErr) {
+      console.error("Log activity failed (non-fatal):", logErr);
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'City updated successfully',
+      message: "City updated successfully",
       city: updatedCity,
     });
   } catch (err: any) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Update city error:', err);
+    console.error("Update city error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
-// DELETE
+// ============================================
+// DELETE — delete city
+// ============================================
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 20 });
+    if (!rl.ok) return rl.response!;
+
     const decoded = await requireAdmin(request);
     const { id } = await params;
-    const cityId = parseInt(id);
+    const cityId = parseInt(id, 10);
 
     if (isNaN(cityId)) {
-      return NextResponse.json({ error: 'Invalid city ID' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
     }
 
     const [rows] = await pool.query(
-      'SELECT id, name FROM cities WHERE id = ?',
+      "SELECT id, name FROM cities WHERE id = ?",
       [cityId]
     );
     const city = (rows as any[])[0];
     if (!city) {
-      return NextResponse.json({ error: 'City not found' }, { status: 404 });
+      return NextResponse.json({ error: "City not found" }, { status: 404 });
     }
 
-    await pool.query('DELETE FROM cities WHERE id = ?', [cityId]);
+    // Check if users are assigned
+    const [userRows] = (await pool.query(
+      "SELECT COUNT(*) as count FROM user_cities WHERE city_id = ?",
+      [cityId]
+    )) as any;
+    const userCount = Number((userRows as any[])[0]?.count) || 0;
+    if (userCount > 0) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete city. ${userCount} user(s) have access to it. Please remove their access first.`,
+        },
+        { status: 400 }
+      );
+    }
 
-    await logActivity({
-      actor: {
-        userId: decoded.userId,
-        userName: decoded.username || `User #${decoded.userId}`,
-      },
-      action: 'delete',
-      entityType: 'city',
-      entityId: cityId,
-      entityName: city.name,
-      changes: { deleted: true },
-      request,
-    });
+    await pool.query("DELETE FROM cities WHERE id = ?", [cityId]);
+
+    try {
+      await logActivity({
+        actor: {
+          userId: decoded.userId,
+          userName: decoded.username || `User #${decoded.userId}`,
+        },
+        action: "delete",
+        entityType: "city",
+        entityId: cityId,
+        entityName: city.name,
+        changes: { deleted: true },
+        request,
+      });
+    } catch (logErr) {
+      console.error("Log activity failed (non-fatal):", logErr);
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'City deleted successfully',
+      message: "City deleted successfully",
     });
   } catch (err: any) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Delete city error:', err);
+    console.error("Delete city error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

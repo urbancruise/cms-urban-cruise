@@ -11,13 +11,13 @@ import {
   MdOutlineExpandMore,
   MdOutlineExpandLess,
 } from "react-icons/md";
-import { useChunkedFetch } from "@/app/hooks/useChunkedFetch";
+import { useChunkedSWR } from "@/lib/use-chunked-swr";
 import InfiniteScrollSentinel from "@/app/components/UI/InfiniteScrollSentinel";
 import {
-  ChunkSkeleton,
   ChunkSpinner,
   EndOfList,
 } from "@/app/components/UI/ChunkLoader";
+import { ActivitySkeleton } from "@/app/components/UI/PageSkeletons";
 
 interface Activity {
   id: number;
@@ -92,7 +92,7 @@ export default function ActivityPage() {
     hasMore,
     loadMore,
     refresh,
-  } = useChunkedFetch<Activity>({
+  } = useChunkedSWR<Activity>({
     endpoint: "/api/admin/activity",
     params,
     pageSize: PAGE_SIZE,
@@ -218,10 +218,9 @@ export default function ActivityPage() {
         </div>
       )}
 
+      {/* ✅ Skeleton while initial load */}
       {initialLoading ? (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <ChunkSkeleton rows={6} />
-        </div>
+        <ActivitySkeleton rows={6} />
       ) : activities.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
           <MdOutlineHistory className="w-12 h-12 mx-auto text-slate-300" />
@@ -309,7 +308,10 @@ export default function ActivityPage() {
 
           {hasMore ? (
             <>
-              <InfiniteScrollSentinel onIntersect={handleLoadMore} disabled={loading} />
+              <InfiniteScrollSentinel
+                onIntersect={handleLoadMore}
+                disabled={loading}
+              />
               {loading && <ChunkSpinner />}
               {!loading && (
                 <div className="flex justify-center py-6">

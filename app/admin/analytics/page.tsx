@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useScopedFetch } from "@/lib/use-scoped-fetch";
+import { AnalyticsSkeleton } from "@/app/components/UI/PageSkeletons";
 import {
   MdOutlinePeople,
   MdOutlineSecurity,
@@ -85,45 +86,20 @@ function BarChart({
 }
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data, isLoading, error, mutate } = useScopedFetch<AnalyticsData>(
+    "/api/admin/analytics/stats"
+  );
 
-  const fetchData = useCallback(async () => {
-    try {
-      setError("");
-      const res = await fetch("/api/admin/analytics/stats", {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load analytics");
-      setData(json);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const id = setInterval(fetchData, 30000);
-    return () => clearInterval(id);
-  }, [fetchData]);
-
-  if (loading && !data) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  // ✅ Skeleton on initial load
+  if (isLoading && !data) {
+    return <AnalyticsSkeleton />;
   }
 
   if (!data) {
     return (
       <div className="p-8">
         <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {error || "No data available"}
+          {error?.message || "No data available"}
         </div>
       </div>
     );
@@ -172,7 +148,7 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <button
-          onClick={fetchData}
+          onClick={() => mutate()}
           className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           title="Refresh"
         >
@@ -182,11 +158,10 @@ export default function AnalyticsPage() {
 
       {error && (
         <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
+          {error.message}
         </div>
       )}
 
-      {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {metrics.map((metric) => (
           <div
@@ -214,7 +189,6 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Monthly charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
@@ -265,7 +239,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Distributions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
@@ -357,4 +330,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-

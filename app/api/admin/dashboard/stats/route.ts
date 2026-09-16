@@ -1,135 +1,128 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import pool from '@/lib/db';
+import { NextRequest } from "next/server";
+import jwt from "jsonwebtoken";
+import pool from "@/lib/db";
+import { cachedJson } from "@/lib/api-cache";
+import { rateLimit } from "@/lib/rate-limit";
 
 async function requireAuth(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
-  if (!token) throw { status: 401, message: 'Not authenticated' };
-
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || 'fallback_secret'
-  ) as { userId: number; role: string };
-}
-
-function getTimeAgo(date: string | Date): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(date).toLocaleDateString();
+  const token = request.cookies.get("token")?.value;
+  if (!token) throw { status: 401, message: "Not authenticated" };
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+    userId: number;
+    role: string;
+  };
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
+    if (!rl.ok) return rl.response!;
+
     await requireAuth(request);
 
-    // 1) User counts
-    const [[usersRow]] = (await pool.query(
-      'SELECT COUNT(*) as total, SUM(is_active) as active FROM users'
-    )) as any;
+    // ✅ Run queries in parallel
+    const [
+      [usersRow],
+      [rolesRow],
+      [citiesRow],
+      [thisMonth],
+      [lastMonth],
+      [recentUsers],
+      [recentRoles],
+      [recentCities],
+    ] = await Promise.all([
+      pool.query(
+        "SELECT COUNT(*) as total, SUM(is_active) as active FROM users"
+      ) as any,
+      pool.query(
+        "SELECT COUNT(*) as total, SUM(is_active) as active FROM roles"
+      ) as any,
+      pool.query(
+        "SELECT COUNT(*) as total, SUM(is_active) as active FROM cities"
+      ) as any,
+      pool.query(
+        "SELECT COUNT(*) as count FROM users WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
+      ) as any,
+      pool.query(
+        `SELECT COUNT(*) as count FROM users
+         WHERE created_at >= DATE_FORMAT(NOW() - INTERVAL 1 MONTH, '%Y-%m-01')
+           AND created_at < DATE_FORMAT(NOW(), '%Y-%m-01')`
+      ) as any,
+      pool.query(
+        `SELECT 'user' as type, id, username as title,
+                CONCAT(full_name, ' (@', username, ') registered') as description,
+                created_at
+         FROM users ORDER BY created_at DESC LIMIT 5`
+      ) as any,
+      pool.query(
+        `SELECT 'role' as type, id, name as title,
+                CONCAT('Role "', name, '" created') as description,
+                created_at
+         FROM roles ORDER BY created_at DESC LIMIT 5`
+      ) as any,
+      pool.query(
+        `SELECT 'city' as type, id, name as title,
+                CONCAT('City "', name, '" added') as description,
+                created_at
+         FROM cities ORDER BY created_at DESC LIMIT 5`
+      ) as any,
+    ]);
 
-    // 2) Role count
-    const [[rolesRow]] = (await pool.query(
-      'SELECT COUNT(*) as total, SUM(is_active) as active FROM roles'
-    )) as any;
-
-    // 3) City count
-    const [[citiesRow]] = (await pool.query(
-      'SELECT COUNT(*) as total, SUM(is_active) as active FROM cities'
-    )) as any;
-
-    // 4) User growth (this month vs last month)
-    const [[thisMonth]] = (await pool.query(
-      `SELECT COUNT(*) as count FROM users
-       WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')`
-    )) as any;
-
-    const [[lastMonth]] = (await pool.query(
-      `SELECT COUNT(*) as count FROM users
-       WHERE created_at >= DATE_FORMAT(NOW() - INTERVAL 1 MONTH, '%Y-%m-01')
-         AND created_at < DATE_FORMAT(NOW(), '%Y-%m-01')`
-    )) as any;
+    const u = (usersRow as any[])[0];
+    const r = (rolesRow as any[])[0];
+    const c = (citiesRow as any[])[0];
+    const tm = (thisMonth as any[])[0];
+    const lm = (lastMonth as any[])[0];
 
     const userGrowth =
-      lastMonth.count === 0
-        ? thisMonth.count > 0
+      lm.count === 0
+        ? tm.count > 0
           ? 100
           : 0
-        : Math.round(
-            ((thisMonth.count - lastMonth.count) / lastMonth.count) * 100
-          );
+        : Math.round(((tm.count - lm.count) / lm.count) * 100);
 
-    // 5) Recent users (last 5 signups)
-    const [recentUsers] = (await pool.query(
-      `SELECT 'user' as type, id, username as title,
-              CONCAT(full_name, ' (@', username, ') registered') as description,
-              created_at
-       FROM users
-       ORDER BY created_at DESC
-       LIMIT 5`
-    )) as any;
-
-    // 6) Recent roles (last 5 created roles)
-    const [recentRoles] = (await pool.query(
-      `SELECT 'role' as type, id, name as title,
-              CONCAT('Role "', name, '" created') as description,
-              created_at
-       FROM roles
-       ORDER BY created_at DESC
-       LIMIT 5`
-    )) as any;
-
-    // 7) Recent cities (last 5 created cities)
-    const [recentCities] = (await pool.query(
-      `SELECT 'city' as type, id, name as title,
-              CONCAT('City "', name, '" added') as description,
-              created_at
-       FROM cities
-       ORDER BY created_at DESC
-       LIMIT 5`
-    )) as any;
+    const timeAgo = (date: any) => {
+      const diff = Date.now() - new Date(date).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return "Just now";
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      return `${Math.floor(h / 24)}d ago`;
+    };
 
     const recentActivity = [
-      ...recentUsers,
-      ...recentRoles,
-      ...recentCities,
+      ...(recentUsers as any[]),
+      ...(recentRoles as any[]),
+      ...(recentCities as any[]),
     ]
       .sort(
-        (a: any, b: any) =>
+        (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
       .slice(0, 6)
-      .map((row: any) => ({
-        ...row,
-        time_ago: getTimeAgo(row.created_at),
-      }));
+      .map((row) => ({ ...row, time_ago: timeAgo(row.created_at) }));
 
-    return NextResponse.json({
-      stats: {
-        totalUsers: Number(usersRow.total) || 0,
-        activeUsers: Number(usersRow.active) || 0,
-        totalRoles: Number(rolesRow.total) || 0,
-        activeRoles: Number(rolesRow.active) || 0,
-        totalCities: Number(citiesRow.total) || 0,
-        activeCities: Number(citiesRow.active) || 0,
-        userGrowth,
+    return cachedJson(
+      {
+        stats: {
+          totalUsers: Number(u.total) || 0,
+          activeUsers: Number(u.active) || 0,
+          totalRoles: Number(r.total) || 0,
+          activeRoles: Number(r.active) || 0,
+          totalCities: Number(c.total) || 0,
+          activeCities: Number(c.active) || 0,
+          userGrowth,
+        },
+        recentActivity,
       },
-      recentActivity,
-    });
+      { ttl: 30, swr: 120 }
+    );
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      return Response.json({ error: err.message }, { status: err.status });
     }
-    console.error('Dashboard stats error:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("Dashboard stats error:", err);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -25,6 +25,7 @@ import {
   MdOutlineKeyboardArrowDown,
   MdOutlineKeyboardArrowRight,
 } from "react-icons/md";
+import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
 
 // ============================================================
 // Types
@@ -309,7 +310,7 @@ const PERMISSION_TREE: PermissionGroup[] = [
 ];
 
 // ============================================================
-// Flatten tree into a map of key → permKey for quick ops
+// Helpers
 // ============================================================
 function collectAllKeys(nodes: PermissionGroup[]): string[] {
   const out: string[] = [];
@@ -325,9 +326,6 @@ function collectAllKeys(nodes: PermissionGroup[]): string[] {
 
 const ALL_PERMISSION_KEYS = collectAllKeys(PERMISSION_TREE);
 
-// ============================================================
-// Auto-add parent permissions when a child is selected
-// ============================================================
 function ensureParents(perms: string[]): string[] {
   const set = new Set(perms);
 
@@ -342,7 +340,6 @@ function ensureParents(perms: string[]): string[] {
         const hasSelectedDescendant = descendants.some((k) => set.has(k));
 
         if (hasSelectedDescendant) {
-          // Add all ancestors
           ancestors.forEach((a) => set.add(a));
           set.add(node.permKey);
         }
@@ -434,20 +431,18 @@ export default function RolesPage() {
     });
   };
 
-  // Toggle an entire branch (parent + all descendants)
+  // Toggle an entire branch
   const toggleBranch = (node: PermissionGroup) => {
     const keys = collectAllKeys([node]);
     const allSelected = keys.every((k) => formData.permissions.includes(k));
 
     setFormData((prev) => {
       if (allSelected) {
-        // Remove all
         return {
           ...prev,
           permissions: prev.permissions.filter((p) => !keys.includes(p)),
         };
       }
-      // Add all
       const set = new Set([...prev.permissions, ...keys]);
       return { ...prev, permissions: Array.from(set) };
     });
@@ -491,7 +486,6 @@ export default function RolesPage() {
       is_active: role.is_active,
     });
     setFormError("");
-    // Auto-expand all parents that have selected children
     const expand: string[] = [];
     const walk = (nodes: PermissionGroup[]) => {
       nodes.forEach((n) => {
@@ -526,7 +520,6 @@ export default function RolesPage() {
     setSaving(true);
     setFormError("");
     try {
-      // ✅ Auto-add parent permissions so child-only selections still show
       const finalPermissions = ensureParents(formData.permissions);
 
       const url = editingRole
@@ -583,7 +576,6 @@ export default function RolesPage() {
 
   const isProtectedRole = (role: Role) => role.slug === "admin";
 
-  // Flatten lookup for table display: key → label
   const getLabelForKey = (key: string): string => {
     let label = key;
     const walk = (nodes: PermissionGroup[]) => {
@@ -596,9 +588,6 @@ export default function RolesPage() {
     return label;
   };
 
-  // ============================================================
-  // Recursive permission tree renderer
-  // ============================================================
   const renderPermissionNode = (
     node: PermissionGroup,
     depth = 0
@@ -622,7 +611,6 @@ export default function RolesPage() {
           }`}
           style={{ paddingLeft: `${12 + indent}px` }}
         >
-          {/* Expand toggle */}
           {hasChildren ? (
             <button
               type="button"
@@ -640,7 +628,6 @@ export default function RolesPage() {
             <span className="w-5 flex-shrink-0" />
           )}
 
-          {/* Checkbox */}
           {node.permKey ? (
             <input
               type="checkbox"
@@ -660,7 +647,6 @@ export default function RolesPage() {
             />
           )}
 
-          {/* Icon + Label */}
           {Icon && (
             <Icon
               className={`w-4 h-4 flex-shrink-0 ${
@@ -678,7 +664,6 @@ export default function RolesPage() {
             {node.label}
           </span>
 
-          {/* Count badge for parents */}
           {hasChildren && (
             <span
               className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium ${
@@ -694,7 +679,6 @@ export default function RolesPage() {
           )}
         </div>
 
-        {/* Children (only if expanded) */}
         {hasChildren && expanded && (
           <div className="mt-0.5">
             {node.children!.map((child) =>
@@ -706,9 +690,6 @@ export default function RolesPage() {
     );
   };
 
-  // ============================================================
-  // Render
-  // ============================================================
   return (
     <div className="p-8">
       <div className="fixed top-4 right-4 z-[100] space-y-2">
@@ -757,10 +738,9 @@ export default function RolesPage() {
         </div>
       </div>
 
+      {/* ✅ Skeleton while loading */}
       {loading ? (
-        <div className="flex justify-center h-64 items-center">
-          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <TableSkeleton rows={5} columns={5} />
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -887,9 +867,7 @@ export default function RolesPage() {
         </div>
       )}
 
-      {/* ============================================
-          Create / Edit Modal
-      ============================================ */}
+      {/* Create / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -991,9 +969,6 @@ export default function RolesPage() {
                 />
               </div>
 
-              {/* ============================================
-                  PERMISSIONS — Recursive Tree
-              ============================================ */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -1071,9 +1046,7 @@ export default function RolesPage() {
         </div>
       )}
 
-      {/* ============================================
-          Delete Modal
-      ============================================ */}
+      {/* Delete Modal */}
       {deletingRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">

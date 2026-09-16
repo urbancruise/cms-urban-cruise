@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   MdOutlineLocationOn,
   MdOutlineKeyboardArrowDown,
@@ -28,13 +28,64 @@ interface Props {
   cities: City[];
   value: CityAccess[];
   onChange: (next: CityAccess[]) => void;
+  allowedPermissions?: string[] | null;
+  loading?: boolean;
 }
 
-const ALL_WEBSITE_KEYS = collectAllKeys(WEBSITE_PERMISSION_TREE);
+// ============================================================
+// Filter tree: keep only branches that have at least one
+// allowed permission. Ancestors of allowed nodes are kept.
+// ============================================================
+function filterTreeByAllowed(
+  nodes: PermissionGroup[],
+  allowed: Set<string>
+): PermissionGroup[] {
+  const result: PermissionGroup[] = [];
 
-export default function CityPermissionTree({ cities, value, onChange }: Props) {
+  for (const node of nodes) {
+    if (node.children?.length) {
+      const filteredChildren = filterTreeByAllowed(node.children, allowed);
+      const selfAllowed = node.permKey ? allowed.has(node.permKey) : false;
+
+      if (selfAllowed || filteredChildren.length > 0) {
+        result.push({
+          ...node,
+          children: filteredChildren,
+        });
+      }
+      continue;
+    }
+
+    if (node.permKey && allowed.has(node.permKey)) {
+      result.push(node);
+    }
+  }
+
+  return result;
+}
+
+export default function CityPermissionTree({
+  cities,
+  value,
+  onChange,
+  allowedPermissions,
+  loading = false,
+}: Props) {
   const [expandedCities, setExpandedCities] = useState<number[]>([]);
   const [expandedNodes, setExpandedNodes] = useState<string[]>([]);
+
+  const visibleTree = useMemo<PermissionGroup[]>(() => {
+    if (!allowedPermissions || allowedPermissions.length === 0) {
+      return WEBSITE_PERMISSION_TREE;
+    }
+    const allowedSet = new Set(allowedPermissions);
+    return filterTreeByAllowed(WEBSITE_PERMISSION_TREE, allowedSet);
+  }, [allowedPermissions]);
+
+  const ALL_VISIBLE_KEYS = useMemo(
+    () => collectAllKeys(visibleTree),
+    [visibleTree]
+  );
 
   const getCityAccess = (cityId: number): string[] =>
     value.find((v) => v.city_id === cityId)?.permissions || [];
@@ -53,7 +104,7 @@ export default function CityPermissionTree({ cities, value, onChange }: Props) {
     if (current.length > 0) {
       updateCityAccess(cityId, []);
     } else {
-      updateCityAccess(cityId, [...ALL_WEBSITE_KEYS]);
+      updateCityAccess(cityId, [...ALL_VISIBLE_KEYS]);
     }
   };
 
@@ -192,6 +243,29 @@ export default function CityPermissionTree({ cities, value, onChange }: Props) {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="border border-slate-200 rounded-lg bg-white p-6 text-center">
+        <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs text-slate-500 mt-2">Loading permissions...</p>
+      </div>
+    );
+  }
+
+  if (visibleTree.length === 0) {
+    return (
+      <div className="border border-slate-200 rounded-lg bg-slate-50 p-6 text-center">
+        <MdOutlineLocationOn className="w-8 h-8 mx-auto text-slate-300" />
+        <p className="text-sm text-slate-500 mt-2 font-medium">
+          No website permissions available
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          Select a role that has Urban Cruise Website access first.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="border border-slate-200 rounded-lg bg-white overflow-hidden">
       <div className="p-2 max-h-[500px] overflow-y-auto">
@@ -204,7 +278,9 @@ export default function CityPermissionTree({ cities, value, onChange }: Props) {
             const perms = getCityAccess(city.id);
             const isExpanded = expandedCities.includes(city.id);
             const hasAny = perms.length > 0;
-            const hasAll = ALL_WEBSITE_KEYS.every((k) => perms.includes(k));
+            const hasAll =
+              ALL_VISIBLE_KEYS.length > 0 &&
+              ALL_VISIBLE_KEYS.every((k) => perms.includes(k));
 
             return (
               <div
@@ -266,16 +342,14 @@ export default function CityPermissionTree({ cities, value, onChange }: Props) {
                           : "bg-amber-100 text-amber-700"
                       }`}
                     >
-                      {perms.length}/{ALL_WEBSITE_KEYS.length}
+                      {perms.length}/{ALL_VISIBLE_KEYS.length}
                     </span>
                   )}
                 </div>
 
                 {isExpanded && (
                   <div className="bg-slate-50/50 px-2 py-2 border-t border-slate-100">
-                    {WEBSITE_PERMISSION_TREE.map((node) =>
-                      renderPermNode(city.id, node)
-                    )}
+                    {visibleTree.map((node) => renderPermNode(city.id, node))}
                   </div>
                 )}
               </div>
@@ -296,7 +370,7 @@ export default function CityPermissionTree({ cities, value, onChange }: Props) {
               onChange(
                 cities.map((c) => ({
                   city_id: c.id,
-                  permissions: [...ALL_WEBSITE_KEYS],
+                  permissions: [...ALL_VISIBLE_KEYS],
                 }))
               )
             }
@@ -317,4 +391,3 @@ export default function CityPermissionTree({ cities, value, onChange }: Props) {
     </div>
   );
 }
-

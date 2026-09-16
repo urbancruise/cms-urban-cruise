@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
-import { useState } from "react";
+import { ProfileSkeleton } from "@/app/components/UI/PageSkeletons";
 import {
   MdOutlinePerson,
   MdOutlineEmail,
@@ -25,6 +26,22 @@ export default function ProfilePage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Sync form data when user loads
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        full_name: user.full_name || "",
+        email: user.email || "",
+        username: user.username || "",
+      });
+    }
+  }, [user]);
+
+  // ✅ Skeleton while user loads
+  if (!user) {
+    return <ProfileSkeleton />;
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -60,17 +77,6 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-slate-500">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -306,4 +312,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

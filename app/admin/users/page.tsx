@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import useSWR from 'swr';
+import { fetcher } from '@/lib/swr-config';
+import { TableSkeleton, ModalFormSkeleton } from '@/app/components/UI/PageSkeletons';
 import {
   MdOutlinePersonAdd,
   MdOutlineSearch,
@@ -17,11 +20,14 @@ import {
   MdOutlineLocationOn,
   MdOutlineSecurity,
 } from 'react-icons/md';
-import { usePagination } from '@/app/hooks/usePagination';
 import Pagination from '@/app/components/UI/Pagination';
 import CityPermissionTree, {
   CityAccess,
 } from '@/app/components/UI/CityPermissionTree';
+import {
+  WEBSITE_PERMISSION_TREE,
+  collectAllKeys,
+} from '@/lib/permissionTree';
 
 // ============================================
 // Types
@@ -31,6 +37,7 @@ interface Role {
   name: string;
   slug: string;
   is_active: boolean;
+  permissions?: string[];
 }
 
 interface City {
@@ -107,6 +114,36 @@ const UserForm = ({
       };
     });
   };
+
+  const allowedPermissions = useMemo<string[]>(() => {
+    if (formData.role_ids.length === 0) return [];
+
+    const selectedRoles = roles.filter((r) =>
+      formData.role_ids.includes(r.id)
+    );
+
+    const set = new Set<string>();
+
+    selectedRoles.forEach((role) => {
+      const perms = role.permissions || [];
+
+      if (role.slug === 'admin' || perms.includes('all')) {
+        collectAllKeys(WEBSITE_PERMISSION_TREE).forEach((k) => set.add(k));
+        return;
+      }
+
+      perms.forEach((p) => {
+        if (
+          p.startsWith('urbancruise') ||
+          p.startsWith('urbancruisewebsite')
+        ) {
+          set.add(p);
+        }
+      });
+    });
+
+    return Array.from(set);
+  }, [formData.role_ids, roles]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -300,7 +337,7 @@ const UserForm = ({
         </label>
         <p className="text-xs text-slate-500 mb-2">
           Grant this user access to specific Urban Cruise Website pages for
-          each city. Click a city&apos;s arrow to configure pages.
+          each city. Only pages permitted by the selected role(s) are shown.
         </p>
 
         <CityPermissionTree
@@ -313,7 +350,16 @@ const UserForm = ({
               city_ids: next.map((c) => c.city_id),
             }))
           }
+          allowedPermissions={allowedPermissions}
+          loading={roles.length === 0}
         />
+
+        {formData.role_ids.length === 0 && (
+          <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+            <MdOutlineSecurity className="w-3.5 h-3.5" />
+            Select at least one role to see available website pages.
+          </p>
+        )}
       </div>
 
       {/* Row 5: Status */}
@@ -371,12 +417,7 @@ const UserForm = ({
 // Main Page
 // ============================================
 export default function UsersManagementPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('All');
@@ -400,76 +441,58 @@ export default function UsersManagementPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formLoading, setFormLoading] = useState(false);
 
-  const { page, totalPages, goTo, reset, offset } = usePagination(
-    total,
-    PAGE_SIZE
-  );
-
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
     return () => clearTimeout(t);
   }, [searchTerm]);
 
   useEffect(() => {
-    reset();
-  }, [debouncedSearch, selectedRole, selectedStatus, reset]);
+    setPage(1);
+  }, [debouncedSearch, selectedRole, selectedStatus]);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(offset));
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (selectedRole !== 'All') params.set('role', selectedRole);
-      if (selectedStatus !== 'All') params.set('status', selectedStatus);
+  // ============================================
+  // Users — SWR with cache + dedup
+  // ============================================
+  const usersKey = useMemo(() => {
+    const p = new URLSearchParams();
+    p.set('limit', String(PAGE_SIZE));
+    p.set('offset', String((page - 1) * PAGE_SIZE));
+    if (debouncedSearch) p.set('search', debouncedSearch);
+    if (selectedRole !== 'All') p.set('role', selectedRole);
+    if (selectedStatus !== 'All') p.set('status', selectedStatus);
+    return `/api/admin/users?${p.toString()}`;
+  }, [page, debouncedSearch, selectedRole, selectedStatus]);
 
-      const res = await fetch(`/api/admin/users?${params.toString()}`, {
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error('Failed to fetch users');
-      const data = await res.json();
-      setUsers(data.users || []);
-      setTotal(Number(data.total) || (data.users?.length ?? 0));
-    } catch (error) {
-      console.error(error);
-      alert('Failed to fetch users. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [offset, debouncedSearch, selectedRole, selectedStatus]);
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    mutate: mutateUsers,
+  } = useSWR<{ users: User[]; total: number }>(usersKey, fetcher, {
+    keepPreviousData: true,
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  const users = usersData?.users || [];
+  const total = Number(usersData?.total) || 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const fetchRoles = async () => {
-    try {
-      const res = await fetch('/api/admin/roles');
-      const data = await res.json();
-      if (res.ok) {
-        setRoles((data.roles || []).filter((r: Role) => r.is_active));
-      }
-    } catch (error) {
-      console.error('Failed to fetch roles:', error);
-    }
-  };
+  // ============================================
+  // Roles + Cities — cached forever (rarely change)
+  // ============================================
+  const { data: rolesData } = useSWR<{ roles: Role[] }>(
+    '/api/admin/roles',
+    fetcher
+  );
+  const roles = (rolesData?.roles || []).filter((r) => r.is_active);
 
-  const fetchCities = async () => {
-    try {
-      const res = await fetch('/api/admin/cities?active=true');
-      const data = await res.json();
-      if (res.ok) setCities(data.cities || []);
-    } catch (error) {
-      console.error('Failed to fetch cities:', error);
-    }
-  };
+  const { data: citiesData } = useSWR<{ cities: City[] }>(
+    '/api/admin/cities?active=true',
+    fetcher
+  );
+  const cities = citiesData?.cities || [];
 
-  useEffect(() => {
-    fetchRoles();
-    fetchCities();
-  }, []);
-
+  // ============================================
+  // Handlers
+  // ============================================
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormErrors({});
@@ -485,7 +508,7 @@ export default function UsersManagementPage() {
         setFormErrors({ general: data.error || 'Failed to create user' });
         return;
       }
-      await fetchUsers();
+      await mutateUsers();
       resetForm();
       setIsCreateModalOpen(false);
       alert('User created successfully!');
@@ -524,7 +547,7 @@ export default function UsersManagementPage() {
         setFormErrors({ general: data.error || 'Failed to update user' });
         return;
       }
-      await fetchUsers();
+      await mutateUsers();
       resetForm();
       setIsEditModalOpen(false);
       alert('User updated successfully!');
@@ -552,7 +575,7 @@ export default function UsersManagementPage() {
         const data = await res.json();
         throw new Error(data.error || 'Failed to delete user');
       }
-      await fetchUsers();
+      await mutateUsers();
       alert('User deleted successfully!');
     } catch (error: any) {
       console.error(error);
@@ -670,7 +693,7 @@ export default function UsersManagementPage() {
             <option value="Inactive">Inactive</option>
           </select>
           <button
-            onClick={fetchUsers}
+            onClick={() => mutateUsers()}
             className="px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             title="Refresh"
           >
@@ -679,10 +702,12 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
-      {/* Table */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+      {/* Table — ✅ Skeleton while loading */}
+      {usersLoading && !usersData ? (
+        <TableSkeleton rows={8} columns={6} />
+      ) : users.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
+          <p className="text-slate-400">No users found</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -711,132 +736,121 @@ export default function UsersManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center text-slate-400"
-                    >
-                      No users found
+                {users.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                          {(user.full_name || user.username)
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900">
+                            {user.full_name || user.username}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            @{user.username}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-slate-600">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.roles && user.roles.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {user.roles.map((r) => (
+                            <span
+                              key={r.id}
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleBadgeColor(
+                                r.slug
+                              )}`}
+                            >
+                              {r.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">None</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.city_permissions &&
+                      user.city_permissions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {user.city_permissions.slice(0, 3).map((cp) => {
+                            const city = user.cities?.find(
+                              (c) => c.id === cp.city_id
+                            );
+                            return (
+                              <span
+                                key={cp.city_id}
+                                className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                                title={`${cp.permissions.length} pages`}
+                              >
+                                {city?.name || `City #${cp.city_id}`}
+                                <span className="ml-1 opacity-70">
+                                  ({cp.permissions.length})
+                                </span>
+                              </span>
+                            );
+                          })}
+                          {user.city_permissions.length > 3 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                              +{user.city_permissions.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">None</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusBadgeColor(
+                          user.is_active
+                        )}`}
+                      >
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openViewModal(user)}
+                          className="p-1.5 hover:bg-teal-50 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <MdOutlineVisibility className="w-4 h-4 text-slate-400 hover:text-teal-600" />
+                        </button>
+                        <button
+                          onClick={() => openEditModal(user)}
+                          className="p-1.5 hover:bg-teal-50 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <MdOutlineEdit className="w-4 h-4 text-slate-400 hover:text-teal-600" />
+                        </button>
+                        {!(user.roles || []).some(
+                          (r) => r.slug === 'admin'
+                        ) &&
+                          user.role !== 'admin' && (
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <MdOutlineDelete className="w-4 h-4 text-slate-400 hover:text-red-600" />
+                            </button>
+                          )}
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                            {(user.full_name || user.username)
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {user.full_name || user.username}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              @{user.username}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-600">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-4">
-                        {user.roles && user.roles.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {user.roles.map((r) => (
-                              <span
-                                key={r.id}
-                                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleBadgeColor(
-                                  r.slug
-                                )}`}
-                              >
-                                {r.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">None</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {user.city_permissions &&
-                        user.city_permissions.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {user.city_permissions.slice(0, 3).map((cp) => {
-                              const city = user.cities?.find(
-                                (c) => c.id === cp.city_id
-                              );
-                              return (
-                                <span
-                                  key={cp.city_id}
-                                  className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700 border border-teal-200"
-                                  title={`${cp.permissions.length} pages`}
-                                >
-                                  {city?.name || `City #${cp.city_id}`}
-                                  <span className="ml-1 opacity-70">
-                                    ({cp.permissions.length})
-                                  </span>
-                                </span>
-                              );
-                            })}
-                            {user.city_permissions.length > 3 && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                +{user.city_permissions.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">None</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusBadgeColor(
-                            user.is_active
-                          )}`}
-                        >
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openViewModal(user)}
-                            className="p-1.5 hover:bg-teal-50 rounded-lg transition-colors"
-                            title="View"
-                          >
-                            <MdOutlineVisibility className="w-4 h-4 text-slate-400 hover:text-teal-600" />
-                          </button>
-                          <button
-                            onClick={() => openEditModal(user)}
-                            className="p-1.5 hover:bg-teal-50 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <MdOutlineEdit className="w-4 h-4 text-slate-400 hover:text-teal-600" />
-                          </button>
-                          {!(user.roles || []).some(
-                            (r) => r.slug === 'admin'
-                          ) &&
-                            user.role !== 'admin' && (
-                              <button
-                                onClick={() => handleDeleteUser(user)}
-                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <MdOutlineDelete className="w-4 h-4 text-slate-400 hover:text-red-600" />
-                              </button>
-                            )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
@@ -845,7 +859,7 @@ export default function UsersManagementPage() {
             <Pagination
               page={page}
               totalPages={totalPages}
-              onPageChange={goTo}
+              onPageChange={setPage}
               totalItems={total}
               pageSize={PAGE_SIZE}
             />
@@ -877,20 +891,25 @@ export default function UsersManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              <UserForm
-                onSubmit={handleCreateUser}
-                isEdit={false}
-                formData={formData}
-                formErrors={formErrors}
-                formLoading={formLoading}
-                setFormData={setFormData}
-                onCancel={() => {
-                  setIsCreateModalOpen(false);
-                  resetForm();
-                }}
-                roles={roles}
-                cities={cities}
-              />
+              {/* ✅ Skeleton while roles/cities load */}
+              {!rolesData || !citiesData ? (
+                <ModalFormSkeleton />
+              ) : (
+                <UserForm
+                  onSubmit={handleCreateUser}
+                  isEdit={false}
+                  formData={formData}
+                  formErrors={formErrors}
+                  formLoading={formLoading}
+                  setFormData={setFormData}
+                  onCancel={() => {
+                    setIsCreateModalOpen(false);
+                    resetForm();
+                  }}
+                  roles={roles}
+                  cities={cities}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -920,26 +939,30 @@ export default function UsersManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              <UserForm
-                onSubmit={handleUpdateUser}
-                isEdit={true}
-                formData={formData}
-                formErrors={formErrors}
-                formLoading={formLoading}
-                setFormData={setFormData}
-                onCancel={() => {
-                  setIsEditModalOpen(false);
-                  resetForm();
-                }}
-                roles={roles}
-                cities={cities}
-              />
+              {!rolesData || !citiesData ? (
+                <ModalFormSkeleton />
+              ) : (
+                <UserForm
+                  onSubmit={handleUpdateUser}
+                  isEdit={true}
+                  formData={formData}
+                  formErrors={formErrors}
+                  formLoading={formLoading}
+                  setFormData={setFormData}
+                  onCancel={() => {
+                    setIsEditModalOpen(false);
+                    resetForm();
+                  }}
+                  roles={roles}
+                  cities={cities}
+                />
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* View Modal */}
+      {/* View Modal — unchanged */}
       {isViewModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -1092,4 +1115,3 @@ export default function UsersManagementPage() {
     </div>
   );
 }
-

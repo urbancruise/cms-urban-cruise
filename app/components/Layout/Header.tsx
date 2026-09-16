@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import useSWR from "swr";
 import {
   MdOutlineNotifications,
   MdOutlineMenu,
@@ -15,6 +16,8 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import { fetcher } from "@/lib/swr-config";
+import { NotificationSkeleton } from "@/app/components/UI/PageSkeletons";
 
 interface HeaderProps {
   toggleSidebar?: () => void;
@@ -38,13 +41,23 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notifLoading, setNotifLoading] = useState(false);
-
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+
+  // ✅ SWR with 60s polling — route-scoped via key
+  const { data, error, mutate } = useSWR<{
+    notifications: NotificationItem[];
+    unread: number;
+  }>(user ? "/api/notifications?limit=15" : null, fetcher, {
+    refreshInterval: 60000,
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  });
+
+  const notifications = data?.notifications || [];
+  const unreadCount = data?.unread || 0;
+  const isLoading = !data && !error;
 
   const getPageTitle = () => {
     const path = pathname?.split("/").pop() || "dashboard";
@@ -71,70 +84,40 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const displayRole = user?.role || "User";
   const displayInitials = getInitials(displayName);
 
-  // ============================================
-  // Notifications
-  // ============================================
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setNotifLoading(true);
-      const res = await fetch("/api/notifications?limit=15", {
-        cache: "no-store",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unread || 0);
-    } catch {
-      // silent
-    } finally {
-      setNotifLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchNotifications();
-    const id = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(id);
-  }, [user, fetchNotifications]);
-
-  useEffect(() => {
-    if (isNotificationsOpen) fetchNotifications();
-  }, [isNotificationsOpen, fetchNotifications]);
-
-  const markAllRead = async () => {
+  const markAllRead = useCallback(async () => {
     await fetch("/api/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markAll: true }),
     });
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
-  };
+    mutate();
+  }, [mutate]);
 
-  const markOneRead = async (id: number) => {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
-    setUnreadCount((c) => Math.max(0, c - 1));
-  };
+  const markOneRead = useCallback(
+    async (id: number) => {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      mutate();
+    },
+    [mutate]
+  );
 
-  const deleteOne = async (id: number) => {
-    await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  const deleteOne = useCallback(
+    async (id: number) => {
+      await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
+      mutate();
+    },
+    [mutate]
+  );
 
-  const clearAll = async () => {
+  const clearAll = useCallback(async () => {
     if (!confirm("Clear all notifications?")) return;
     await fetch("/api/notifications?all=true", { method: "DELETE" });
-    setNotifications([]);
-    setUnreadCount(0);
-  };
+    mutate();
+  }, [mutate]);
 
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
@@ -143,8 +126,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     if (m < 60) return `${m}m ago`;
     const h = Math.floor(m / 60);
     if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    return `${d}d ago`;
+    return `${Math.floor(h / 24)}d ago`;
   };
 
   return (
@@ -231,10 +213,9 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   </div>
 
                   <div className="max-h-96 overflow-y-auto">
-                    {notifLoading && notifications.length === 0 ? (
-                      <div className="flex justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                      </div>
+                    {/* ✅ Skeleton while loading */}
+                    {isLoading ? (
+                      <NotificationSkeleton rows={5} />
                     ) : notifications.length === 0 ? (
                       <div className="py-10 text-center">
                         <MdOutlineNotificationsActive className="w-10 h-10 mx-auto text-slate-300" />
@@ -387,4 +368,3 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
     </header>
   );
 }
-

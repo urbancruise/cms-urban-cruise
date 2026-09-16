@@ -1,21 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import pool from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import pool from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 async function requireAdmin(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
-  if (!token) throw { status: 401, message: 'Not authenticated' };
+  const token = request.cookies.get("token")?.value;
+  if (!token) throw { status: 401, message: "Not authenticated" };
 
   const decoded = jwt.verify(
     token,
-    process.env.JWT_SECRET || 'fallback_secret'
+    process.env.JWT_SECRET || "fallback_secret"
   ) as { userId: number; role: string; roles?: string[] };
 
   const isAdmin =
-    decoded.role === 'admin' ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes('admin'));
+    decoded.role === "admin" ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
 
-  if (!isAdmin) throw { status: 403, message: 'Access denied. Admin only.' };
+  if (!isAdmin) throw { status: 403, message: "Access denied. Admin only." };
   return decoded;
 }
 
@@ -29,38 +30,41 @@ function safeJsonParse(s: string) {
 
 export async function GET(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60000, max: 90 });
+    if (!rl.ok) return rl.response!;
+
     await requireAdmin(request);
     const { searchParams } = new URL(request.url);
 
-    const entityType = searchParams.get('entity_type') || '';
-    const action = searchParams.get('action') || '';
-    const userId = searchParams.get('user_id') || '';
-    const search = searchParams.get('search') || '';
-    const limit = Math.min(Number(searchParams.get('limit')) || 50, 200);
-    const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
+    const entityType = searchParams.get("entity_type") || "";
+    const action = searchParams.get("action") || "";
+    const userId = searchParams.get("user_id") || "";
+    const search = searchParams.get("search") || "";
+    const limit = Math.min(Number(searchParams.get("limit")) || 50, 200);
+    const offset = Math.max(Number(searchParams.get("offset")) || 0, 0);
 
-    const where: string[] = ['1=1'];
+    const where: string[] = ["1=1"];
     const params: any[] = [];
 
     if (entityType) {
-      where.push('entity_type = ?');
+      where.push("entity_type = ?");
       params.push(entityType);
     }
     if (action) {
-      where.push('action = ?');
+      where.push("action = ?");
       params.push(action);
     }
     if (userId) {
-      where.push('user_id = ?');
+      where.push("user_id = ?");
       params.push(Number(userId));
     }
     if (search) {
-      where.push('(entity_name LIKE ? OR user_name LIKE ?)');
+      where.push("(entity_name LIKE ? OR user_name LIKE ?)");
       const term = `%${search}%`;
       params.push(term, term);
     }
 
-    const whereClause = where.join(' AND ');
+    const whereClause = where.join(" AND ");
 
     const [rows] = (await pool.query(
       `SELECT id, user_id, user_name, action, entity_type, entity_id,
@@ -80,24 +84,31 @@ export async function GET(request: NextRequest) {
     const activities = (rows as any[]).map((r) => ({
       ...r,
       changes:
-        typeof r.changes === 'string'
+        typeof r.changes === "string"
           ? safeJsonParse(r.changes)
           : r.changes || null,
     }));
 
-    return NextResponse.json({
-      activities,
-      total: Number((countRows as any)[0]?.total) || 0,
-      limit,
-      offset,
-    });
+    return NextResponse.json(
+      {
+        activities,
+        total: Number((countRows as any)[0]?.total) || 0,
+        limit,
+        offset,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=10, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (err: any) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('Get activity error:', err);
+    console.error("Get activity error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
