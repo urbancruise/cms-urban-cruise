@@ -23,7 +23,9 @@ async function requireAdmin(request: NextRequest) {
   return decoded;
 }
 
-// GET
+// ============================================
+// GET - paginated list
+// ============================================
 export async function GET(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60000, max: 120 });
@@ -64,8 +66,9 @@ export async function GET(request: NextRequest) {
         `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
         params
       ) as any,
+      // ✅ avatar_url in SELECT
       pool.query(
-        `SELECT u.id, u.username, u.email, u.full_name,
+        `SELECT u.id, u.username, u.email, u.full_name, u.avatar_url,
                 u.role, u.role_id, u.is_active, u.created_at, u.last_login
          FROM users u
          WHERE ${whereClause}
@@ -171,7 +174,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST
+// ============================================
+// POST - create user
+// ============================================
 export async function POST(request: NextRequest) {
   const connection = await pool.getConnection();
   try {
@@ -191,6 +196,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       full_name,
+      avatar_url, // ✅
       role_ids,
       is_active,
       city_ids,
@@ -239,14 +245,17 @@ export async function POST(request: NextRequest) {
     try {
       const passwordHash = await bcrypt.hash(password, 10);
 
+      // ✅ avatar_url in INSERT
       const [result] = await connection.query(
-        `INSERT INTO users (username, email, password_hash, full_name, role, role_id, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO users 
+         (username, email, password_hash, full_name, avatar_url, role, role_id, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           username,
           email,
           passwordHash,
           full_name || username,
+          avatar_url || null,
           primarySlug,
           primaryRoleId,
           is_active !== undefined ? (is_active ? 1 : 0) : 1,
@@ -295,8 +304,9 @@ export async function POST(request: NextRequest) {
 
       await connection.commit();
 
+      // ✅ avatar_url in SELECT
       const [newUserRows] = await connection.query(
-        `SELECT id, username, email, full_name, role, role_id, is_active, created_at
+        `SELECT id, username, email, full_name, avatar_url, role, role_id, is_active, created_at
          FROM users WHERE id = ?`,
         [newUserId]
       );
@@ -345,6 +355,7 @@ export async function POST(request: NextRequest) {
           username,
           email,
           full_name: full_name || username,
+          avatar_url: avatar_url || null,
           role_ids,
           city_permissions: permList,
           is_active: is_active !== undefined ? is_active : true,

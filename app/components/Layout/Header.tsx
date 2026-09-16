@@ -45,7 +45,6 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  // ✅ SWR with 60s polling — route-scoped via key
   const { data, error, mutate } = useSWR<{
     notifications: NotificationItem[];
     unread: number;
@@ -83,6 +82,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const displayEmail = user?.email || "user@urbancruise.com";
   const displayRole = user?.role || "User";
   const displayInitials = getInitials(displayName);
+  const avatarUrl = user?.avatar_url || null;  // ✅
 
   const markAllRead = useCallback(async () => {
     await fetch("/api/notifications", {
@@ -213,7 +213,6 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   </div>
 
                   <div className="max-h-96 overflow-y-auto">
-                    {/* ✅ Skeleton while loading */}
                     {isLoading ? (
                       <NotificationSkeleton rows={5} />
                     ) : notifications.length === 0 ? (
@@ -290,9 +289,23 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                {displayInitials}
-              </div>
+              {/* ✅ Avatar in header button */}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                  {displayInitials}
+                </div>
+              )}
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-slate-900">
                   {displayName}
@@ -312,9 +325,19 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-50">
                   <div className="p-4 border-b border-slate-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                        {displayInitials}
-                      </div>
+                      {/* ✅ Avatar in dropdown */}
+                      {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={avatarUrl}
+                          alt={displayName}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                          {displayInitials}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-medium text-slate-900 truncate">
                           {displayName}

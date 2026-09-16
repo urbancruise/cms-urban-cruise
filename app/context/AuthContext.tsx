@@ -20,6 +20,7 @@ interface User {
   username: string;
   email: string;
   full_name: string;
+  avatar_url: string | null;   
   role: string;
   roles: string[];
   role_ids?: number[];

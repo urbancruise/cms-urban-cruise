@@ -24,8 +24,9 @@ export async function GET(request: NextRequest) {
       process.env.JWT_SECRET || 'fallback_secret'
     ) as { userId: number };
 
+    // ✅ avatar_url MUST be in SELECT
     const [rows] = await pool.query(
-      `SELECT id, username, email, full_name, role, role_id, is_active, created_at, last_login
+      `SELECT id, username, email, full_name, avatar_url, role, role_id, is_active, created_at, last_login
        FROM users WHERE id = ?`,
       [decoded.userId]
     );
@@ -37,10 +38,12 @@ export async function GET(request: NextRequest) {
 
     const user = users[0];
     if (!user.is_active) {
-      return NextResponse.json({ error: 'Account is deactivated' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Account is deactivated' },
+        { status: 403 }
+      );
     }
 
-    // Fetch roles + permissions
     const [roleRows] = await pool.query(
       `SELECT r.id, r.name, r.slug, r.permissions
        FROM user_roles ur
@@ -53,9 +56,10 @@ export async function GET(request: NextRequest) {
     let roleSlugs: string[] = roles.map((r) => r.slug);
     if (roleSlugs.length === 0 && user.role) roleSlugs = [user.role];
 
-    const primaryRole = roleSlugs.includes('admin') ? 'admin' : roleSlugs[0] || 'user';
+    const primaryRole = roleSlugs.includes('admin')
+      ? 'admin'
+      : roleSlugs[0] || 'user';
 
-    // ✅ Merge permissions from all roles
     const permissionSet = new Set<string>();
     roles.forEach((r) => {
       parsePermissions(r.permissions).forEach((p) => permissionSet.add(p));
@@ -63,7 +67,6 @@ export async function GET(request: NextRequest) {
 
     let permissions: string[] = Array.from(permissionSet);
 
-    // Admin always gets all permissions
     if (roleSlugs.includes('admin')) {
       permissions = [
         'dashboard.view',
@@ -75,7 +78,6 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Fetch cities
     const [cityRows] = await pool.query(
       `SELECT c.id, c.name, c.state, c.code
        FROM user_cities uc
@@ -88,6 +90,8 @@ export async function GET(request: NextRequest) {
       {
         user: {
           ...user,
+          // ✅ Explicitly ensure avatar_url is present
+          avatar_url: user.avatar_url || null,
           role: primaryRole,
           roles: roleSlugs,
           role_ids: roles.map((r) => r.id),
@@ -103,7 +107,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
     console.error('Get user error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-

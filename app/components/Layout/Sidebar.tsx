@@ -121,7 +121,7 @@ const vehicleSections = (
     compare?: boolean;
     prices?: boolean;
     discover?: boolean;
-  } = {}
+  } = {},
 ): MenuItem[] => [
   { label: "Hero", href: `${basePath}/hero` },
   { label: "Get a Quick Call", href: `${basePath}/get-a-quick-call` },
@@ -184,7 +184,7 @@ const createVehicle = (
     compare?: boolean;
     prices?: boolean;
     discover?: boolean;
-  } = {}
+  } = {},
 ): MenuItem => ({
   label,
   href: basePath,
@@ -260,19 +260,19 @@ const menuItems: MenuItem[] = [
                 "Ertiga",
                 "/admin/urbancruise/vehicles/car-suvs/ertiga",
                 "urbancruise.vehicles.ertiga.view",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Innova Crysta",
                 "/admin/urbancruise/vehicles/car-suvs/innova-crysta",
                 "urbancruise.vehicles.innova.view",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Hycross",
                 "/admin/urbancruise/vehicles/car-suvs/hycross",
                 "urbancruise.vehicles.hycross.view",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
             ],
           },
@@ -285,19 +285,19 @@ const menuItems: MenuItem[] = [
                 "Luxury Cars & SUVs",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/luxury-cars-suvs",
                 "urbancruise.vehicles.luxurycars.view",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Mercedes Sprinter",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/mercedes-sprinter",
                 "urbancruise.vehicles.sprinter.view",
-                { compare: true, discover: true }
+                { compare: true, discover: true },
               ),
               createVehicle(
                 "Luxury Vans",
                 "/admin/urbancruise/vehicles/luxury-cars-suvs-vans/luxury-vans",
                 "urbancruise.vehicles.luxuryvans.view",
-                { prices: true, discover: true }
+                { prices: true, discover: true },
               ),
             ],
           },
@@ -310,13 +310,13 @@ const menuItems: MenuItem[] = [
                 "Tempo Traveller",
                 "/admin/urbancruise/vehicles/tempo-traveller",
                 "urbancruise.vehicles.tempotraveller.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Maharaja Tempo Traveller",
                 "/admin/urbancruise/vehicles/tempo-traveller/maharaja",
                 "urbancruise.vehicles.maharaja.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -329,7 +329,7 @@ const menuItems: MenuItem[] = [
                 "Urbania",
                 "/admin/urbancruise/vehicles/urbania",
                 "urbancruise.vehicles.urbania.main.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -342,7 +342,7 @@ const menuItems: MenuItem[] = [
                 "Mini Bus",
                 "/admin/urbancruise/vehicles/mini-bus",
                 "urbancruise.vehicles.minibus.main.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -355,31 +355,31 @@ const menuItems: MenuItem[] = [
                 "Luxury Bus",
                 "/admin/urbancruise/vehicles/luxury-buses",
                 "urbancruise.vehicles.luxurybus.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Volvo Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/volvo-bus",
                 "urbancruise.vehicles.volvo.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Bharat Benz Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/bharat-benz-bus",
                 "urbancruise.vehicles.bharatbenz.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Bus With Washroom",
                 "/admin/urbancruise/vehicles/luxury-buses/bus-with-washroom",
                 "urbancruise.vehicles.washroom.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
               createVehicle(
                 "Sleeper | Semi Sleeper Bus",
                 "/admin/urbancruise/vehicles/luxury-buses/sleeper-semi-sleeper-bus",
                 "urbancruise.vehicles.sleeper.view",
-                { compare: true, prices: true, discover: true }
+                { compare: true, prices: true, discover: true },
               ),
             ],
           },
@@ -406,13 +406,13 @@ const isPathActive = (pathname: string | null, href: string): boolean => {
 
 const hasActiveDescendant = (
   item: MenuItem,
-  pathname: string | null
+  pathname: string | null,
 ): boolean => {
   if (!item.children?.length) return false;
   return item.children.some(
     (child) =>
       isPathActive(pathname, child.href) ||
-      hasActiveDescendant(child, pathname)
+      hasActiveDescendant(child, pathname),
   );
 };
 
@@ -421,7 +421,7 @@ const hasActiveDescendant = (
 // ============================================================
 const filterMenuTree = (
   items: MenuItem[],
-  hasPermission: (perm: string) => boolean
+  hasPermission: (perm: string) => boolean,
 ): MenuItem[] => {
   return items
     .map((item) => {
@@ -467,7 +467,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     setOpenDropdowns((prev) =>
       prev.includes(href)
         ? prev.filter((item) => item !== href)
-        : [...prev, href]
+        : [...prev, href],
     );
   };
 
@@ -482,7 +482,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
   // ✅ Permission-filtered menu tree
   const visibleItems = useMemo(
     () => filterMenuTree(menuItems, hasPermission),
-    [hasPermission]
+    [hasPermission],
   );
 
   // ✅ Auto-open parents of active route (on the filtered tree)
@@ -506,7 +506,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
     if (activeParents.length) {
       setOpenDropdowns((prev) =>
-        Array.from(new Set([...prev, ...activeParents]))
+        Array.from(new Set([...prev, ...activeParents])),
       );
     }
   }, [pathname, visibleItems]);
@@ -587,11 +587,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
               <NodeIcon
                 className={`
                   ${depth === 0 ? "w-5 h-5" : "w-4 h-4"}
-                  ${
-                    isActive || isDescendantActive
-                      ? activeIcon
-                      : inactiveIcon
-                  }
+                  ${isActive || isDescendantActive ? activeIcon : inactiveIcon}
                 `}
               />
             )}
@@ -757,11 +753,24 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {/* User / Logout */}
       <div className="p-3 border-t border-slate-200 flex-shrink-0">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors group">
-          <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-            <span className="text-white font-semibold text-xs">
-              {displayInitials}
-            </span>
-          </div>
+          {/* ✅ Avatar in sidebar */}
+          {user?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatar_url}
+              alt={displayName}
+              className="w-9 h-9 rounded-full object-cover shadow-sm flex-shrink-0"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+              <span className="text-white font-semibold text-xs">
+                {displayInitials}
+              </span>
+            </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-slate-900 truncate">
@@ -770,7 +779,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full inline-block mt-0.5 font-medium ${getRoleBadgeColor(
-                displayRole
+                displayRole,
               )}`}
             >
               {displayRole}

@@ -3,7 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import { fetcher } from '@/lib/swr-config';
-import { TableSkeleton, ModalFormSkeleton } from '@/app/components/UI/PageSkeletons';
+import {
+  TableSkeleton,
+  ModalFormSkeleton,
+} from '@/app/components/UI/PageSkeletons';
 import {
   MdOutlinePersonAdd,
   MdOutlineSearch,
@@ -24,6 +27,7 @@ import Pagination from '@/app/components/UI/Pagination';
 import CityPermissionTree, {
   CityAccess,
 } from '@/app/components/UI/CityPermissionTree';
+import AvatarUpload from '@/app/components/UI/AvatarUpload';
 import {
   WEBSITE_PERMISSION_TREE,
   collectAllKeys,
@@ -52,6 +56,7 @@ interface User {
   username: string;
   email: string;
   full_name: string;
+  avatar_url: string | null; // ✅ ADD
   role: string;
   role_id: number | null;
   role_name?: string | null;
@@ -71,6 +76,8 @@ interface FormData {
   email: string;
   password: string;
   full_name: string;
+  avatar_url: string | null; 
+  avatar_public_id?: string | null; 
   role_ids: number[];
   is_active: boolean;
   city_ids: number[];
@@ -152,6 +159,22 @@ const UserForm = ({
           {formErrors.general}
         </div>
       )}
+
+      {/* ✅ AVATAR UPLOAD */}
+      <div className="flex flex-col items-center pb-4 border-b border-slate-100">
+        <AvatarUpload
+          value={formData.avatar_url}
+          name={formData.full_name || formData.username || '?'}
+          onChange={(url, publicId) => {
+            setFormData((prev) => ({
+              ...prev,
+              avatar_url: url,
+              avatar_public_id: publicId || null,
+            }));
+          }}
+          size={96}
+        />
+      </div>
 
       {/* Row 1: Username + Full Name */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -433,6 +456,8 @@ export default function UsersManagementPage() {
     email: '',
     password: '',
     full_name: '',
+    avatar_url: null, 
+    avatar_public_id: null, 
     role_ids: [],
     is_active: true,
     city_ids: [],
@@ -451,7 +476,7 @@ export default function UsersManagementPage() {
   }, [debouncedSearch, selectedRole, selectedStatus]);
 
   // ============================================
-  // Users — SWR with cache + dedup
+  // Users — SWR
   // ============================================
   const usersKey = useMemo(() => {
     const p = new URLSearchParams();
@@ -476,7 +501,7 @@ export default function UsersManagementPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // ============================================
-  // Roles + Cities — cached forever (rarely change)
+  // Roles + Cities
   // ============================================
   const { data: rolesData } = useSWR<{ roles: Role[] }>(
     '/api/admin/roles',
@@ -498,12 +523,27 @@ export default function UsersManagementPage() {
     setFormErrors({});
     setFormLoading(true);
     try {
+      const payload = {
+  username: formData.username,
+  email: formData.email,
+  password: formData.password,
+  full_name: formData.full_name,
+  avatar_url: formData.avatar_url,
+  role_ids: formData.role_ids,
+  is_active: Boolean(formData.is_active),   // ✅
+  city_ids: formData.city_ids,
+  city_permissions: formData.city_permissions,
+};
+
+      console.log('POST payload:', payload);
+
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+      console.log('POST response:', data);
       if (!res.ok) {
         setFormErrors({ general: data.error || 'Failed to create user' });
         return;
@@ -521,43 +561,51 @@ export default function UsersManagementPage() {
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormErrors({});
-    setFormLoading(true);
-    if (!selectedUser) return;
-    try {
-      const payload: any = {
-        username: formData.username,
-        email: formData.email,
-        full_name: formData.full_name,
-        role_ids: formData.role_ids,
-        is_active: formData.is_active,
-        city_ids: formData.city_ids,
-        city_permissions: formData.city_permissions,
-      };
-      if (formData.password) payload.password = formData.password;
+  e.preventDefault();
+  setFormErrors({});
+  setFormLoading(true);
+  if (!selectedUser) return;
 
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setFormErrors({ general: data.error || 'Failed to update user' });
-        return;
-      }
-      await mutateUsers();
-      resetForm();
-      setIsEditModalOpen(false);
-      alert('User updated successfully!');
-    } catch (error) {
-      console.error(error);
-      setFormErrors({ general: 'Failed to update user. Please try again.' });
-    } finally {
-      setFormLoading(false);
+  try {
+    const payload: any = {
+  username: formData.username,
+  email: formData.email,
+  full_name: formData.full_name,
+  avatar_url: formData.avatar_url,
+  role_ids: formData.role_ids,
+  is_active: Boolean(formData.is_active),   // ✅ Boolean में convert करें
+  city_ids: formData.city_ids,
+  city_permissions: formData.city_permissions,
+};
+    if (formData.password) payload.password = formData.password;
+
+    // ✅ Debug log — browser console में देखें
+    console.log('PUT payload:', payload);
+
+    const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    console.log('PUT response:', data);   // ✅ Debug log
+
+    if (!res.ok) {
+      setFormErrors({ general: data.error || 'Failed to update user' });
+      return;
     }
-  };
+    await mutateUsers();
+    resetForm();
+    setIsEditModalOpen(false);
+    alert('User updated successfully!');
+  } catch (error) {
+    console.error(error);
+    setFormErrors({ general: 'Failed to update user. Please try again.' });
+  } finally {
+    setFormLoading(false);
+  }
+};
 
   const handleDeleteUser = async (user: User) => {
     if (user.role === 'admin' || user.role_slug === 'admin') {
@@ -584,20 +632,22 @@ export default function UsersManagementPage() {
   };
 
   const openEditModal = (user: User) => {
-    setSelectedUser(user);
-    setFormData({
-      username: user.username,
-      email: user.email,
-      password: '',
-      full_name: user.full_name || '',
-      role_ids: user.role_ids || (user.role_id ? [user.role_id] : []),
-      is_active: user.is_active,
-      city_ids: user.city_ids || [],
-      city_permissions: user.city_permissions || [],
-    });
-    setFormErrors({});
-    setIsEditModalOpen(true);
-  };
+  setSelectedUser(user);
+  setFormData({
+    username: user.username,
+    email: user.email,
+    password: '',
+    full_name: user.full_name || '',
+    avatar_url: user.avatar_url || null,
+    avatar_public_id: null,
+    role_ids: user.role_ids || (user.role_id ? [user.role_id] : []),
+    is_active: Boolean(user.is_active),   // ✅ number → boolean
+    city_ids: user.city_ids || [],
+    city_permissions: user.city_permissions || [],
+  });
+  setFormErrors({});
+  setIsEditModalOpen(true);
+};
 
   const openViewModal = (user: User) => {
     setSelectedUser(user);
@@ -610,6 +660,8 @@ export default function UsersManagementPage() {
       email: '',
       password: '',
       full_name: '',
+      avatar_url: null, // ✅
+      avatar_public_id: null, // ✅
       role_ids: [],
       is_active: true,
       city_ids: [],
@@ -702,7 +754,7 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
-      {/* Table — ✅ Skeleton while loading */}
+      {/* Table */}
       {usersLoading && !usersData ? (
         <TableSkeleton rows={8} columns={6} />
       ) : users.length === 0 ? (
@@ -741,13 +793,24 @@ export default function UsersManagementPage() {
                     key={user.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
+                    {/* ✅ User cell with avatar */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                          {(user.full_name || user.username)
-                            .charAt(0)
-                            .toUpperCase()}
-                        </div>
+                        {user.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={user.avatar_url}
+                            alt={user.full_name || user.username}
+                            className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                            {(user.full_name || user.username)
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <p className="font-medium text-slate-900">
                             {user.full_name || user.username}
@@ -891,7 +954,6 @@ export default function UsersManagementPage() {
               </button>
             </div>
             <div className="p-6">
-              {/* ✅ Skeleton while roles/cities load */}
               {!rolesData || !citiesData ? (
                 <ModalFormSkeleton />
               ) : (
@@ -962,7 +1024,7 @@ export default function UsersManagementPage() {
         </div>
       )}
 
-      {/* View Modal — unchanged */}
+      {/* View Modal */}
       {isViewModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -982,11 +1044,21 @@ export default function UsersManagementPage() {
             </div>
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-sm">
-                  {(selectedUser.full_name || selectedUser.username)
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
+                {/* ✅ Avatar in view modal */}
+                {selectedUser.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedUser.avatar_url}
+                    alt={selectedUser.full_name || selectedUser.username}
+                    className="w-20 h-20 rounded-full object-cover border-2 border-slate-200 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-sm">
+                    {(selectedUser.full_name || selectedUser.username)
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">
                     {selectedUser.full_name || selectedUser.username}

@@ -23,6 +23,9 @@ export const UserCreateSchema = z.object({
 
   full_name: z.string().max(100).optional().or(z.literal("")),
 
+  // ✅ ADD THIS
+  avatar_url: z.string().url().max(500).optional().nullable(),
+
   role_ids: z
     .array(z.number().int().positive())
     .min(1, "At least one role is required"),
@@ -74,9 +77,6 @@ export const CityCreateSchema = z.object({
 
 export const CityUpdateSchema = CityCreateSchema.partial();
 
-// ============================================================
-// Helper: safe parse
-// ============================================================
 export function parseBody<T extends z.ZodTypeAny>(
   schema: T,
   body: any

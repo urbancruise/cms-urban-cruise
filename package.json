@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.11.0",
     "cookie": "^0.6.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.24.4",
