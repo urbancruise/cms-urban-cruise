@@ -20,6 +20,9 @@ export const CLOUDINARY_FOLDERS = {
   vehicles: "urban_cruise/vehicles",
   banners: "urban_cruise/banners",
   partners: "urban_cruise/partners",
+  editor: "urban_cruise/editor",
+  website: "urban_cruise/website",
+  websiteVehicles: "urban_cruise/website/vehicles",
 } as const;
 
 export type CloudinaryFolder = keyof typeof CLOUDINARY_FOLDERS;
