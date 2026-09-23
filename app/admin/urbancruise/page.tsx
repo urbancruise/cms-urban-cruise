@@ -6,7 +6,7 @@ import ContentCard from './_components/ContentCard';
 export default function UrbanCruisePage() {
   const sections = [
     {
-      title: 'Home Page',
+      title: 'Website Home',
       description: 'Manage all homepage sections',
       href: '/admin/urbancruise/home',
       icon: MdOutlineHome,
@@ -14,7 +14,7 @@ export default function UrbanCruisePage() {
       count: 13,
     },
     {
-      title: 'Our Vehicles',
+      title: 'Website Vehicles',
       description: 'Manage vehicle pages and details',
       href: '/admin/urbancruise/vehicles',
       icon: MdOutlineDirectionsCar,
@@ -52,4 +52,3 @@ export default function UrbanCruisePage() {
     </div>
   );
 }
-

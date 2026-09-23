@@ -6,16 +6,75 @@ import { rateLimit } from "@/lib/rate-limit";
 import { parseBody, CityCreateSchema } from "@/lib/validators";
 
 // ============================================
-// Auth
+// Auth helpers
 // ============================================
-async function requireAdmin(request: NextRequest) {
+async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  const decoded = jwt.verify(
+  return jwt.verify(
     token,
     process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
+  ) as {
+    userId: number;
+    role: string;
+    roles?: string[];
+    username?: string;
+  };
+}
+
+async function requireCityReadAccess(request: NextRequest) {
+  const decoded = await requireAuth(request);
+
+  const isAdmin =
+    decoded.role === "admin" ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
+  if (isAdmin) return decoded;
+
+  const [rows] = (await pool.query(
+    `SELECT r.slug, r.permissions
+     FROM user_roles ur
+     JOIN roles r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND r.is_active = 1`,
+    [decoded.userId]
+  )) as any;
+
+  const userRoles = rows as any[];
+  if (userRoles.length === 0) {
+    throw { status: 403, message: "Access denied." };
+  }
+
+  const permissionSet = new Set<string>();
+  userRoles.forEach((r) => {
+    let perms: string[] = [];
+    try {
+      perms = Array.isArray(r.permissions)
+        ? r.permissions
+        : typeof r.permissions === "string"
+        ? JSON.parse(r.permissions)
+        : [];
+    } catch {
+      perms = [];
+    }
+    perms.forEach((p) => permissionSet.add(p));
+  });
+
+  const allowed = [
+    "cities.view",
+    "urbancruisewebsite.view",
+    "urbancruise.home.view",
+    "urbancruise.vehicles.view",
+  ];
+
+  if (!allowed.some((p) => permissionSet.has(p))) {
+    throw { status: 403, message: "Access denied." };
+  }
+
+  return decoded;
+}
+
+async function requireAdmin(request: NextRequest) {
+  const decoded = await requireAuth(request);
 
   const isAdmin =
     decoded.role === "admin" ||
@@ -33,7 +92,7 @@ export async function GET(request: NextRequest) {
     const rl = rateLimit(request, { windowMs: 60000, max: 120 });
     if (!rl.ok) return rl.response!;
 
-    await requireAdmin(request);
+    await requireCityReadAccess(request);
 
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get("active") === "true";
@@ -75,7 +134,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ============================================
-// POST create city
+// POST create city  (admin only)
 // ============================================
 export async function POST(request: NextRequest) {
   try {
@@ -86,7 +145,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // ✅ Validate input
     const parsed = parseBody(CityCreateSchema, body);
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -94,7 +152,6 @@ export async function POST(request: NextRequest) {
 
     const { name, state, country, code, description, is_active } = parsed.data;
 
-    // Uniqueness check
     const [existing] = await pool.query(
       "SELECT id FROM cities WHERE name = ? AND (state = ? OR (state IS NULL AND ? IS NULL))",
       [name, state || null, state || null]
@@ -124,7 +181,6 @@ export async function POST(request: NextRequest) {
       insertResult.insertId,
     ]);
 
-    // Log activity
     await logActivity({
       actor: {
         userId: decoded.userId,

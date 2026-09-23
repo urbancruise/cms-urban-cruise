@@ -103,7 +103,7 @@ const PERMISSION_TREE: PermissionGroup[] = [
     children: [
       {
         key: "urbancruise.home.view",
-        label: "Home",
+        label: "Website Home",
         icon: MdOutlineHome,
         permKey: "urbancruise.home.view",
         children: [
@@ -176,7 +176,7 @@ const PERMISSION_TREE: PermissionGroup[] = [
       },
       {
         key: "urbancruise.vehicles.view",
-        label: "Our Vehicles",
+        label: "Website Vehicles",
         icon: MdOutlineDirectionsCar,
         permKey: "urbancruise.vehicles.view",
         children: [
@@ -738,7 +738,6 @@ export default function RolesPage() {
         </div>
       </div>
 
-      {/* ✅ Skeleton while loading */}
       {loading ? (
         <TableSkeleton rows={5} columns={5} />
       ) : (

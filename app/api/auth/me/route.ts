@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
       process.env.JWT_SECRET || 'fallback_secret'
     ) as { userId: number };
 
-    // ✅ avatar_url MUST be in SELECT
     const [rows] = await pool.query(
       `SELECT id, username, email, full_name, avatar_url, role, role_id, is_active, created_at, last_login
        FROM users WHERE id = ?`,
@@ -78,6 +77,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    // ── Cities the user has access to ──
     const [cityRows] = await pool.query(
       `SELECT c.id, c.name, c.state, c.code
        FROM user_cities uc
@@ -86,11 +86,31 @@ export async function GET(request: NextRequest) {
       [user.id]
     );
 
+    // ── Per-city granular permissions ──
+    const [cityPermRows] = await pool.query(
+      `SELECT city_id, permission_key
+       FROM user_city_permissions
+       WHERE user_id = ?`,
+      [user.id]
+    );
+
+    const cityPermMap: Record<number, string[]> = {};
+    (cityPermRows as any[]).forEach((row) => {
+      if (!cityPermMap[row.city_id]) cityPermMap[row.city_id] = [];
+      cityPermMap[row.city_id].push(row.permission_key);
+    });
+
+    const city_permissions = Object.entries(cityPermMap).map(
+      ([cityId, perms]) => ({
+        city_id: Number(cityId),
+        permissions: perms,
+      })
+    );
+
     return NextResponse.json(
       {
         user: {
           ...user,
-          // ✅ Explicitly ensure avatar_url is present
           avatar_url: user.avatar_url || null,
           role: primaryRole,
           roles: roleSlugs,
@@ -98,6 +118,7 @@ export async function GET(request: NextRequest) {
           permissions,
           cities: cityRows,
           city_ids: (cityRows as any[]).map((c) => c.id),
+          city_permissions,
         },
       },
       { status: 200 }

@@ -4,32 +4,81 @@ import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
 
-async function requireAdmin(request: NextRequest) {
+// ============================================
+// Auth helpers
+// ============================================
+async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  const decoded = jwt.verify(
+  return jwt.verify(
     token,
     process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
+  ) as {
+    userId: number;
+    role: string;
+    roles?: string[];
+    username?: string;
+  };
+}
+
+/**
+ * Site content access: any authenticated user with at least one
+ * `urbancruise*` permission or admin role.
+ */
+async function requireSiteContentAccess(request: NextRequest) {
+  const decoded = await requireAuth(request);
 
   const isAdmin =
     decoded.role === "admin" ||
     (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
+  if (isAdmin) return decoded;
 
-  if (!isAdmin) throw { status: 403, message: "Access denied. Admin only." };
+  const [rows] = (await pool.query(
+    `SELECT r.permissions
+     FROM user_roles ur
+     JOIN roles r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND r.is_active = 1`,
+    [decoded.userId]
+  )) as any;
+
+  const permissionSet = new Set<string>();
+  (rows as any[]).forEach((r) => {
+    let perms: string[] = [];
+    try {
+      perms = Array.isArray(r.permissions)
+        ? r.permissions
+        : typeof r.permissions === "string"
+        ? JSON.parse(r.permissions)
+        : [];
+    } catch {
+      perms = [];
+    }
+    perms.forEach((p) => permissionSet.add(p));
+  });
+
+  const allowed = [
+    "urbancruisewebsite.view",
+    "urbancruise.home.view",
+    "urbancruise.vehicles.view",
+  ];
+
+  if (!allowed.some((p) => permissionSet.has(p))) {
+    throw { status: 403, message: "Access denied." };
+  }
+
   return decoded;
 }
 
 // ============================================================
-// GET all sections for a city (including drafts)
+// GET all sections for a city
 // ============================================================
 export async function GET(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60000, max: 120 });
     if (!rl.ok) return rl.response!;
 
-    await requireAdmin(request);
+    await requireSiteContentAccess(request);
 
     const { searchParams } = new URL(request.url);
     const cityId = Number(searchParams.get("city_id"));
@@ -76,7 +125,7 @@ export async function PUT(request: NextRequest) {
     const rl = rateLimit(request, { windowMs: 60000, max: 60 });
     if (!rl.ok) return rl.response!;
 
-    const decoded = await requireAdmin(request);
+    const decoded = await requireSiteContentAccess(request);
     const body = await request.json();
 
     const { cityId, sectionKey, content, status } = body;
@@ -139,7 +188,7 @@ export async function DELETE(request: NextRequest) {
     const rl = rateLimit(request, { windowMs: 60000, max: 30 });
     if (!rl.ok) return rl.response!;
 
-    await requireAdmin(request);
+    await requireSiteContentAccess(request);
 
     const { searchParams } = new URL(request.url);
     const cityId = Number(searchParams.get("city_id"));

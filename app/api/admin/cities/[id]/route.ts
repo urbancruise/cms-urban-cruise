@@ -6,16 +6,75 @@ import { rateLimit } from "@/lib/rate-limit";
 import { parseBody, CityUpdateSchema } from "@/lib/validators";
 
 // ============================================
-// Auth
+// Auth helpers
 // ============================================
-async function requireAdmin(request: NextRequest) {
+async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  const decoded = jwt.verify(
+  return jwt.verify(
     token,
     process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
+  ) as {
+    userId: number;
+    role: string;
+    roles?: string[];
+    username?: string;
+  };
+}
+
+async function requireCityReadAccess(request: NextRequest) {
+  const decoded = await requireAuth(request);
+
+  const isAdmin =
+    decoded.role === "admin" ||
+    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
+  if (isAdmin) return decoded;
+
+  const [rows] = (await pool.query(
+    `SELECT r.slug, r.permissions
+     FROM user_roles ur
+     JOIN roles r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND r.is_active = 1`,
+    [decoded.userId]
+  )) as any;
+
+  const userRoles = rows as any[];
+  if (userRoles.length === 0) {
+    throw { status: 403, message: "Access denied." };
+  }
+
+  const permissionSet = new Set<string>();
+  userRoles.forEach((r) => {
+    let perms: string[] = [];
+    try {
+      perms = Array.isArray(r.permissions)
+        ? r.permissions
+        : typeof r.permissions === "string"
+        ? JSON.parse(r.permissions)
+        : [];
+    } catch {
+      perms = [];
+    }
+    perms.forEach((p) => permissionSet.add(p));
+  });
+
+  const allowed = [
+    "cities.view",
+    "urbancruisewebsite.view",
+    "urbancruise.home.view",
+    "urbancruise.vehicles.view",
+  ];
+
+  if (!allowed.some((p) => permissionSet.has(p))) {
+    throw { status: 403, message: "Access denied." };
+  }
+
+  return decoded;
+}
+
+async function requireAdmin(request: NextRequest) {
+  const decoded = await requireAuth(request);
 
   const isAdmin =
     decoded.role === "admin" ||
@@ -36,7 +95,8 @@ export async function GET(
     const rl = rateLimit(request, { windowMs: 60000, max: 120 });
     if (!rl.ok) return rl.response!;
 
-    await requireAdmin(request);
+    await requireCityReadAccess(request);
+
     const { id } = await params;
     const cityId = parseInt(id, 10);
     if (isNaN(cityId)) {
@@ -54,7 +114,6 @@ export async function GET(
       return NextResponse.json({ error: "City not found" }, { status: 404 });
     }
 
-    // Count users assigned to this city
     const [userCountRows] = (await pool.query(
       "SELECT COUNT(*) as count FROM user_cities WHERE city_id = ?",
       [cityId]
@@ -87,7 +146,7 @@ export async function GET(
 }
 
 // ============================================
-// PUT — update city
+// PUT — update city  (admin only)
 // ============================================
 export async function PUT(
   request: NextRequest,
@@ -112,7 +171,6 @@ export async function PUT(
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    // ✅ Validate input
     const parsed = parseBody(CityUpdateSchema, body);
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -120,7 +178,6 @@ export async function PUT(
 
     const { name, state, country, code, description, is_active } = parsed.data;
 
-    // Load existing city
     const [existingRows] = (await pool.query(
       "SELECT name, state, country, code, description, is_active FROM cities WHERE id = ?",
       [cityId]
@@ -130,7 +187,6 @@ export async function PUT(
       return NextResponse.json({ error: "City not found" }, { status: 404 });
     }
 
-    // Uniqueness check (if name or state changing)
     if (name || state !== undefined) {
       const newName = name || existing.name;
       const newState = state !== undefined ? state : existing.state;
@@ -193,7 +249,6 @@ export async function PUT(
     ]);
     const updatedCity = (updated as any[])[0];
 
-    // Log activity
     try {
       await logActivity({
         actor: {
@@ -245,7 +300,7 @@ export async function PUT(
 }
 
 // ============================================
-// DELETE — delete city
+// DELETE — delete city  (admin only)
 // ============================================
 export async function DELETE(
   request: NextRequest,
@@ -272,7 +327,6 @@ export async function DELETE(
       return NextResponse.json({ error: "City not found" }, { status: 404 });
     }
 
-    // Check if users are assigned
     const [userRows] = (await pool.query(
       "SELECT COUNT(*) as count FROM user_cities WHERE city_id = ?",
       [cityId]
