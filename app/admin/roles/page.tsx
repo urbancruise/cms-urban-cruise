@@ -24,6 +24,7 @@ import {
   MdOutlineDirectionsCar,
   MdOutlineKeyboardArrowDown,
   MdOutlineKeyboardArrowRight,
+  MdOutlineSearch,
 } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
 
@@ -302,6 +303,33 @@ const PERMISSION_TREE: PermissionGroup[] = [
     ],
   },
   {
+  key: "seo.view",
+  label: "SEO",
+  icon: MdOutlineSearch,
+  permKey: "seo.view",
+  children: [
+    { key: "seo.dashboard.view", label: "SEO Dashboard", permKey: "seo.dashboard.view" },
+    { key: "seo.pages.view", label: "Page SEO Management", permKey: "seo.pages.view" },
+    { key: "seo.keywords.view", label: "Keyword Management", permKey: "seo.keywords.view" },
+    { key: "seo.content.view", label: "SEO Content Editor", permKey: "seo.content.view" },
+    { key: "seo.images.view", label: "Image SEO", permKey: "seo.images.view" },
+    { key: "seo.technical.view", label: "Technical SEO", permKey: "seo.technical.view" },
+    { key: "seo.sitemap.view", label: "Sitemap Management", permKey: "seo.sitemap.view" },
+    { key: "seo.robots.view", label: "Robots.txt Management", permKey: "seo.robots.view" },
+    { key: "seo.schema.view", label: "Schema / Structured Data", permKey: "seo.schema.view" },
+    { key: "seo.urls.view", label: "URL Management", permKey: "seo.urls.view" },
+    { key: "seo.internal_links.view", label: "Internal Linking", permKey: "seo.internal_links.view" },
+    { key: "seo.gsc.view", label: "Google Search Console", permKey: "seo.gsc.view" },
+    { key: "seo.ga.view", label: "Google Analytics", permKey: "seo.ga.view" },
+    { key: "seo.cwv.view", label: "Core Web Vitals", permKey: "seo.cwv.view" },
+    { key: "seo.audit.view", label: "SEO Audit", permKey: "seo.audit.view" },
+    { key: "seo.issues.view", label: "SEO Issues Center", permKey: "seo.issues.view" },
+    { key: "seo.social.view", label: "Open Graph / Social SEO", permKey: "seo.social.view" },
+    { key: "seo.settings.view", label: "SEO Settings", permKey: "seo.settings.view" },
+    { key: "seo.location.view", label: "Location SEO", permKey: "seo.location.view" },
+  ],
+},
+  {
     key: "profile.view",
     label: "Profile",
     icon: MdOutlinePerson,
@@ -409,7 +437,6 @@ export default function RolesPage() {
     fetchRoles();
   }, []);
 
-  // Expand/collapse a group node
   const toggleExpand = (key: string) => {
     setExpandedNodes((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
@@ -418,7 +445,6 @@ export default function RolesPage() {
 
   const isExpanded = (key: string) => expandedNodes.includes(key);
 
-  // Toggle a single permission
   const togglePermission = (permKey: string) => {
     setFormData((prev) => {
       const has = prev.permissions.includes(permKey);
@@ -431,7 +457,6 @@ export default function RolesPage() {
     });
   };
 
-  // Toggle an entire branch
   const toggleBranch = (node: PermissionGroup) => {
     const keys = collectAllKeys([node]);
     const allSelected = keys.every((k) => formData.permissions.includes(k));
@@ -770,7 +795,7 @@ export default function RolesPage() {
                       colSpan={5}
                       className="px-6 py-12 text-center text-slate-400"
                     >
-                      No roles yet. Click "Add Role" to create one.
+                      No roles yet. Click &quot;Add Role&quot; to create one.
                     </td>
                   </tr>
                 ) : (
@@ -1060,7 +1085,7 @@ export default function RolesPage() {
                 You are about to delete the role:
               </p>
               <p className="font-semibold text-slate-900 mb-4">
-                "{deletingRole.name}"
+                &quot;{deletingRole.name}&quot;
               </p>
               <p className="text-xs text-slate-400 mb-4">
                 This action cannot be undone. Users assigned to this role will
