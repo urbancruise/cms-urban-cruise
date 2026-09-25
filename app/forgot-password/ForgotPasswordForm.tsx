@@ -1,36 +1,30 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import {
-  MdOutlineEmail,
-  MdOutlinePerson,
-  MdOutlineArrowBack,
-} from 'react-icons/md';
+import { useState } from "react";
+import Link from "next/link";
+import { MdOutlineEmail, MdOutlinePerson, MdOutlineArrowBack } from "react-icons/md";
 
 export default function ForgotPasswordForm() {
-  const [identifier, setIdentifier] = useState('');
-  const [identifierType, setIdentifierType] = useState<'email' | 'username'>(
-    'email'
-  );
-  const [error, setError] = useState('');
+  const [identifier, setIdentifier] = useState("");
+  const [identifierType, setIdentifierType] = useState<"email" | "username">("email");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [resetLink, setResetLink] = useState('');
+  const [resetLink, setResetLink] = useState("");
 
   const validateIdentifier = (value: string) => {
     if (!value || value.trim().length === 0) {
-      return 'Email or username is required';
+      return "Email or username is required";
     }
     if (value.trim().length < 2) {
-      return 'Must be at least 2 characters';
+      return "Must be at least 2 characters";
     }
     return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSuccess(false);
 
     const identifierError = validateIdentifier(identifier);
@@ -42,16 +36,16 @@ export default function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: identifier.trim() }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset link');
+        throw new Error(data.error || "Failed to send reset link");
       }
 
       setSuccess(true);
@@ -60,9 +54,9 @@ export default function ForgotPasswordForm() {
         setResetLink(data.devLink);
       }
 
-      setIdentifier('');
+      setIdentifier("");
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -84,9 +78,7 @@ export default function ForgotPasswordForm() {
             <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto shadow-md">
               <span className="text-2xl font-bold text-white">UC</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mt-4">
-              Forgot Password
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-900 mt-4">Forgot Password</h1>
             <p className="text-slate-500 mt-1">
               Enter your email or username to receive a password reset link
             </p>
@@ -99,9 +91,8 @@ export default function ForgotPasswordForm() {
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
               <p className="font-medium">✅ Reset link sent!</p>
               <p className="mt-1">
-                If an admin account exists with{' '}
-                <strong>{identifier}</strong>, you will receive a password
-                reset link shortly.
+                If an admin account exists with <strong>{identifier}</strong>, you will
+                receive a password reset link shortly.
               </p>
               {resetLink && (
                 <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg">
@@ -134,7 +125,7 @@ export default function ForgotPasswordForm() {
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    {identifierType === 'email' ? (
+                    {identifierType === "email" ? (
                       <MdOutlineEmail className="w-5 h-5 text-slate-400" />
                     ) : (
                       <MdOutlinePerson className="w-5 h-5 text-slate-400" />
@@ -146,9 +137,9 @@ export default function ForgotPasswordForm() {
                     onChange={(e) => {
                       setIdentifier(e.target.value);
                       setIdentifierType(
-                        e.target.value.includes('@') ? 'email' : 'username'
+                        e.target.value.includes("@") ? "email" : "username"
                       );
-                      setError('');
+                      setError("");
                     }}
                     className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
                     placeholder="Enter email or username"
@@ -156,9 +147,9 @@ export default function ForgotPasswordForm() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-slate-400">
-                  {identifierType === 'email'
-                    ? '📧 Using email address'
-                    : '👤 Using username'}
+                  {identifierType === "email"
+                    ? "📧 Using email address"
+                    : "👤 Using username"}
                 </p>
               </div>
 
@@ -192,7 +183,7 @@ export default function ForgotPasswordForm() {
                     Sending reset link...
                   </span>
                 ) : (
-                  'Send Reset Link'
+                  "Send Reset Link"
                 )}
               </button>
             </form>
@@ -201,8 +192,8 @@ export default function ForgotPasswordForm() {
               <button
                 onClick={() => {
                   setSuccess(false);
-                  setIdentifier('');
-                  setResetLink('');
+                  setIdentifier("");
+                  setResetLink("");
                 }}
                 className="text-teal-600 hover:text-teal-700 font-medium text-sm"
               >

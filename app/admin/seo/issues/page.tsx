@@ -27,9 +27,18 @@ const SEV_COLORS = {
 };
 
 export default function SeoIssuesPage() {
-  const { data: pagesData, mutate } = useSWR<{ pages: any[] }>("/api/admin/seo/pages?limit=500", fetcher);
-  const { data: imgData } = useSWR<{ images: any[] }>("/api/admin/seo/images?limit=500", fetcher);
-  const { data: linkData } = useSWR<{ links: any[] }>("/api/admin/seo/internal-links", fetcher);
+  const { data: pagesData, mutate } = useSWR<{ pages: any[] }>(
+    "/api/admin/seo/pages?limit=500",
+    fetcher
+  );
+  const { data: imgData } = useSWR<{ images: any[] }>(
+    "/api/admin/seo/images?limit=500",
+    fetcher
+  );
+  const { data: linkData } = useSWR<{ links: any[] }>(
+    "/api/admin/seo/internal-links",
+    fetcher
+  );
 
   const issues = useMemo<Issue[]>(() => {
     const pages = pagesData?.pages || [];
@@ -44,7 +53,8 @@ export default function SeoIssuesPage() {
         id: "missing-title",
         severity: missingTitle.length > 5 ? "critical" : "high",
         title: `${missingTitle.length} pages missing meta title`,
-        description: "Meta titles are critical for SEO. Each page should have a unique title.",
+        description:
+          "Meta titles are critical for SEO. Each page should have a unique title.",
         fix_url: "/admin/seo/pages?filter=missing_title",
       });
     }
@@ -122,10 +132,15 @@ export default function SeoIssuesPage() {
             SEO Issues Center
           </h1>
           <p className="text-slate-500 mt-1">
-            {issues.length === 0 ? "No issues found 🎉" : `${issues.length} issue${issues.length > 1 ? "s" : ""} detected`}
+            {issues.length === 0
+              ? "No issues found 🎉"
+              : `${issues.length} issue${issues.length > 1 ? "s" : ""} detected`}
           </p>
         </div>
-        <button onClick={() => mutate()} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+        <button
+          onClick={() => mutate()}
+          className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+        >
           <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
         </button>
       </div>
@@ -134,7 +149,9 @@ export default function SeoIssuesPage() {
         <div className="bg-white rounded-xl border border-slate-200 py-20 text-center">
           <MdOutlineCheckCircle className="w-16 h-16 mx-auto text-green-500" />
           <p className="mt-4 text-lg font-medium text-slate-700">All clear!</p>
-          <p className="text-sm text-slate-400 mt-1">No SEO issues detected on your site</p>
+          <p className="text-sm text-slate-400 mt-1">
+            No SEO issues detected on your site
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -148,11 +165,16 @@ export default function SeoIssuesPage() {
                 </h2>
                 <div className="space-y-3">
                   {items.map((issue) => (
-                    <div key={issue.id} className={`bg-white rounded-xl border p-5 ${SEV_COLORS[severity]}`}>
+                    <div
+                      key={issue.id}
+                      className={`bg-white rounded-xl border p-5 ${SEV_COLORS[severity]}`}
+                    >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <p className="font-semibold text-slate-900">{issue.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">{issue.description}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {issue.description}
+                          </p>
                         </div>
                         {issue.fix_url && (
                           <a

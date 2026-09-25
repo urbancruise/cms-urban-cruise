@@ -261,9 +261,7 @@ export default function WebsiteVehiclesPage() {
     const q = search.trim().toLowerCase();
     if (!q) return allowed;
     return allowed.filter(
-      (s) =>
-        s.label.toLowerCase().includes(q) ||
-        s.slug.toLowerCase().includes(q)
+      (s) => s.label.toLowerCase().includes(q) || s.slug.toLowerCase().includes(q)
     );
   }, [search, hasCityPermission, selectedCityId]);
 
@@ -335,16 +333,11 @@ export default function WebsiteVehiclesPage() {
       );
       if (res.ok) {
         const { vehicle } = await res.json();
-        await mutate(
-          (current) => {
-            if (!current) return current;
-            const others = current.vehicles.filter(
-              (v) => v.vehicle_slug !== slug
-            );
-            return { ...current, vehicles: [...others, vehicle] };
-          },
-          false
-        );
+        await mutate((current) => {
+          if (!current) return current;
+          const others = current.vehicles.filter((v) => v.vehicle_slug !== slug);
+          return { ...current, vehicles: [...others, vehicle] };
+        }, false);
         return vehicle;
       }
     } catch {
@@ -505,19 +498,17 @@ export default function WebsiteVehiclesPage() {
                           status === "published"
                             ? "bg-teal-50 text-teal-700 border border-teal-200"
                             : status === "draft"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : status === "archived"
-                            ? "bg-slate-100 text-slate-600 border border-slate-200"
-                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : status === "archived"
+                                ? "bg-slate-100 text-slate-600 border border-slate-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200"
                         }`}
                       >
                         {status}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-400 font-mono mb-1">
-                      {slug}
-                    </p>
+                    <p className="text-xs text-slate-400 font-mono mb-1">{slug}</p>
 
                     {v?.meta?.title && (
                       <p className="text-xs text-slate-500 truncate mb-1">
@@ -526,9 +517,7 @@ export default function WebsiteVehiclesPage() {
                     )}
 
                     {lastUpdated && (
-                      <p className="text-[10px] text-slate-400">
-                        Updated {lastUpdated}
-                      </p>
+                      <p className="text-[10px] text-slate-400">Updated {lastUpdated}</p>
                     )}
 
                     <div className="flex items-center gap-1.5 mt-auto pt-3 border-t border-slate-100">
@@ -572,8 +561,7 @@ export default function WebsiteVehiclesPage() {
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
           vehicleSlug={editingSlug}
           vehicleLabel={
-            VEHICLE_SLUGS.find((s) => s.slug === editingSlug)?.label ||
-            editingSlug
+            VEHICLE_SLUGS.find((s) => s.slug === editingSlug)?.label || editingSlug
           }
           initial={vehicleMap[editingSlug] || null}
           onSave={handleSave}
@@ -589,8 +577,7 @@ export default function WebsiteVehiclesPage() {
       {previewSlug && selectedCityId && canAccessVehicle(previewSlug) && (
         <VehiclePreviewModal
           vehicleLabel={
-            VEHICLE_SLUGS.find((s) => s.slug === previewSlug)?.label ||
-            previewSlug
+            VEHICLE_SLUGS.find((s) => s.slug === previewSlug)?.label || previewSlug
           }
           vehicleSlug={previewSlug}
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
@@ -611,8 +598,7 @@ export default function WebsiteVehiclesPage() {
       {deleteSlug && canAccessVehicle(deleteSlug) && (
         <DeleteConfirmModal
           vehicleLabel={
-            VEHICLE_SLUGS.find((s) => s.slug === deleteSlug)?.label ||
-            deleteSlug
+            VEHICLE_SLUGS.find((s) => s.slug === deleteSlug)?.label || deleteSlug
           }
           vehicleSlug={deleteSlug}
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
@@ -670,13 +656,11 @@ function VehicleEditor({
     return base;
   });
 
-  const [status, setStatus] = useState<
-    "draft" | "published" | "archived"
-  >(initial?.status || "draft");
-
-  const [sortOrder, setSortOrder] = useState<number>(
-    initial?.sort_order ?? 0
+  const [status, setStatus] = useState<"draft" | "published" | "archived">(
+    initial?.status || "draft"
   );
+
+  const [sortOrder, setSortOrder] = useState<number>(initial?.sort_order ?? 0);
 
   const [activeSection, setActiveSection] = useState<string>("meta");
 
@@ -684,8 +668,7 @@ function VehicleEditor({
   const [saving, setSaving] = useState(false);
 
   const visibleSections = VEHICLE_SECTIONS.filter((s) => {
-    const hiddenFor =
-      "hiddenFor" in s ? (s.hiddenFor as readonly string[]) : undefined;
+    const hiddenFor = "hiddenFor" in s ? (s.hiddenFor as readonly string[]) : undefined;
     return !hiddenFor || !hiddenFor.includes(vehicleSlug);
   });
 
@@ -706,18 +689,14 @@ function VehicleEditor({
     }
   };
 
-  const currentSection = visibleSections.find(
-    (s) => s.key === activeSection
-  );
+  const currentSection = visibleSections.find((s) => s.key === activeSection);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl w-full max-w-6xl shadow-2xl max-h-[94vh] flex flex-col">
         <div className="p-6 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-slate-900 truncate">
-              {vehicleLabel}
-            </h2>
+            <h2 className="text-xl font-bold text-slate-900 truncate">{vehicleLabel}</h2>
             <p className="text-xs text-slate-400 font-mono truncate">
               {cityName} · {vehicleSlug}
             </p>
@@ -774,9 +753,7 @@ function VehicleEditor({
           </select>
 
           {currentSection && "hint" in currentSection && currentSection.hint && (
-            <p className="text-[11px] text-slate-400 sm:w-64">
-              {currentSection.hint}
-            </p>
+            <p className="text-[11px] text-slate-400 sm:w-64">{currentSection.hint}</p>
           )}
         </div>
 
@@ -839,13 +816,7 @@ function VehicleEditor({
 // ============================================================
 // META EDITOR
 // ============================================================
-function MetaEditor({
-  meta,
-  setMeta,
-}: {
-  meta: any;
-  setMeta: (m: any) => void;
-}) {
+function MetaEditor({ meta, setMeta }: { meta: any; setMeta: (m: any) => void }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -889,9 +860,7 @@ function MetaEditor({
           <input
             type="number"
             value={meta.price ?? 0}
-            onChange={(e) =>
-              setMeta({ ...meta, price: Number(e.target.value) })
-            }
+            onChange={(e) => setMeta({ ...meta, price: Number(e.target.value) })}
             className={inputCls}
             placeholder="16"
           />
@@ -961,16 +930,14 @@ function VehiclePreviewModal({
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <MdOutlineVisibility className="w-5 h-5 text-teal-600" />
-              <h2 className="text-xl font-bold text-slate-900">
-                {vehicleLabel}
-              </h2>
+              <h2 className="text-xl font-bold text-slate-900">{vehicleLabel}</h2>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   status === "published"
                     ? "bg-teal-50 text-teal-700 border border-teal-200"
                     : status === "draft"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                      ? "bg-amber-50 text-amber-700 border border-amber-200"
+                      : "bg-slate-100 text-slate-600 border border-slate-200"
                 }`}
               >
                 {status}
@@ -1029,11 +996,7 @@ function VehiclePreviewModal({
 
         <div className="flex-1 overflow-auto p-6 bg-slate-50/40">
           {tab === "visual" ? (
-            <VisualPreview
-              meta={meta}
-              sections={sections}
-              vehicleSlug={vehicleSlug}
-            />
+            <VisualPreview meta={meta} sections={sections} vehicleSlug={vehicleSlug} />
           ) : (
             <pre className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-4 overflow-auto max-h-[60vh] font-mono">
               {JSON.stringify({ meta, sections }, null, 2)}
@@ -1110,9 +1073,7 @@ function VisualPreview({
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
                   Title
                 </p>
-                <p className="text-base font-semibold text-slate-900">
-                  {meta.title}
-                </p>
+                <p className="text-base font-semibold text-slate-900">{meta.title}</p>
               </div>
             )}
 
@@ -1151,9 +1112,7 @@ function VisualPreview({
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     Price
                   </p>
-                  <p className="text-sm font-mono text-slate-900">
-                    ₹{meta.price}/km
-                  </p>
+                  <p className="text-sm font-mono text-slate-900">₹{meta.price}/km</p>
                 </div>
               )}
               {meta.seats && (
@@ -1178,9 +1137,7 @@ function VisualPreview({
 
           {CONTENT_SECTIONS.map((s) => {
             const hiddenFor =
-              "hiddenFor" in s
-                ? (s.hiddenFor as readonly string[])
-                : undefined;
+              "hiddenFor" in s ? (s.hiddenFor as readonly string[]) : undefined;
             if (hiddenFor && hiddenFor.includes(vehicleSlug)) return null;
 
             const value = sections[s.key];
@@ -1310,9 +1267,7 @@ function DeleteConfirmModal({
           <p className="text-xs text-slate-400 font-mono mb-4">
             {cityName} · {vehicleSlug}
           </p>
-          <p className="text-xs text-slate-400 mb-4">
-            This action cannot be undone.
-          </p>
+          <p className="text-xs text-slate-400 mb-4">This action cannot be undone.</p>
 
           <div className="flex gap-3">
             <button

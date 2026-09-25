@@ -33,8 +33,8 @@ export default function Pagination({
     <div className="flex items-center justify-between gap-4 py-4 flex-wrap">
       {totalItems !== undefined && (
         <p className="text-sm text-slate-500">
-          Showing {(page - 1) * pageSize + 1}–
-          {Math.min(page * pageSize, totalItems)} of {totalItems}
+          Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalItems)} of{" "}
+          {totalItems}
         </p>
       )}
       <div className="flex items-center gap-1.5 ml-auto">
@@ -77,4 +77,3 @@ export default function Pagination({
     </div>
   );
 }
-

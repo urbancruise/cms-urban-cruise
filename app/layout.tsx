@@ -17,6 +17,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Urban Cruise - CMS Panel",
   description: "Manage your cruise bookings and listings",
+  metadataBase: new URL(
+    process.env.WEBSITE_ORIGIN || "http://localhost:5000"
+  ),
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

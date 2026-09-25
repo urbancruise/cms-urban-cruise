@@ -33,4 +33,3 @@ export default function InfiniteScrollSentinel({
 
   return <div ref={ref} className="h-1 w-full" aria-hidden />;
 }
-

@@ -1,20 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { RATE_LIMIT_WINDOW_MS } from "./constants";
 
 // ============================================================
 // In-memory rate limiter (per-IP, per-route).
-// For multi-instance, replace with Redis.
+// ⚠️ For multi-instance deployments, replace with Redis/Upstash.
 // ============================================================
-const buckets = new Map<string, { count: number; reset: number }>();
+
+interface Bucket {
+  count: number;
+  reset: number;
+}
+
+const buckets = new Map<string, Bucket>();
 
 interface Options {
   windowMs?: number;
   max?: number;
 }
 
+export type RateLimitResult =
+  | { ok: true; remaining: number; reset: number }
+  | { ok: false; remaining: 0; reset: number; response: NextResponse };
+
 export function rateLimit(
   request: NextRequest,
-  { windowMs = 60000, max = 100 }: Options = {}
-) {
+  { windowMs = RATE_LIMIT_WINDOW_MS, max = 100 }: Options = {}
+): RateLimitResult {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
     request.headers.get("x-real-ip") ||
@@ -26,13 +37,14 @@ export function rateLimit(
 
   if (!bucket || bucket.reset < now) {
     buckets.set(key, { count: 1, reset: now + windowMs });
-    return { ok: true as const, remaining: max - 1, reset: now + windowMs };
+    return { ok: true, remaining: max - 1, reset: now + windowMs };
   }
 
   bucket.count++;
+
   if (bucket.count > max) {
     return {
-      ok: false as const,
+      ok: false,
       remaining: 0,
       reset: bucket.reset,
       response: NextResponse.json(
@@ -50,15 +62,19 @@ export function rateLimit(
     };
   }
 
-  return { ok: true as const, remaining: max - bucket.count, reset: bucket.reset };
+  return { ok: true, remaining: max - bucket.count, reset: bucket.reset };
 }
 
-// Cleanup old buckets every 5 min
+// Periodic cleanup
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
+  const timer = setInterval(() => {
     const now = Date.now();
     for (const [key, val] of buckets.entries()) {
       if (val.reset < now) buckets.delete(key);
     }
-  }, 300000);
+  }, 300_000);
+  // Prevent the interval from holding the process open in edge runtimes
+  if (typeof timer === "object" && "unref" in timer) {
+    (timer as any).unref?.();
+  }
 }

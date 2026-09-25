@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  MdClose, 
-  MdOutlineCloudUpload, 
-  MdOutlineAnchor, 
-  MdOutlineCalendarToday, 
-  MdOutlineLocationOn, 
-  MdOutlineAttachMoney 
+import {
+  MdClose,
+  MdOutlineCloudUpload,
+  MdOutlineAnchor,
+  MdOutlineCalendarToday,
+  MdOutlineLocationOn,
+  MdOutlineAttachMoney,
 } from "react-icons/md";
 
 interface AddCruiseModalProps {
@@ -42,8 +42,12 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
               <MdOutlineAnchor className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Cruise</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Fill in the details to create a new cruise</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Add New Cruise
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Fill in the details to create a new cruise
+              </p>
             </div>
           </div>
           <button
@@ -63,7 +67,10 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
               <div className="text-center">
                 <MdOutlineCloudUpload className="w-12 h-12 mx-auto text-gray-400 group-hover:text-blue-500 transition-colors" />
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span className="font-medium text-blue-600 dark:text-blue-400">Click to upload</span> or drag and drop
+                  <span className="font-medium text-blue-600 dark:text-blue-400">
+                    Click to upload
+                  </span>{" "}
+                  or drag and drop
                 </p>
                 <p className="text-xs text-gray-400">PNG, JPG, WEBP (Max 5MB)</p>
               </div>
@@ -91,7 +98,9 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
               <input
                 type="text"
                 value={formData.destination}
-                onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, destination: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g., Greece, Italy, Spain"
                 required
@@ -176,4 +185,3 @@ export default function AddCruiseModal({ isOpen, onClose }: AddCruiseModalProps)
     </div>
   );
 }
-

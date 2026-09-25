@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import pool from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import pool from "@/lib/db";
+import { env } from "@/lib/env";
 
 function parsePermissions(raw: any): string[] {
   try {
     if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'string') return JSON.parse(raw);
+    if (typeof raw === "string") return JSON.parse(raw);
     return [];
   } catch {
     return [];
@@ -14,15 +15,12 @@ function parsePermissions(raw: any): string[] {
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
+    const token = request.cookies.get("token")?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'fallback_secret'
-    ) as { userId: number };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: number };
 
     const [rows] = await pool.query(
       `SELECT id, username, email, full_name, avatar_url, role, role_id, is_active, created_at, last_login
@@ -32,15 +30,12 @@ export async function GET(request: NextRequest) {
 
     const users = rows as any[];
     if (users.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const user = users[0];
     if (!user.is_active) {
-      return NextResponse.json(
-        { error: 'Account is deactivated' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Account is deactivated" }, { status: 403 });
     }
 
     const [roleRows] = await pool.query(
@@ -55,9 +50,7 @@ export async function GET(request: NextRequest) {
     let roleSlugs: string[] = roles.map((r) => r.slug);
     if (roleSlugs.length === 0 && user.role) roleSlugs = [user.role];
 
-    const primaryRole = roleSlugs.includes('admin')
-      ? 'admin'
-      : roleSlugs[0] || 'user';
+    const primaryRole = roleSlugs.includes("admin") ? "admin" : roleSlugs[0] || "user";
 
     const permissionSet = new Set<string>();
     roles.forEach((r) => {
@@ -66,18 +59,12 @@ export async function GET(request: NextRequest) {
 
     let permissions: string[] = Array.from(permissionSet);
 
-    if (roleSlugs.includes('admin')) {
-      permissions = [
-        'dashboard.view',
-        'analytics.view',
-        'users.view',
-        'roles.view',
-        'cities.view',
-        'profile.view',
-      ];
+    // ✅ Admin gets everything — client `hasPermission` bypasses for admin anyway,
+    // but a non-empty list helps non-context guards on the client.
+    if (roleSlugs.includes("admin")) {
+      permissions = []; // AuthContext.hasPermission returns true for admin
     }
 
-    // ── Cities the user has access to ──
     const [cityRows] = await pool.query(
       `SELECT c.id, c.name, c.state, c.code
        FROM user_cities uc
@@ -86,7 +73,6 @@ export async function GET(request: NextRequest) {
       [user.id]
     );
 
-    // ── Per-city granular permissions ──
     const [cityPermRows] = await pool.query(
       `SELECT city_id, permission_key
        FROM user_city_permissions
@@ -100,12 +86,10 @@ export async function GET(request: NextRequest) {
       cityPermMap[row.city_id].push(row.permission_key);
     });
 
-    const city_permissions = Object.entries(cityPermMap).map(
-      ([cityId, perms]) => ({
-        city_id: Number(cityId),
-        permissions: perms,
-      })
-    );
+    const city_permissions = Object.entries(cityPermMap).map(([cityId, perms]) => ({
+      city_id: Number(cityId),
+      permissions: perms,
+    }));
 
     return NextResponse.json(
       {
@@ -125,12 +109,9 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
-    console.error('Get user error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("Get user error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

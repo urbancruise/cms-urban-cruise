@@ -109,8 +109,7 @@ export default function SeoImagesPage() {
             Image SEO
           </h1>
           <p className="text-slate-500 mt-1">
-            Manage alt tags, captions, and image optimization ({data?.total || 0}{" "}
-            images)
+            Manage alt tags, captions, and image optimization ({data?.total || 0} images)
           </p>
         </div>
         <button

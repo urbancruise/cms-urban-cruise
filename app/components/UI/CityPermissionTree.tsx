@@ -82,10 +82,7 @@ export default function CityPermissionTree({
     return filterTreeByAllowed(WEBSITE_PERMISSION_TREE, allowedSet);
   }, [allowedPermissions]);
 
-  const ALL_VISIBLE_KEYS = useMemo(
-    () => collectAllKeys(visibleTree),
-    [visibleTree]
-  );
+  const ALL_VISIBLE_KEYS = useMemo(() => collectAllKeys(visibleTree), [visibleTree]);
 
   const getCityAccess = (cityId: number): string[] =>
     value.find((v) => v.city_id === cityId)?.permissions || [];
@@ -110,9 +107,7 @@ export default function CityPermissionTree({
 
   const toggleCityExpand = (cityId: number) => {
     setExpandedCities((prev) =>
-      prev.includes(cityId)
-        ? prev.filter((id) => id !== cityId)
-        : [...prev, cityId]
+      prev.includes(cityId) ? prev.filter((id) => id !== cityId) : [...prev, cityId]
     );
   };
 
@@ -127,9 +122,7 @@ export default function CityPermissionTree({
   const togglePerm = (cityId: number, permKey: string) => {
     const current = getCityAccess(cityId);
     const has = current.includes(permKey);
-    const next = has
-      ? current.filter((p) => p !== permKey)
-      : [...current, permKey];
+    const next = has ? current.filter((p) => p !== permKey) : [...current, permKey];
     updateCityAccess(cityId, next);
   };
 
@@ -139,7 +132,10 @@ export default function CityPermissionTree({
     const allSelected = keys.every((k) => current.includes(k));
 
     if (allSelected) {
-      updateCityAccess(cityId, current.filter((p) => !keys.includes(p)));
+      updateCityAccess(
+        cityId,
+        current.filter((p) => !keys.includes(p))
+      );
     } else {
       const set = new Set([...current, ...keys]);
       updateCityAccess(cityId, Array.from(set));
@@ -223,9 +219,7 @@ export default function CityPermissionTree({
 
           <span
             className={`text-xs flex-1 truncate ${
-              state !== "none"
-                ? "font-medium text-slate-900"
-                : "text-slate-600"
+              state !== "none" ? "font-medium text-slate-900" : "text-slate-600"
             }`}
           >
             {node.label}
@@ -234,9 +228,7 @@ export default function CityPermissionTree({
 
         {hasChildren && expanded && (
           <div className="mt-0.5">
-            {node.children!.map((child) =>
-              renderPermNode(cityId, child, depth + 1)
-            )}
+            {node.children!.map((child) => renderPermNode(cityId, child, depth + 1))}
           </div>
         )}
       </div>
@@ -283,10 +275,7 @@ export default function CityPermissionTree({
               ALL_VISIBLE_KEYS.every((k) => perms.includes(k));
 
             return (
-              <div
-                key={city.id}
-                className="border-b border-slate-100 last:border-b-0"
-              >
+              <div key={city.id} className="border-b border-slate-100 last:border-b-0">
                 <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors">
                   <button
                     type="button"
@@ -322,9 +311,7 @@ export default function CityPermissionTree({
                       {city.name}
                     </span>
                     {city.state && (
-                      <span className="text-xs text-slate-400 ml-1">
-                        ({city.state})
-                      </span>
+                      <span className="text-xs text-slate-400 ml-1">({city.state})</span>
                     )}
                   </div>
 
@@ -360,8 +347,8 @@ export default function CityPermissionTree({
 
       <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
         <span className="text-xs text-slate-500">
-          Click a city&apos;s arrow to grant access to specific pages. Parent
-          checkbox selects all children.
+          Click a city&apos;s arrow to grant access to specific pages. Parent checkbox
+          selects all children.
         </span>
         <div className="flex gap-2">
           <button

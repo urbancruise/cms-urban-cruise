@@ -12,6 +12,91 @@ export const inputCls =
   "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500";
 
 // ============================================================
+// Local item shapes — used to strongly type RichList<T>
+// ============================================================
+interface ImageItemShape {
+  url: string;
+  publicId: string;
+}
+
+interface GroupSizeVehicle {
+  name: string;
+  tagline: string;
+  seats: string;
+  price: string;
+  description: string;
+  images: ImageItemShape[];
+}
+
+interface OccasionCard {
+  image: string;
+  imagePublicId: string;
+  title: string;
+  seats: string;
+  price: string;
+  location: string;
+  description: string;
+  features: string[];
+  bookLabel: string;
+  bookLink: string;
+  readMoreLabel: string;
+  readMoreLink: string;
+}
+
+interface OccasionTab {
+  label: string;
+  slug: string;
+  cards: OccasionCard[];
+}
+
+interface CompareFeature {
+  icon: string;
+  label: string;
+  value: string;
+}
+
+interface CompareCard {
+  badge: string;
+  badgeIcon: string;
+  image: string;
+  imagePublicId: string;
+  name: string;
+  price: string;
+  accentColor: string;
+  features: CompareFeature[];
+  footerText: string;
+  bookLabel: string;
+  bookLink: string;
+}
+
+interface ComparePair {
+  cardA: CompareCard;
+  cardB: CompareCard;
+}
+
+interface WhyChooseBenefit {
+  number: string;
+  title: string;
+  color: string;
+  items: string[];
+  image: string;
+  imagePublicId: string;
+}
+
+interface DiscoverPlace {
+  tabLabel: string;
+  tabSlug: string;
+  placeName: string;
+  tagline: string;
+  description: string;
+  images: ImageItemShape[];
+  duration: string;
+  bestTime: string;
+  bestFor: string;
+  highlights: string[];
+}
+
+// ============================================================
 // FormEditor — shared across Home & Vehicles pages
 // ============================================================
 export function FormEditor({
@@ -275,7 +360,7 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<string>
           label="Paragraphs"
           items={value.paragraphs || []}
           onChange={(items) => set("paragraphs", items)}
@@ -339,7 +424,13 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          number: string;
+          title: string;
+          description: string;
+          image: string;
+          imagePublicId: string;
+        }>
           label="Steps"
           items={value.steps || []}
           onChange={(items) => set("steps", items)}
@@ -453,7 +544,12 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          title: string;
+          description: string;
+          image: string;
+          imagePublicId: string;
+        }>
           label="Categories"
           items={value.items || []}
           onChange={(items) => set("items", items)}
@@ -553,7 +649,7 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<GroupSizeVehicle>
           label="Vehicles"
           items={value.vehicles || []}
           onChange={(items) => set("vehicles", items)}
@@ -683,7 +779,7 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<OccasionTab>
           label="Tabs (Occasions)"
           items={value.tabs || []}
           onChange={(items) => set("tabs", items)}
@@ -716,7 +812,7 @@ export function FormEditor({
               </div>
 
               <div className="border-t border-teal-200 pt-4">
-                <RichList
+                <RichList<OccasionCard>
                   label="Cards"
                   items={tab.cards || []}
                   onChange={(cards) => updateTab({ ...tab, cards })}
@@ -965,7 +1061,13 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          title: string;
+          seats: string;
+          image: string;
+          imagePublicId: string;
+          href: string;
+        }>
           label="Vehicles"
           items={value.vehicles || []}
           onChange={(items) => set("vehicles", items)}
@@ -1105,7 +1207,7 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<ComparePair>
           label="Comparison Cards (pair per slide)"
           items={value.comparisons || []}
           onChange={(items) => set("comparisons", items)}
@@ -1255,7 +1357,7 @@ export function FormEditor({
                 </Field>
 
                 <Field label="Features (rows)">
-                  <RichList
+                  <RichList<CompareFeature>
                     label=""
                     items={pair.cardA?.features || []}
                     onChange={(features) =>
@@ -1476,7 +1578,7 @@ export function FormEditor({
                 </Field>
 
                 <Field label="Features (rows)">
-                  <RichList
+                  <RichList<CompareFeature>
                     label=""
                     items={pair.cardB?.features || []}
                     onChange={(features) =>
@@ -1681,7 +1783,15 @@ export function FormEditor({
           </Field>
         </div>
 
-        <RichList
+        <RichList<{
+          image: string;
+          imagePublicId: string;
+          seats: string;
+          subLabel: string;
+          price: string;
+          bookLabel: string;
+          bookLink: string;
+        }>
           label="Price Rows"
           items={value.rows || []}
           onChange={(items) => set("rows", items)}
@@ -1825,7 +1935,7 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<WhyChooseBenefit>
           label="Benefit Cards"
           items={value.benefits || []}
           onChange={(items) => set("benefits", items)}
@@ -1949,7 +2059,16 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          name: string;
+          location: string;
+          message: string;
+          rating: number;
+          avatar: string;
+          avatarPublicId: string;
+          featured: boolean;
+          youtubeUrl: string;
+        }>
           label="Testimonials"
           items={value.items || []}
           onChange={(items) => set("items", items)}
@@ -2172,7 +2291,7 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<DiscoverPlace>
           label="Places (Tabs + Cards)"
           items={value.places || []}
           onChange={(items) => set("places", items)}
@@ -2367,7 +2486,11 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          number: string;
+          question: string;
+          answer: string;
+        }>
           label="FAQ items"
           items={value.items || []}
           onChange={(items) => set("items", items)}
@@ -2463,7 +2586,12 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          name: string;
+          state: string;
+          image: string;
+          imagePublicId: string;
+        }>
           label="Cities"
           items={value.cities || []}
           onChange={(items) => set("cities", items)}
@@ -2559,7 +2687,11 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          name: string;
+          logo: string;
+          logoPublicId: string;
+        }>
           label="Partner logos"
           items={value.logos || []}
           onChange={(items) => set("logos", items)}
@@ -2654,7 +2786,11 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          icon: string;
+          title: string;
+          subtitle: string;
+        }>
           label="Feature Cards"
           items={value.features || []}
           onChange={(items) => set("features", items)}
@@ -2769,7 +2905,11 @@ export function FormEditor({
           />
         </Field>
 
-        <RichList
+        <RichList<{
+          icon: string;
+          value: string;
+          label: string;
+        }>
           label="Stats"
           items={value.stats || []}
           onChange={(items) => set("stats", items)}

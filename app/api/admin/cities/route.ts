@@ -12,10 +12,7 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as {
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
     userId: number;
     role: string;
     roles?: string[];
@@ -51,8 +48,8 @@ async function requireCityReadAccess(request: NextRequest) {
       perms = Array.isArray(r.permissions)
         ? r.permissions
         : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
+          ? JSON.parse(r.permissions)
+          : [];
     } catch {
       perms = [];
     }
@@ -126,10 +123,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Get cities error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -213,9 +207,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Create city error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

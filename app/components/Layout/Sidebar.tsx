@@ -2,12 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useMemo,
-  useState,
-  type ComponentType,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 
 import {
   MdOutlineExplore,
@@ -109,32 +104,60 @@ const menuItems: MenuItem[] = [
   // SEO
   // ============================================================
   {
-  icon: MdOutlineSearch,
-  label: "SEO",
-  href: "/admin/seo",
-  perm: "seo.view",
-  children: [
-    { label: "SEO Dashboard", href: "/admin/seo", perm: "seo.dashboard.view" },
-    { label: "Page SEO Management", href: "/admin/seo/pages", perm: "seo.pages.view" },
-    { label: "Keyword Management", href: "/admin/seo/keywords", perm: "seo.keywords.view" },
-    { label: "SEO Content Editor", href: "/admin/seo/content", perm: "seo.content.view" },
-    { label: "Image SEO", href: "/admin/seo/images", perm: "seo.images.view" },
-    { label: "Technical SEO", href: "/admin/seo/technical", perm: "seo.technical.view" },
-    { label: "Sitemap Management", href: "/admin/seo/sitemap", perm: "seo.sitemap.view" },
-    { label: "Robots.txt", href: "/admin/seo/robots", perm: "seo.robots.view" },
-    { label: "Schema / Structured Data", href: "/admin/seo/schema", perm: "seo.schema.view" },
-    { label: "URL Management", href: "/admin/seo/urls", perm: "seo.urls.view" },
-    { label: "Internal Linking", href: "/admin/seo/internal-links", perm: "seo.internal_links.view" },
-    { label: "Search Console", href: "/admin/seo/gsc", perm: "seo.gsc.view" },
-    { label: "Google Analytics", href: "/admin/seo/analytics", perm: "seo.ga.view" },
-    { label: "Core Web Vitals", href: "/admin/seo/cwv", perm: "seo.cwv.view" },
-    { label: "SEO Audit", href: "/admin/seo/audit", perm: "seo.audit.view" },
-    { label: "Issues Center", href: "/admin/seo/issues", perm: "seo.issues.view" },
-    { label: "Social / Open Graph", href: "/admin/seo/social", perm: "seo.social.view" },
-    { label: "Location SEO", href: "/admin/seo/location", perm: "seo.location.view" },
-    { label: "SEO Settings", href: "/admin/seo/settings", perm: "seo.settings.view" },
-  ],
-},
+    icon: MdOutlineSearch,
+    label: "SEO",
+    href: "/admin/seo",
+    perm: "seo.view",
+    children: [
+      { label: "SEO Dashboard", href: "/admin/seo", perm: "seo.dashboard.view" },
+      { label: "Page SEO Management", href: "/admin/seo/pages", perm: "seo.pages.view" },
+      {
+        label: "Keyword Management",
+        href: "/admin/seo/keywords",
+        perm: "seo.keywords.view",
+      },
+      {
+        label: "SEO Content Editor",
+        href: "/admin/seo/content",
+        perm: "seo.content.view",
+      },
+      { label: "Image SEO", href: "/admin/seo/images", perm: "seo.images.view" },
+      {
+        label: "Technical SEO",
+        href: "/admin/seo/technical",
+        perm: "seo.technical.view",
+      },
+      {
+        label: "Sitemap Management",
+        href: "/admin/seo/sitemap",
+        perm: "seo.sitemap.view",
+      },
+      { label: "Robots.txt", href: "/admin/seo/robots", perm: "seo.robots.view" },
+      {
+        label: "Schema / Structured Data",
+        href: "/admin/seo/schema",
+        perm: "seo.schema.view",
+      },
+      { label: "URL Management", href: "/admin/seo/urls", perm: "seo.urls.view" },
+      {
+        label: "Internal Linking",
+        href: "/admin/seo/internal-links",
+        perm: "seo.internal_links.view",
+      },
+      { label: "Search Console", href: "/admin/seo/gsc", perm: "seo.gsc.view" },
+      { label: "Google Analytics", href: "/admin/seo/analytics", perm: "seo.ga.view" },
+      { label: "Core Web Vitals", href: "/admin/seo/cwv", perm: "seo.cwv.view" },
+      { label: "SEO Audit", href: "/admin/seo/audit", perm: "seo.audit.view" },
+      { label: "Issues Center", href: "/admin/seo/issues", perm: "seo.issues.view" },
+      {
+        label: "Social / Open Graph",
+        href: "/admin/seo/social",
+        perm: "seo.social.view",
+      },
+      { label: "Location SEO", href: "/admin/seo/location", perm: "seo.location.view" },
+      { label: "SEO Settings", href: "/admin/seo/settings", perm: "seo.settings.view" },
+    ],
+  },
 
   // ============================================================
   // PROFILE
@@ -156,9 +179,7 @@ const isPathActive = (pathname: string | null, href: string): boolean => {
 const hasActiveDescendant = (item: MenuItem, pathname: string | null): boolean => {
   if (!item.children?.length) return false;
   return item.children.some(
-    (child) =>
-      isPathActive(pathname, child.href) ||
-      hasActiveDescendant(child, pathname)
+    (child) => isPathActive(pathname, child.href) || hasActiveDescendant(child, pathname)
   );
 };
 
@@ -189,9 +210,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   const toggleDropdown = (href: string) => {
     setOpenDropdowns((prev) =>
-      prev.includes(href)
-        ? prev.filter((item) => item !== href)
-        : [...prev, href]
+      prev.includes(href) ? prev.filter((item) => item !== href) : [...prev, href]
     );
   };
 
@@ -383,9 +402,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             />
           </div>
           <div className="min-w-0">
-            <h1 className="text-base font-bold text-slate-900 truncate">
-              Urban Cruise
-            </h1>
+            <h1 className="text-base font-bold text-slate-900 truncate">Urban Cruise</h1>
             <p className="text-xs text-slate-500">CMS Panel</p>
           </div>
         </div>
@@ -428,16 +445,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
             />
           ) : (
             <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-              <span className="text-white font-semibold text-xs">
-                {displayInitials}
-              </span>
+              <span className="text-white font-semibold text-xs">{displayInitials}</span>
             </div>
           )}
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">
-              {displayName}
-            </p>
+            <p className="text-sm font-medium text-slate-900 truncate">{displayName}</p>
             <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
             <span
               className={`
@@ -463,4 +476,3 @@ export default function Sidebar({ onClose }: SidebarProps) {
     </aside>
   );
 }
-

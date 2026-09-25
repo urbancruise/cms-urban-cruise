@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CHUNKED_CACHE_MAX_ENTRIES } from "./constants";
 
 interface ChunkedOptions<T> {
   endpoint: string;
@@ -11,10 +12,36 @@ interface ChunkedOptions<T> {
   enabled?: boolean;
 }
 
-// ============================================================
-// Client-side cache per (endpoint + params)
-// ============================================================
-const cache = new Map<string, { items: any[]; total: number }>();
+interface CacheEntry {
+  items: any[];
+  total: number;
+  ts: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+function cacheGet(key: string): CacheEntry | undefined {
+  const hit = cache.get(key);
+  if (hit) hit.ts = Date.now();
+  return hit;
+}
+
+function cacheSet(key: string, items: any[], total: number) {
+  cache.set(key, { items, total, ts: Date.now() });
+
+  if (cache.size > CHUNKED_CACHE_MAX_ENTRIES) {
+    // LRU eviction
+    let oldestKey: string | null = null;
+    let oldestTs = Infinity;
+    for (const [k, v] of cache.entries()) {
+      if (v.ts < oldestTs) {
+        oldestTs = v.ts;
+        oldestKey = k;
+      }
+    }
+    if (oldestKey) cache.delete(oldestKey);
+  }
+}
 
 export function useChunkedSWR<T>({
   endpoint,
@@ -51,23 +78,20 @@ export function useChunkedSWR<T>({
     [endpoint, pageSize, paramsKey]
   );
 
+  const cacheKey = `${endpoint}::${paramsKey}::${pageSize}::0`;
+
   // ============================================================
-  // First page (respects tab visibility)
+  // First page (respects tab visibility + cache)
   // ============================================================
   useEffect(() => {
     if (!enabled) return;
-
     if (typeof document !== "undefined" && document.hidden) return;
 
-    const cacheKey = `${endpoint}::${paramsKey}::0`;
-    const cached = cache.get(cacheKey);
-
+    const cached = cacheGet(cacheKey);
     if (cached) {
       setItems(cached.items as T[]);
       setTotal(cached.total);
-      setHasMore(
-        cached.items.length === pageSize && cached.items.length < cached.total
-      );
+      setHasMore(cached.items.length === pageSize && cached.items.length < cached.total);
       setInitialLoading(false);
       return;
     }
@@ -99,7 +123,7 @@ export function useChunkedSWR<T>({
         setItems(chunk);
         setTotal(totalCount);
         setHasMore(chunk.length === pageSize && chunk.length < totalCount);
-        cache.set(cacheKey, { items: chunk, total: totalCount });
+        cacheSet(cacheKey, chunk, totalCount);
       } catch (e: any) {
         if (e.name !== "AbortError") setError(e.message);
       } finally {
@@ -109,7 +133,7 @@ export function useChunkedSWR<T>({
     })();
 
     return () => abortRef.current?.abort();
-  }, [buildUrl, enabled, dataKey, pageSize, totalKey, paramsKey, endpoint]);
+  }, [buildUrl, enabled, dataKey, pageSize, totalKey, paramsKey, endpoint, cacheKey]);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -132,7 +156,6 @@ export function useChunkedSWR<T>({
   }, [loading, hasMore, page, buildUrl, dataKey, pageSize]);
 
   const refresh = useCallback(() => {
-    const cacheKey = `${endpoint}::${paramsKey}::0`;
     cache.delete(cacheKey);
     setPage(0);
     setHasMore(true);
@@ -151,7 +174,7 @@ export function useChunkedSWR<T>({
         setItems(chunk);
         setTotal(totalCount);
         setHasMore(chunk.length === pageSize && chunk.length < totalCount);
-        cache.set(cacheKey, { items: chunk, total: totalCount });
+        cacheSet(cacheKey, chunk, totalCount);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -159,7 +182,7 @@ export function useChunkedSWR<T>({
         setLoading(false);
       }
     })();
-  }, [buildUrl, dataKey, pageSize, totalKey, paramsKey, endpoint]);
+  }, [buildUrl, dataKey, pageSize, totalKey, cacheKey]);
 
   return {
     items,

@@ -32,9 +32,7 @@ function normalizeValue(value: any) {
 
   return {
     time: Date.now(),
-    blocks: [
-      { type: "paragraph", data: { text: JSON.stringify(value, null, 2) } },
-    ],
+    blocks: [{ type: "paragraph", data: { text: JSON.stringify(value, null, 2) } }],
     version: "2.28.0",
   };
 }
@@ -196,10 +194,7 @@ export default function RichEditor({
     return () => {
       destroyed = true;
 
-      if (
-        editorRef.current &&
-        typeof editorRef.current.destroy === "function"
-      ) {
+      if (editorRef.current && typeof editorRef.current.destroy === "function") {
         try {
           editorRef.current.destroy();
         } catch {
@@ -230,14 +225,8 @@ export default function RichEditor({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-      {!ready && (
-        <div className="p-6 text-sm text-slate-400">Loading editor…</div>
-      )}
-      <div
-        ref={holderRef}
-        className="rich-editor-body px-4 py-3"
-        style={{ minHeight }}
-      />
+      {!ready && <div className="p-6 text-sm text-slate-400">Loading editor…</div>}
+      <div ref={holderRef} className="rich-editor-body px-4 py-3" style={{ minHeight }} />
 
       <style jsx global>{`
         .rich-editor-body .ce-block__content,

@@ -57,7 +57,9 @@ export default function SeoGscPage() {
           <MdOutlineTravelExplore className="w-8 h-8 text-teal-600" />
           Google Search Console
         </h1>
-        <p className="text-slate-500 mt-1">Connect your site for search performance data</p>
+        <p className="text-slate-500 mt-1">
+          Connect your site for search performance data
+        </p>
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
@@ -77,7 +79,9 @@ export default function SeoGscPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-        <label className="block text-sm font-medium text-slate-900 mb-2">Verification Code</label>
+        <label className="block text-sm font-medium text-slate-900 mb-2">
+          Verification Code
+        </label>
         <div className="flex gap-2">
           <input
             type="text"
@@ -86,27 +90,49 @@ export default function SeoGscPage() {
             placeholder="e.g., aBcD1234...xyz"
             className="flex-1 px-4 py-2 border border-slate-200 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
-          <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50"
+          >
             <MdOutlineSave className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
           </button>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          This will be rendered as <code className="font-mono bg-slate-100 px-1 rounded">&lt;meta name="google-site-verification" content="..."&gt;</code>
+          This will be rendered as{" "}
+          <code className="font-mono bg-slate-100 px-1 rounded">
+            &lt;meta name="google-site-verification" content="..."&gt;
+          </code>
         </p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-sm font-semibold text-slate-900 mb-3">Quick Links</h2>
         <div className="space-y-2">
-          <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline">
+          <a
+            href="https://search.google.com/search-console"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline"
+          >
             Open Google Search Console
             <MdOutlineOpenInNew className="w-3.5 h-3.5" />
           </a>
-          <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline">
+          <a
+            href="https://search.google.com/test/rich-results"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline"
+          >
             Rich Results Test
             <MdOutlineOpenInNew className="w-3.5 h-3.5" />
           </a>
-          <a href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline">
+          <a
+            href="https://pagespeed.web.dev/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline"
+          >
             PageSpeed Insights
             <MdOutlineOpenInNew className="w-3.5 h-3.5" />
           </a>

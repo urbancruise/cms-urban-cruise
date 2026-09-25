@@ -72,10 +72,17 @@ export default function SeoTechnicalPage() {
           <p className="text-slate-500 mt-1">Monitor technical issues and site health</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => mutate()} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+          <button
+            onClick={() => mutate()}
+            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
             <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
           </button>
-          <button onClick={runAudit} disabled={running} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm">
+          <button
+            onClick={runAudit}
+            disabled={running}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm"
+          >
             {running ? "Running..." : "Run Audit"}
           </button>
         </div>
@@ -122,7 +129,9 @@ export default function SeoTechnicalPage() {
         <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
           <MdOutlineBuild className="w-12 h-12 mx-auto text-slate-300" />
           <p className="mt-3 text-slate-500 font-medium">No technical checks yet</p>
-          <p className="text-xs text-slate-400 mt-1">Click &quot;Run Audit&quot; to start</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Click &quot;Run Audit&quot; to start
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
@@ -131,11 +140,21 @@ export default function SeoTechnicalPage() {
               <div className="flex-shrink-0">{STATUS_ICON[c.status]}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-slate-900">{CHECK_LABELS[c.check_type] || c.check_type}</h3>
-                  {c.check_key && <span className="text-xs font-mono text-slate-400">{c.check_key}</span>}
+                  <h3 className="font-medium text-slate-900">
+                    {CHECK_LABELS[c.check_type] || c.check_type}
+                  </h3>
+                  {c.check_key && (
+                    <span className="text-xs font-mono text-slate-400">
+                      {c.check_key}
+                    </span>
+                  )}
                 </div>
-                <p className="text-sm text-slate-500 mt-0.5">{c.message || "No details"}</p>
-                <p className="text-[10px] text-slate-400 mt-1">Checked {new Date(c.checked_at).toLocaleString()}</p>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  {c.message || "No details"}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Checked {new Date(c.checked_at).toLocaleString()}
+                </p>
               </div>
             </div>
           ))}

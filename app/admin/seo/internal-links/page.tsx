@@ -49,20 +49,32 @@ export default function SeoInternalLinksPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => mutate()} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+          <button
+            onClick={() => mutate()}
+            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
             <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
           </button>
-          <button onClick={checkLinks} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm">
+          <button
+            onClick={checkLinks}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm"
+          >
             Recheck Links
           </button>
         </div>
       </div>
 
       <div className="flex gap-2 mb-6">
-        <button onClick={() => setFilter("all")} className={`px-4 py-1.5 rounded-lg text-sm font-medium ${filter === "all" ? "bg-teal-600 text-white" : "bg-white border border-slate-200 text-slate-700"}`}>
+        <button
+          onClick={() => setFilter("all")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium ${filter === "all" ? "bg-teal-600 text-white" : "bg-white border border-slate-200 text-slate-700"}`}
+        >
           All ({links.length})
         </button>
-        <button onClick={() => setFilter("broken")} className={`px-4 py-1.5 rounded-lg text-sm font-medium ${filter === "broken" ? "bg-red-600 text-white" : "bg-white border border-slate-200 text-slate-700"}`}>
+        <button
+          onClick={() => setFilter("broken")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium ${filter === "broken" ? "bg-red-600 text-white" : "bg-white border border-slate-200 text-slate-700"}`}
+        >
           Broken ({brokenCount})
         </button>
       </div>

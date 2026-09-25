@@ -10,54 +10,140 @@ import {
   MdOutlineWarning,
 } from "react-icons/md";
 
+// ============================================================
+// Types
+// ============================================================
 interface Settings {
   [key: string]: string;
 }
 
-const GROUPS = [
+interface SettingField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  type?: "text" | "textarea";
+  rows?: number;
+}
+
+interface SettingGroup {
+  title: string;
+  fields: SettingField[];
+}
+
+// ============================================================
+// Field groups
+// ============================================================
+const GROUPS: SettingGroup[] = [
   {
     title: "Site Information",
     fields: [
       { key: "site_name", label: "Site Name", placeholder: "Urban Cruise" },
-      { key: "site_url", label: "Site URL", placeholder: "https://urbancruise.com" },
+      {
+        key: "site_url",
+        label: "Site URL",
+        placeholder: "https://urbancruise.com",
+      },
     ],
   },
   {
     title: "Default Meta",
     fields: [
-      { key: "default_meta_title", label: "Default Meta Title Template", placeholder: "%page% | Urban Cruise" },
-      { key: "default_meta_description", label: "Default Meta Description", type: "textarea", placeholder: "Book cars, buses, and tempo travellers..." },
-      { key: "default_og_image", label: "Default OG Image URL", placeholder: "https://..." },
-      { key: "default_twitter_handle", label: "Twitter Handle", placeholder: "@UrbanCruise" },
-      { key: "default_twitter_card", label: "Twitter Card Type", placeholder: "summary_large_image" },
-      { key: "default_robots", label: "Default Robots", placeholder: "index, follow" },
+      {
+        key: "default_meta_title",
+        label: "Default Meta Title Template",
+        placeholder: "%page% | Urban Cruise",
+      },
+      {
+        key: "default_meta_description",
+        label: "Default Meta Description",
+        type: "textarea",
+        rows: 3,
+        placeholder: "Book cars, buses, and tempo travellers...",
+      },
+      {
+        key: "default_og_image",
+        label: "Default OG Image URL",
+        placeholder: "https://...",
+      },
+      {
+        key: "default_twitter_handle",
+        label: "Twitter Handle",
+        placeholder: "@UrbanCruise",
+      },
+      {
+        key: "default_twitter_card",
+        label: "Twitter Card Type",
+        placeholder: "summary_large_image",
+      },
+      {
+        key: "default_robots",
+        label: "Default Robots",
+        placeholder: "index, follow",
+      },
     ],
   },
   {
     title: "Google Integration",
     fields: [
-      { key: "gsc_verification", label: "Search Console Verification Code", placeholder: "google-site-verification=..." },
-      { key: "ga_measurement_id", label: "Google Analytics Measurement ID", placeholder: "G-XXXXXXXXXX" },
-      { key: "ga_property_id", label: "Google Analytics Property ID", placeholder: "123456789" },
-      { key: "gtm_id", label: "Google Tag Manager ID", placeholder: "GTM-XXXXXX" },
+      {
+        key: "gsc_verification",
+        label: "Search Console Verification Code",
+        placeholder: "google-site-verification=...",
+      },
+      {
+        key: "ga_measurement_id",
+        label: "Google Analytics Measurement ID",
+        placeholder: "G-XXXXXXXXXX",
+      },
+      {
+        key: "ga_property_id",
+        label: "Google Analytics Property ID",
+        placeholder: "123456789",
+      },
+      {
+        key: "gtm_id",
+        label: "Google Tag Manager ID",
+        placeholder: "GTM-XXXXXX",
+      },
     ],
   },
   {
     title: "Other Integrations",
     fields: [
-      { key: "facebook_pixel_id", label: "Facebook Pixel ID", placeholder: "1234567890" },
-      { key: "bing_verification", label: "Bing Webmaster Verification", placeholder: "..." },
+      {
+        key: "facebook_pixel_id",
+        label: "Facebook Pixel ID",
+        placeholder: "1234567890",
+      },
+      {
+        key: "bing_verification",
+        label: "Bing Webmaster Verification",
+        placeholder: "...",
+      },
     ],
   },
   {
     title: "Sitemap & Robots",
     fields: [
-      { key: "sitemap_auto_update", label: "Auto-update Sitemap", placeholder: "true / false" },
-      { key: "robots_txt_content", label: "Robots.txt Content", type: "textarea", rows: 6, placeholder: "User-agent: *\nAllow: /" },
+      {
+        key: "sitemap_auto_update",
+        label: "Auto-update Sitemap",
+        placeholder: "true / false",
+      },
+      {
+        key: "robots_txt_content",
+        label: "Robots.txt Content",
+        type: "textarea",
+        rows: 6,
+        placeholder: "User-agent: *\nAllow: /",
+      },
     ],
   },
 ];
 
+// ============================================================
+// Component
+// ============================================================
 export default function SeoSettingsPage() {
   const { data, isLoading, mutate } = useSWR<{ settings: Settings }>(
     "/api/admin/seo/settings",
@@ -157,7 +243,7 @@ export default function SeoSettingsPage() {
                     </label>
                     {field.type === "textarea" ? (
                       <textarea
-                        rows={field.rows || 3}
+                        rows={field.rows ?? 3}
                         value={form[field.key] || ""}
                         onChange={(e) => set(field.key, e.target.value)}
                         placeholder={field.placeholder}

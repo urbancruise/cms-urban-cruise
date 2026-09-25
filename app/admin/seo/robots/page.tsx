@@ -42,7 +42,10 @@ export default function SeoRobotsPage() {
   );
   const [content, setContent] = useState(DEFAULT_ROBOTS);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (data?.settings?.robots_txt_content) {
@@ -75,8 +78,14 @@ export default function SeoRobotsPage() {
   return (
     <div className="p-8 max-w-4xl">
       {toast && (
-        <div className={`fixed top-4 right-4 z-[100] flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border min-w-[260px] ${toast.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"}`}>
-          {toast.type === "success" ? <MdOutlineCheckCircle className="w-5 h-5" /> : <MdOutlineWarning className="w-5 h-5" />}
+        <div
+          className={`fixed top-4 right-4 z-[100] flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border min-w-[260px] ${toast.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"}`}
+        >
+          {toast.type === "success" ? (
+            <MdOutlineCheckCircle className="w-5 h-5" />
+          ) : (
+            <MdOutlineWarning className="w-5 h-5" />
+          )}
           <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
@@ -87,13 +96,22 @@ export default function SeoRobotsPage() {
             <MdOutlineSmartToy className="w-8 h-8 text-teal-600" />
             Robots.txt Management
           </h1>
-          <p className="text-slate-500 mt-1">Control how search engines crawl your site</p>
+          <p className="text-slate-500 mt-1">
+            Control how search engines crawl your site
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setContent(DEFAULT_ROBOTS)} className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+          <button
+            onClick={() => setContent(DEFAULT_ROBOTS)}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
             <MdOutlineRestartAlt className="w-4 h-4" /> Reset
           </button>
-          <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm"
+          >
             <MdOutlineSave className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
           </button>
         </div>
@@ -101,7 +119,11 @@ export default function SeoRobotsPage() {
 
       <div className="mb-4 flex gap-2 flex-wrap">
         {Object.entries(PRESETS).map(([name, preset]) => (
-          <button key={name} onClick={() => setContent(preset)} className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50">
+          <button
+            key={name}
+            onClick={() => setContent(preset)}
+            className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
             {name}
           </button>
         ))}
@@ -128,7 +150,12 @@ export default function SeoRobotsPage() {
         <h3 className="text-sm font-semibold text-slate-900 mb-2">Tip</h3>
         <p className="text-sm text-slate-600">
           After saving, test your robots.txt at{" "}
-          <a href="https://support.google.com/webmasters/answer/6062598" target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">
+          <a
+            href="https://support.google.com/webmasters/answer/6062598"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-teal-600 hover:underline"
+          >
             Google Search Console → robots.txt Tester
           </a>
           .

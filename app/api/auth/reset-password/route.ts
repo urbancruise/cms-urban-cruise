@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import pool from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import pool from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     if (!token || !password) {
       return NextResponse.json(
-        { error: 'Token and password are required' },
+        { error: "Token and password are required" },
         { status: 400 }
       );
     }
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     // Validate password strength
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: "Password must be at least 6 characters" },
         { status: 400 }
       );
     }
@@ -30,19 +30,19 @@ export async function POST(request: NextRequest) {
 
     if (!hasUpperCase || !hasLowerCase) {
       return NextResponse.json(
-        { error: 'Password must contain both uppercase and lowercase letters' },
+        { error: "Password must contain both uppercase and lowercase letters" },
         { status: 400 }
       );
     }
     if (!hasNumber) {
       return NextResponse.json(
-        { error: 'Password must contain at least one number' },
+        { error: "Password must contain at least one number" },
         { status: 400 }
       );
     }
     if (!hasSpecialChar) {
       return NextResponse.json(
-        { error: 'Password must contain at least one special character' },
+        { error: "Password must contain at least one special character" },
         { status: 400 }
       );
     }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const users = rows as any[];
     if (users.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
+        { error: "Invalid or expired reset token" },
         { status: 400 }
       );
     }
@@ -78,19 +78,14 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Password reset successful' 
+      {
+        success: true,
+        message: "Password reset successful",
       },
       { status: 200 }
     );
-
   } catch (error) {
-    console.error('Reset password error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("Reset password error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -1,60 +1,18 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/app/components/Layout/Sidebar";
 import Header from "@/app/components/Layout/Header";
 import { AuthProvider, useAuth } from "@/app/context/AuthContext";
-
-// ============================================================
-// Lazy-load skeletons (keep initial bundle small)
-// ============================================================
-const DashboardSkeleton = dynamic(
-  () =>
-    import("@/app/components/UI/PageSkeletons").then(
-      (m) => m.DashboardSkeleton
-    ),
-  { ssr: false }
-);
-
-const AnalyticsSkeleton = dynamic(
-  () =>
-    import("@/app/components/UI/PageSkeletons").then(
-      (m) => m.AnalyticsSkeleton
-    ),
-  { ssr: false }
-);
-
-const TableSkeleton = dynamic(
-  () =>
-    import("@/app/components/UI/PageSkeletons").then((m) => m.TableSkeleton),
-  { ssr: false }
-);
-
-const CardGridSkeleton = dynamic(
-  () =>
-    import("@/app/components/UI/PageSkeletons").then(
-      (m) => m.CardGridSkeleton
-    ),
-  { ssr: false }
-);
-
-const ActivitySkeleton = dynamic(
-  () =>
-    import("@/app/components/UI/PageSkeletons").then(
-      (m) => m.ActivitySkeleton
-    ),
-  { ssr: false }
-);
-
-const ProfileSkeleton = dynamic(
-  () =>
-    import("@/app/components/UI/PageSkeletons").then(
-      (m) => m.ProfileSkeleton
-    ),
-  { ssr: false }
-);
+import {
+  DashboardSkeleton,
+  AnalyticsSkeleton,
+  TableSkeleton,
+  CardGridSkeleton,
+  ActivitySkeleton,
+  ProfileSkeleton,
+} from "@/app/components/UI/PageSkeletons";
 
 // ============================================================
 // Route-specific fallback
@@ -75,19 +33,13 @@ function RouteSkeleton() {
 // ============================================================
 // Layout content
 // ============================================================
-function AdminLayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
+    if (!loading && !user) router.push("/login");
   }, [user, loading, router]);
 
   if (loading) {
@@ -133,11 +85,7 @@ function AdminLayoutContent({
   );
 }
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AdminLayoutContent>{children}</AdminLayoutContent>

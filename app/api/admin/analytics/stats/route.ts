@@ -13,10 +13,7 @@ async function requireAuth(request: NextRequest) {
   };
 }
 
-function buildMonthScaffold(
-  months: number,
-  rows: { month: string; count: number }[]
-) {
+function buildMonthScaffold(months: number, rows: { month: string; count: number }[]) {
   const map = new Map(rows.map((r) => [r.month, Number(r.count)]));
   const out: { month: string; label: string; count: number }[] = [];
   const now = new Date();
@@ -81,15 +78,9 @@ export async function GET(request: NextRequest) {
          WHERE c.is_active = 1
          GROUP BY c.id ORDER BY count DESC LIMIT 6`
       ) as any,
-      pool.query(
-        "SELECT COUNT(*) as total, SUM(is_active) as active FROM users"
-      ) as any,
-      pool.query(
-        "SELECT COUNT(*) as total, SUM(is_active) as active FROM roles"
-      ) as any,
-      pool.query(
-        "SELECT COUNT(*) as total, SUM(is_active) as active FROM cities"
-      ) as any,
+      pool.query("SELECT COUNT(*) as total, SUM(is_active) as active FROM users") as any,
+      pool.query("SELECT COUNT(*) as total, SUM(is_active) as active FROM roles") as any,
+      pool.query("SELECT COUNT(*) as total, SUM(is_active) as active FROM cities") as any,
       pool.query(
         "SELECT COUNT(*) as count FROM users WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
       ) as any,
@@ -110,9 +101,7 @@ export async function GET(request: NextRequest) {
           ? 100
           : 0
         : Math.round(
-            ((thisMonthUsers.count - lastMonthUsers.count) /
-              lastMonthUsers.count) *
-              100
+            ((thisMonthUsers.count - lastMonthUsers.count) / lastMonthUsers.count) * 100
           );
 
     return cachedJson(
@@ -136,15 +125,9 @@ export async function GET(request: NextRequest) {
     );
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json(
-        { error: err.message },
-        { status: err.status }
-      );
+      return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Analytics error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

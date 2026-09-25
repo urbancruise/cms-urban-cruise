@@ -11,10 +11,7 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as {
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
     userId: number;
     role: string;
     roles?: string[];
@@ -49,8 +46,8 @@ async function requireSiteContentAccess(request: NextRequest) {
       perms = Array.isArray(r.permissions)
         ? r.permissions
         : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
+          ? JSON.parse(r.permissions)
+          : [];
     } catch {
       perms = [];
     }
@@ -84,10 +81,7 @@ export async function GET(request: NextRequest) {
     const cityId = Number(searchParams.get("city_id"));
 
     if (!cityId) {
-      return NextResponse.json(
-        { error: "city_id is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "city_id is required" }, { status: 400 });
     }
 
     const [rows] = (await pool.query(
@@ -100,8 +94,7 @@ export async function GET(request: NextRequest) {
 
     const sections = (rows as any[]).map((r) => ({
       ...r,
-      content:
-        typeof r.content === "string" ? JSON.parse(r.content) : r.content,
+      content: typeof r.content === "string" ? JSON.parse(r.content) : r.content,
     }));
 
     return NextResponse.json({ sections });
@@ -110,10 +103,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("[admin/site-content/home GET]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -145,13 +135,7 @@ export async function PUT(request: NextRequest) {
          content = VALUES(content),
          status = VALUES(status),
          updated_by = VALUES(updated_by)`,
-      [
-        cityId,
-        sectionKey,
-        JSON.stringify(content),
-        status || "draft",
-        decoded.userId,
-      ]
+      [cityId, sectionKey, JSON.stringify(content), status || "draft", decoded.userId]
     );
 
     await logActivity({
@@ -173,10 +157,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("[admin/site-content/home PUT]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -211,9 +192,6 @@ export async function DELETE(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

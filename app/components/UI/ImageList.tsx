@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import {
-  MdOutlineCloudUpload,
-  MdOutlineDelete,
-  MdOutlineAdd,
-} from "react-icons/md";
+import { MdOutlineCloudUpload, MdOutlineDelete, MdOutlineAdd } from "react-icons/md";
 
 const MAX_KB = 300;
 const MAX_BYTES = MAX_KB * 1024;

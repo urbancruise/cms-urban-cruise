@@ -3,17 +3,11 @@ import pool from "@/lib/db";
 
 const PUBLIC_HEADER = "x-api-key";
 
-export type ApiKeyResult =
-  | { ok: true; name: string }
-  | { ok: false; error: string };
+export type ApiKeyResult = { ok: true; name: string } | { ok: false; error: string };
 
-export async function requireApiKey(
-  request: NextRequest
-): Promise<ApiKeyResult> {
+export async function requireApiKey(request: NextRequest): Promise<ApiKeyResult> {
   const headerKey = request.headers.get(PUBLIC_HEADER);
-  const bearer = request.headers
-    .get("authorization")
-    ?.replace(/^Bearer\s+/i, "");
+  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   const key = headerKey || bearer;
 
   if (!key) {
@@ -35,9 +29,7 @@ export async function requireApiKey(
 
     // Best-effort last-used timestamp
     pool
-      .query(`UPDATE api_keys SET last_used_at = NOW() WHERE id = ?`, [
-        record.id,
-      ])
+      .query(`UPDATE api_keys SET last_used_at = NOW() WHERE id = ?`, [record.id])
       .catch(() => {});
 
     return { ok: true, name: record.name };
@@ -51,10 +43,7 @@ export async function requireApiKey(
 // CORS wrapper for public API responses
 // ============================================================
 export function withCors(res: Response): Response {
-  res.headers.set(
-    "Access-Control-Allow-Origin",
-    process.env.WEBSITE_ORIGIN || "*"
-  );
+  res.headers.set("Access-Control-Allow-Origin", process.env.WEBSITE_ORIGIN || "*");
   res.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.headers.set(
     "Access-Control-Allow-Headers",

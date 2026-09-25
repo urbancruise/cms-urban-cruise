@@ -56,10 +56,16 @@ export default function SeoCwvPage() {
           <p className="text-slate-500 mt-1">Monitor LCP, FID, CLS, INP, TTFB</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => mutate()} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+          <button
+            onClick={() => mutate()}
+            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
             <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
           </button>
-          <button onClick={checkVitals} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm">
+          <button
+            onClick={checkVitals}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm"
+          >
             Measure Now
           </button>
         </div>
@@ -78,7 +84,10 @@ export default function SeoCwvPage() {
       ) : (
         <div className="space-y-4">
           {entries.map((entry) => (
-            <div key={entry.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div
+              key={entry.id}
+              className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+            >
               <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-mono text-slate-800">{entry.page_path}</p>
@@ -89,12 +98,16 @@ export default function SeoCwvPage() {
                     entry.status === "good"
                       ? "bg-green-50 text-green-700"
                       : entry.status === "needs_improvement"
-                      ? "bg-amber-50 text-amber-700"
-                      : "bg-red-50 text-red-700"
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-red-50 text-red-700"
                   }`}
                 >
-                  {entry.status === "good" && <MdOutlineCheckCircle className="w-3.5 h-3.5" />}
-                  {entry.status === "needs_improvement" && <MdOutlineWarning className="w-3.5 h-3.5" />}
+                  {entry.status === "good" && (
+                    <MdOutlineCheckCircle className="w-3.5 h-3.5" />
+                  )}
+                  {entry.status === "needs_improvement" && (
+                    <MdOutlineWarning className="w-3.5 h-3.5" />
+                  )}
                   {entry.status === "poor" && <MdOutlineError className="w-3.5 h-3.5" />}
                   {entry.status.replace("_", " ")}
                 </span>
@@ -104,11 +117,22 @@ export default function SeoCwvPage() {
                 {(["lcp", "fid", "cls", "inp", "ttfb"] as const).map((metric) => {
                   const val = entry[metric];
                   const threshold = METRIC_THRESHOLDS[metric];
-                  const status = val == null ? "missing" : val <= threshold.good ? "good" : val <= threshold.poor ? "warn" : "bad";
+                  const status =
+                    val == null
+                      ? "missing"
+                      : val <= threshold.good
+                        ? "good"
+                        : val <= threshold.poor
+                          ? "warn"
+                          : "bad";
                   return (
                     <div key={metric} className="p-4 text-center">
-                      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{metric}</p>
-                      <p className={`text-lg font-bold mt-1 ${status === "good" ? "text-green-600" : status === "warn" ? "text-amber-600" : status === "bad" ? "text-red-600" : "text-slate-400"}`}>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                        {metric}
+                      </p>
+                      <p
+                        className={`text-lg font-bold mt-1 ${status === "good" ? "text-green-600" : status === "warn" ? "text-amber-600" : status === "bad" ? "text-red-600" : "text-slate-400"}`}
+                      >
                         {val != null ? `${val}${threshold.unit}` : "—"}
                       </p>
                     </div>

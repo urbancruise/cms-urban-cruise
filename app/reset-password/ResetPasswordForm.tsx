@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   MdOutlineLock,
   MdOutlineArrowBack,
   MdOutlineVisibility,
   MdOutlineVisibilityOff,
-} from 'react-icons/md';
-import PasswordStrength from '@/app/components/Auth/PasswordStrength';
+} from "react-icons/md";
+import PasswordStrength from "@/app/components/Auth/PasswordStrength";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
   const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: '',
+    password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -34,30 +34,27 @@ export default function ResetPasswordForm() {
   useEffect(() => {
     if (!token) {
       setTokenValid(false);
-      setErrors({ general: 'Invalid or missing reset token' });
+      setErrors({ general: "Invalid or missing reset token" });
     }
   }, [token]);
 
   const validatePassword = (value: string) => {
-    if (!value) return 'Password is required';
-    if (value.length < 6) return 'Password must be at least 6 characters';
+    if (!value) return "Password is required";
+    if (value.length < 6) return "Password must be at least 6 characters";
     const hasUpperCase = /[A-Z]/.test(value);
     const hasLowerCase = /[a-z]/.test(value);
     const hasNumber = /[0-9]/.test(value);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(
-      value
-    );
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
     if (!hasUpperCase || !hasLowerCase)
-      return 'Password must contain both uppercase and lowercase letters';
-    if (!hasNumber) return 'Password must contain at least one number';
-    if (!hasSpecialChar)
-      return 'Password must contain at least one special character';
+      return "Password must contain both uppercase and lowercase letters";
+    if (!hasNumber) return "Password must contain at least one number";
+    if (!hasSpecialChar) return "Password must contain at least one special character";
     return null;
   };
 
   const validateConfirmPassword = (value: string) => {
-    if (!value) return 'Please confirm your password';
-    if (value !== formData.password) return 'Passwords do not match';
+    if (!value) return "Please confirm your password";
+    if (value !== formData.password) return "Passwords do not match";
     return null;
   };
 
@@ -89,9 +86,9 @@ export default function ResetPasswordForm() {
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
           password: formData.password,
@@ -101,15 +98,15 @@ export default function ResetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        throw new Error(data.error || "Failed to reset password");
       }
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/login?reset=true');
+        router.push("/login?reset=true");
       }, 3000);
     } catch (err: any) {
-      setErrors({ general: err.message || 'An error occurred' });
+      setErrors({ general: err.message || "An error occurred" });
     } finally {
       setLoading(false);
     }
@@ -123,9 +120,7 @@ export default function ResetPasswordForm() {
             <div className="w-20 h-20 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl">🔒</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              Invalid Reset Link
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Invalid Reset Link</h2>
             <p className="text-slate-500 mb-6">
               The password reset link is invalid or has expired.
             </p>
@@ -149,15 +144,9 @@ export default function ResetPasswordForm() {
             <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto shadow-md">
               <span className="text-2xl font-bold text-white">UC</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mt-4">
-              Reset Password
-            </h1>
-            <p className="text-slate-500 mt-1">
-              Enter your new password below
-            </p>
-            <p className="text-xs text-teal-600 mt-2">
-              🔐 Admin password reset
-            </p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-4">Reset Password</h1>
+            <p className="text-slate-500 mt-1">Enter your new password below</p>
+            <p className="text-xs text-teal-600 mt-2">🔐 Admin password reset</p>
           </div>
 
           {success && (
@@ -184,12 +173,12 @@ export default function ResetPasswordForm() {
                     <MdOutlineLock className="w-5 h-5 text-slate-400" />
                   </div>
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${
-                      errors.password ? 'border-red-400' : 'border-slate-200'
+                      errors.password ? "border-red-400" : "border-slate-200"
                     } rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all`}
                     placeholder="Enter new password"
                     required
@@ -198,9 +187,7 @@ export default function ResetPasswordForm() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    aria-label={
-                      showPassword ? 'Hide password' : 'Show password'
-                    }
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <MdOutlineVisibilityOff className="w-5 h-5" />
@@ -210,9 +197,7 @@ export default function ResetPasswordForm() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.password}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
                 )}
 
                 <PasswordStrength password={formData.password} />
@@ -227,27 +212,21 @@ export default function ResetPasswordForm() {
                     <MdOutlineLock className="w-5 h-5 text-slate-400" />
                   </div>
                   <input
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     className={`w-full pl-10 pr-12 py-3 border ${
-                      errors.confirmPassword
-                        ? 'border-red-400'
-                        : 'border-slate-200'
+                      errors.confirmPassword ? "border-red-400" : "border-slate-200"
                     } rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all`}
                     placeholder="Confirm new password"
                     required
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(!showConfirmPassword)
-                    }
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    aria-label={
-                      showConfirmPassword ? 'Hide password' : 'Show password'
-                    }
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
                     {showConfirmPassword ? (
                       <MdOutlineVisibilityOff className="w-5 h-5" />
@@ -257,9 +236,7 @@ export default function ResetPasswordForm() {
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.confirmPassword}
-                  </p>
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
                 )}
               </div>
 
@@ -293,7 +270,7 @@ export default function ResetPasswordForm() {
                     Resetting password...
                   </span>
                 ) : (
-                  'Reset Password'
+                  "Reset Password"
                 )}
               </button>
             </form>

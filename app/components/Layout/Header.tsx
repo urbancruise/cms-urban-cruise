@@ -82,7 +82,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const displayEmail = user?.email || "user@urbancruise.com";
   const displayRole = user?.role || "User";
   const displayInitials = getInitials(displayName);
-  const avatarUrl = user?.avatar_url || null;  // ✅
+  const avatarUrl = user?.avatar_url || null; // ✅
 
   const markAllRead = useCallback(async () => {
     await fetch("/api/notifications", {
@@ -147,9 +147,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
           </button>
 
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              {getPageTitle()}
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">{getPageTitle()}</h2>
             <p className="text-xs text-slate-500 hidden sm:block">
               Welcome back, {displayName}
             </p>
@@ -181,9 +179,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                 <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-50">
                   <div className="flex items-center justify-between p-4 border-b border-slate-200">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">
-                        Notifications
-                      </h3>
+                      <h3 className="font-semibold text-slate-900">Notifications</h3>
                       {unreadCount > 0 && (
                         <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full font-medium">
                           {unreadCount} new
@@ -249,9 +245,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                               <p className="text-sm font-medium text-slate-900">
                                 {n.title}
                               </p>
-                              <p className="text-xs text-slate-600 mt-0.5">
-                                {n.message}
-                              </p>
+                              <p className="text-xs text-slate-600 mt-0.5">{n.message}</p>
                               <p className="text-[11px] text-slate-400 mt-1">
                                 {timeAgo(n.created_at)}
                               </p>
@@ -307,12 +301,8 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                 </div>
               )}
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-slate-900">
-                  {displayName}
-                </p>
-                <p className="text-xs text-slate-500 capitalize">
-                  {displayRole}
-                </p>
+                <p className="text-sm font-medium text-slate-900">{displayName}</p>
+                <p className="text-xs text-slate-500 capitalize">{displayRole}</p>
               </div>
             </button>
 
@@ -342,9 +332,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                         <p className="font-medium text-slate-900 truncate">
                           {displayName}
                         </p>
-                        <p className="text-xs text-slate-500 truncate">
-                          {displayEmail}
-                        </p>
+                        <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
                         <p className="text-xs text-teal-600 capitalize font-medium">
                           {displayRole}
                         </p>
@@ -358,9 +346,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                       onClick={() => setIsProfileOpen(false)}
                     >
                       <MdOutlineAccountCircle className="w-4 h-4 text-slate-500" />
-                      <span className="text-sm text-slate-700">
-                        My Profile
-                      </span>
+                      <span className="text-sm text-slate-700">My Profile</span>
                     </Link>
                     <Link
                       href="/admin"
@@ -368,9 +354,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                       onClick={() => setIsProfileOpen(false)}
                     >
                       <MdOutlineDashboard className="w-4 h-4 text-slate-500" />
-                      <span className="text-sm text-slate-700">
-                        Dashboard
-                      </span>
+                      <span className="text-sm text-slate-700">Dashboard</span>
                     </Link>
                   </div>
                   <div className="border-t border-slate-200 py-2">

@@ -56,11 +56,9 @@ export default function CitiesPage() {
     return `/api/admin/cities${qs ? `?${qs}` : ""}`;
   }, [debouncedSearch]);
 
-  const { data, isLoading, mutate } = useSWR<{ cities: City[] }>(
-    citiesKey,
-    fetcher,
-    { keepPreviousData: true }
-  );
+  const { data, isLoading, mutate } = useSWR<{ cities: City[] }>(citiesKey, fetcher, {
+    keepPreviousData: true,
+  });
 
   const cities = data?.cities || [];
 
@@ -90,9 +88,7 @@ export default function CitiesPage() {
     setSaving(true);
     setFormError("");
     try {
-      const url = editing
-        ? `/api/admin/cities/${editing.id}`
-        : "/api/admin/cities";
+      const url = editing ? `/api/admin/cities/${editing.id}` : "/api/admin/cities";
       const method = editing ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
@@ -129,9 +125,7 @@ export default function CitiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Cities Management
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900">Cities Management</h1>
           <p className="text-slate-500 mt-1">
             Manage cruise destination cities ({cities.length} total)
           </p>
@@ -187,9 +181,7 @@ export default function CitiesPage() {
                     <MdOutlineLocationOn className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900">
-                      {city.name}
-                    </h3>
+                    <h3 className="font-semibold text-slate-900">{city.name}</h3>
                     <p className="text-xs text-slate-500">
                       {city.state || "—"}, {city.country}
                     </p>
@@ -269,9 +261,7 @@ export default function CitiesPage() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="e.g., Mumbai"
                     required
@@ -305,9 +295,7 @@ export default function CitiesPage() {
                   <input
                     type="text"
                     value={formData.state}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                     placeholder="e.g., Maharashtra"
                   />

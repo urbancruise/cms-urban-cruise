@@ -9,26 +9,18 @@ export const UserCreateSchema = z.object({
     .string()
     .min(3, "Username must be at least 3 characters")
     .max(50)
-    .regex(
-      /^[a-zA-Z0-9_.-]+$/,
-      "Username can only contain letters, numbers, _, ., -"
-    ),
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, _, ., -"),
 
   email: z.string().email("Invalid email address").max(100).toLowerCase(),
 
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .max(100),
+  password: z.string().min(6, "Password must be at least 6 characters").max(100),
 
   full_name: z.string().max(100).optional().or(z.literal("")),
 
-  // ✅ ADD THIS
   avatar_url: z.string().url().max(500).optional().nullable(),
+  avatar_public_id: z.string().max(255).optional().nullable(),
 
-  role_ids: z
-    .array(z.number().int().positive())
-    .min(1, "At least one role is required"),
+  role_ids: z.array(z.number().int().positive()).min(1, "At least one role is required"),
 
   is_active: z.boolean().optional(),
 
@@ -86,9 +78,7 @@ export function parseBody<T extends z.ZodTypeAny>(
     const first = result.error.issues[0];
     return {
       ok: false,
-      error: first
-        ? `${first.path.join(".")}: ${first.message}`
-        : "Invalid input",
+      error: first ? `${first.path.join(".")}: ${first.message}` : "Invalid input",
     };
   }
   return { ok: true, data: result.data };

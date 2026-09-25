@@ -17,10 +17,7 @@ export function DashboardSkeleton() {
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="bg-white rounded-xl border border-slate-200 p-5"
-          >
+          <div key={i} className="bg-white rounded-xl border border-slate-200 p-5">
             <Skeleton height={40} width={40} rounded="lg" className="mb-3" />
             <Skeleton height={12} width="50%" className="mb-2" />
             <Skeleton height={28} width="40%" className="mb-2" />
@@ -62,10 +59,7 @@ export function AnalyticsSkeleton() {
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="bg-white rounded-xl border border-slate-200 p-6"
-          >
+          <div key={i} className="bg-white rounded-xl border border-slate-200 p-6">
             <div className="flex justify-between mb-2">
               <Skeleton height={12} width="40%" />
               <Skeleton height={14} width={50} />
@@ -79,10 +73,7 @@ export function AnalyticsSkeleton() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="bg-white rounded-xl border border-slate-200 p-6"
-          >
+          <div key={i} className="bg-white rounded-xl border border-slate-200 p-6">
             <div className="flex items-center gap-2 mb-4">
               <Skeleton height={20} width={20} rounded="md" />
               <Skeleton height={18} width={120} />
@@ -93,11 +84,7 @@ export function AnalyticsSkeleton() {
               {[40, 65, 30, 80, 55, 70, 45, 90, 60, 75, 50, 85].map((h, j) => (
                 <div key={j} className="flex-1 flex flex-col items-center">
                   <div className="w-full flex items-end h-full">
-                    <Skeleton
-                      height={`${h}%`}
-                      className="w-full"
-                      rounded="md"
-                    />
+                    <Skeleton height={`${h}%`} className="w-full" rounded="md" />
                   </div>
                   <Skeleton height={8} width={20} className="mt-2" />
                 </div>
@@ -110,10 +97,7 @@ export function AnalyticsSkeleton() {
       {/* Distributions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[1, 2].map((i) => (
-          <div
-            key={i}
-            className="bg-white rounded-xl border border-slate-200 p-6"
-          >
+          <div key={i} className="bg-white rounded-xl border border-slate-200 p-6">
             <Skeleton height={20} width={140} className="mb-4" />
             <div className="space-y-4">
               {[1, 2, 3, 4].map((j) => (
@@ -148,12 +132,7 @@ export function TableSkeleton({
       {/* Header */}
       <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex gap-6">
         {Array.from({ length: columns }).map((_, i) => (
-          <Skeleton
-            key={i}
-            height={10}
-            width={i === 0 ? 80 : 60}
-            rounded="sm"
-          />
+          <Skeleton key={i} height={10} width={i === 0 ? 80 : 60} rounded="sm" />
         ))}
       </div>
 
@@ -173,13 +152,7 @@ export function TableSkeleton({
                   </div>
                 );
               }
-              return (
-                <Skeleton
-                  key={j}
-                  height={12}
-                  width={j === columns - 1 ? 60 : 90}
-                />
-              );
+              return <Skeleton key={j} height={12} width={j === columns - 1 ? 60 : 90} />;
             })}
           </div>
         ))}
@@ -201,10 +174,7 @@ export function CardGridSkeleton({
   return (
     <div className={`grid ${className} gap-4`}>
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="bg-white rounded-xl border border-slate-200 p-5"
-        >
+        <div key={i} className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="flex items-start justify-between mb-3">
             <Skeleton height={40} width={40} rounded="lg" />
             <Skeleton height={20} width={60} rounded="full" />
@@ -248,10 +218,7 @@ export function ProfileSkeleton() {
 
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="bg-slate-50 rounded-lg p-4 border border-slate-100"
-              >
+              <div key={i} className="bg-slate-50 rounded-lg p-4 border border-slate-100">
                 <Skeleton height={12} width="40%" className="mb-2" />
                 <Skeleton height={18} width="70%" />
               </div>

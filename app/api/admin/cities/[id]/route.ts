@@ -12,10 +12,7 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as {
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
     userId: number;
     role: string;
     roles?: string[];
@@ -51,8 +48,8 @@ async function requireCityReadAccess(request: NextRequest) {
       perms = Array.isArray(r.permissions)
         ? r.permissions
         : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
+          ? JSON.parse(r.permissions)
+          : [];
     } catch {
       perms = [];
     }
@@ -138,10 +135,7 @@ export async function GET(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Get city error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -232,21 +226,13 @@ export async function PUT(
     }
 
     if (fields.length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
     values.push(cityId);
-    await pool.query(
-      `UPDATE cities SET ${fields.join(", ")} WHERE id = ?`,
-      values
-    );
+    await pool.query(`UPDATE cities SET ${fields.join(", ")} WHERE id = ?`, values);
 
-    const [updated] = await pool.query("SELECT * FROM cities WHERE id = ?", [
-      cityId,
-    ]);
+    const [updated] = await pool.query("SELECT * FROM cities WHERE id = ?", [cityId]);
     const updatedCity = (updated as any[])[0];
 
     try {
@@ -272,8 +258,7 @@ export async function PUT(
             state: state ?? existing.state,
             country: country || existing.country,
             code: code ?? existing.code,
-            is_active:
-              is_active !== undefined ? is_active : Boolean(existing.is_active),
+            is_active: is_active !== undefined ? is_active : Boolean(existing.is_active),
           },
         },
         request,
@@ -292,10 +277,7 @@ export async function PUT(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Update city error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -318,10 +300,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
     }
 
-    const [rows] = await pool.query(
-      "SELECT id, name FROM cities WHERE id = ?",
-      [cityId]
-    );
+    const [rows] = await pool.query("SELECT id, name FROM cities WHERE id = ?", [cityId]);
     const city = (rows as any[])[0];
     if (!city) {
       return NextResponse.json({ error: "City not found" }, { status: 404 });
@@ -369,9 +348,6 @@ export async function DELETE(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Delete city error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -70,14 +70,20 @@ export default function SeoSocialPage() {
             Configure how your site appears when shared on social media
           </p>
         </div>
-        <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm"
+        >
           <MdOutlineSave className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
         </button>
       </div>
 
       <div className="space-y-6">
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-sm font-semibold text-slate-900 mb-4">Default Open Graph Image</h2>
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">
+            Default Open Graph Image
+          </h2>
           <input
             type="text"
             value={ogImage}
@@ -100,7 +106,9 @@ export default function SeoSocialPage() {
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Twitter / X</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Twitter Handle</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Twitter Handle
+              </label>
               <input
                 type="text"
                 value={twitterHandle}
@@ -110,8 +118,14 @@ export default function SeoSocialPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Card Type</label>
-              <select value={twitterCard} onChange={(e) => setTwitterCard(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm">
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Card Type
+              </label>
+              <select
+                value={twitterCard}
+                onChange={(e) => setTwitterCard(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+              >
                 <option value="summary">Summary (small)</option>
                 <option value="summary_large_image">Summary Large Image</option>
               </select>

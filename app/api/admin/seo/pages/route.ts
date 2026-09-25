@@ -1,58 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
-
-async function requireAuth(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
-  if (!token) throw { status: 401, message: "Not authenticated" };
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
-}
-
-async function requireSeoAccess(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  const isAdmin =
-    decoded.role === "admin" ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
-  if (isAdmin) return decoded;
-
-  const [rows] = (await pool.query(
-    `SELECT r.permissions FROM user_roles ur
-     JOIN roles r ON r.id = ur.role_id
-     WHERE ur.user_id = ? AND r.is_active = 1`,
-    [decoded.userId]
-  )) as any;
-
-  const set = new Set<string>();
-  (rows as any[]).forEach((r) => {
-    let perms: string[] = [];
-    try {
-      perms = Array.isArray(r.permissions)
-        ? r.permissions
-        : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
-    } catch {}
-    perms.forEach((p) => set.add(p));
-  });
-
-  if (![...set].some((p) => p.startsWith("seo."))) {
-    throw { status: 403, message: "Access denied." };
-  }
-  return decoded;
-}
+import { requireSeoAccess } from "@/lib/auth-guard";
+import { respondError } from "@/lib/api-error";
 
 // ============================================================
 // GET — list all SEO pages with filters
 // ============================================================
 export async function GET(request: NextRequest) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, { windowMs: 60_000, max: 120 });
+    if (!rl.ok) return rl.response;
 
     await requireSeoAccess(request);
 
@@ -111,10 +70,15 @@ export async function GET(request: NextRequest) {
 
     const pages = (rows as any[]).map((r) => ({
       ...r,
+      is_indexable: Boolean(r.is_indexable),
       secondary_keywords:
         typeof r.secondary_keywords === "string"
           ? JSON.parse(r.secondary_keywords)
           : r.secondary_keywords || [],
+      schema_json:
+        typeof r.schema_json === "string"
+          ? JSON.parse(r.schema_json)
+          : r.schema_json || null,
     }));
 
     return NextResponse.json({
@@ -123,15 +87,8 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
     });
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    console.error("[seo/pages GET]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "GET /api/admin/seo/pages");
   }
 }
 
@@ -140,8 +97,8 @@ export async function GET(request: NextRequest) {
 // ============================================================
 export async function POST(request: NextRequest) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 30 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, { windowMs: 60_000, max: 30 });
+    if (!rl.ok) return rl.response;
 
     const decoded = await requireSeoAccess(request);
     const body = await request.json();
@@ -149,13 +106,31 @@ export async function POST(request: NextRequest) {
     const {
       city_id,
       page_path,
+      slug,
       page_type,
+      page_title,
+      favicon_url,
       meta_title,
       meta_description,
       focus_keyword,
+      meta_keywords,
       canonical_url,
       robots_meta,
       is_indexable,
+      og_title,
+      og_description,
+      og_image,
+      og_url,
+      og_type,
+      feature_image,
+      feature_image_public_id,
+      twitter_card,
+      twitter_domain,
+      twitter_url,
+      twitter_image,
+      twitter_title,
+      twitter_description,
+      schema_json,
     } = body;
 
     if (!page_path || !page_type) {
@@ -167,19 +142,45 @@ export async function POST(request: NextRequest) {
 
     const [result] = await pool.query(
       `INSERT INTO seo_pages
-       (city_id, page_path, page_type, meta_title, meta_description,
-        focus_keyword, canonical_url, robots_meta, is_indexable)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (city_id, page_path, slug, page_type,
+        page_title, favicon_url,
+        meta_title, meta_description,
+        focus_keyword, meta_keywords,
+        canonical_url, robots_meta, is_indexable,
+        og_title, og_description, og_image, og_url, og_type,
+        feature_image, feature_image_public_id,
+        twitter_card, twitter_domain, twitter_url, twitter_image,
+        twitter_title, twitter_description,
+        schema_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         city_id || null,
         page_path,
+        slug || null,
         page_type,
+        page_title || null,
+        favicon_url || null,
         meta_title || null,
         meta_description || null,
         focus_keyword || null,
+        meta_keywords || null,
         canonical_url || null,
         robots_meta || "index, follow",
         is_indexable !== false ? 1 : 0,
+        og_title || null,
+        og_description || null,
+        og_image || null,
+        og_url || null,
+        og_type || "website",
+        feature_image || null,
+        feature_image_public_id || null,
+        twitter_card || null,
+        twitter_domain || null,
+        twitter_url || null,
+        twitter_image || null,
+        twitter_title || null,
+        twitter_description || null,
+        schema_json ? JSON.stringify(schema_json) : null,
       ]
     );
 
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
       entityType: "profile",
       entityId: insertId,
       entityName: `seo_page:${page_path}`,
-      changes: { page_path, page_type, city_id },
+      changes: { page_path, slug, page_type, city_id },
       request,
     });
 
@@ -202,14 +203,7 @@ export async function POST(request: NextRequest) {
       { success: true, id: insertId },
       { status: 201 }
     );
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    console.error("[seo/pages POST]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "POST /api/admin/seo/pages");
   }
 }

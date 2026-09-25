@@ -75,14 +75,7 @@ export function SkeletonAvatar({
   size?: number;
   className?: string;
 }) {
-  return (
-    <Skeleton
-      width={size}
-      height={size}
-      rounded="full"
-      className={className}
-    />
-  );
+  return <Skeleton width={size} height={size} rounded="full" className={className} />;
 }
 
 // ============================================================
@@ -96,9 +89,7 @@ export function SkeletonCard({
   className?: string;
 }) {
   return (
-    <div
-      className={`bg-white rounded-xl border border-slate-200 p-5 ${className}`}
-    >
+    <div className={`bg-white rounded-xl border border-slate-200 p-5 ${className}`}>
       <Skeleton height={40} width={40} rounded="lg" className="mb-3" />
       <Skeleton height={14} width="40%" className="mb-2" />
       <Skeleton height={24} width="60%" className="mb-3" />

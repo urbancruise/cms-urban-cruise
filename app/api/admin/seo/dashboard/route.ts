@@ -7,10 +7,11 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[] };
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+    userId: number;
+    role: string;
+    roles?: string[];
+  };
 }
 
 async function requireSeoAccess(request: NextRequest) {
@@ -35,8 +36,8 @@ async function requireSeoAccess(request: NextRequest) {
       perms = Array.isArray(r.permissions)
         ? r.permissions
         : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
+          ? JSON.parse(r.permissions)
+          : [];
     } catch {
       perms = [];
     }
@@ -140,10 +141,9 @@ export async function GET(request: NextRequest) {
        GROUP BY status`
     )) as any;
 
-    const cwvStatus =
-      (cwvRows as any[]).find((r) => r.status === "poor")
-        ? "poor"
-        : (cwvRows as any[]).find((r) => r.status === "needs_improvement")
+    const cwvStatus = (cwvRows as any[]).find((r) => r.status === "poor")
+      ? "poor"
+      : (cwvRows as any[]).find((r) => r.status === "needs_improvement")
         ? "needs_improvement"
         : "good";
 
@@ -176,9 +176,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("[seo/dashboard GET]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

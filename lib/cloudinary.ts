@@ -53,8 +53,7 @@ export async function uploadImage(
   } = {}
 ): Promise<UploadResult> {
   const {
-    folder =
-      process.env.CLOUDINARY_UPLOAD_FOLDER || CLOUDINARY_FOLDERS.avatars,
+    folder = process.env.CLOUDINARY_UPLOAD_FOLDER || CLOUDINARY_FOLDERS.avatars,
     publicId,
     // ✅ Object array — Cloudinary SDK properly parses this
     transformation = [
@@ -114,9 +113,7 @@ export async function deleteImage(publicId: string): Promise<boolean> {
 // ============================================================
 // Extract public_id from a Cloudinary URL
 // ============================================================
-export function extractPublicId(
-  url: string | null | undefined
-): string | null {
+export function extractPublicId(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
     const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[\w]+)?$/);

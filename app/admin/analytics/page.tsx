@@ -62,9 +62,7 @@ function BarChart({
   const hasData = data.some((d) => d.count > 0);
 
   if (!hasData) {
-    return (
-      <p className="text-sm text-slate-400 text-center py-16">{emptyText}</p>
-    );
+    return <p className="text-sm text-slate-400 text-center py-16">{emptyText}</p>;
   }
 
   return (
@@ -143,9 +141,7 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Analytics</h1>
-          <p className="text-slate-500 mt-1">
-            Track users, roles and cities activity
-          </p>
+          <p className="text-slate-500 mt-1">Track users, roles and cities activity</p>
         </div>
         <button
           onClick={() => mutate()}
@@ -193,9 +189,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
             <MdOutlinePeople className="w-5 h-5 text-teal-600" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              User Signups
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">User Signups</h2>
           </div>
           <p className="text-xs text-slate-500 mb-4">Last 12 months</p>
           <BarChart
@@ -209,9 +203,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
             <MdOutlineSecurity className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              Roles Created
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">Roles Created</h2>
           </div>
           <p className="text-xs text-slate-500 mb-4">Last 12 months</p>
           <BarChart
@@ -225,9 +217,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
             <MdOutlineLocationCity className="w-5 h-5 text-sky-500" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              Cities Added
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">Cities Added</h2>
           </div>
           <p className="text-xs text-slate-500 mb-4">Last 12 months</p>
           <BarChart
@@ -243,14 +233,10 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
             <MdOutlineSecurity className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              Users per Role
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">Users per Role</h2>
           </div>
           {data.roleDist.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">
-              No roles data
-            </p>
+            <p className="text-sm text-slate-400 text-center py-6">No roles data</p>
           ) : (
             <div className="space-y-4">
               {data.roleDist.map((role) => {
@@ -259,8 +245,8 @@ export default function AnalyticsPage() {
                   role.slug === "admin"
                     ? "from-red-400 to-red-500"
                     : role.slug === "manager"
-                    ? "from-amber-400 to-amber-500"
-                    : "from-teal-400 to-teal-500";
+                      ? "from-amber-400 to-amber-500"
+                      : "from-teal-400 to-teal-500";
                 return (
                   <div key={role.slug}>
                     <div className="flex justify-between mb-1">
@@ -287,14 +273,10 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
             <MdOutlineLocationCity className="w-5 h-5 text-sky-500" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              Users per City
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">Users per City</h2>
           </div>
           {data.cityDist.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">
-              No cities data
-            </p>
+            <p className="text-sm text-slate-400 text-center py-6">No cities data</p>
           ) : (
             <div className="space-y-4">
               {data.cityDist.map((c) => {
@@ -305,9 +287,7 @@ export default function AnalyticsPage() {
                       <span className="text-sm text-slate-600">
                         {c.city}
                         {c.state && (
-                          <span className="text-xs text-slate-400 ml-1">
-                            ({c.state})
-                          </span>
+                          <span className="text-xs text-slate-400 ml-1">({c.state})</span>
                         )}
                       </span>
                       <span className="text-sm font-medium text-slate-900">

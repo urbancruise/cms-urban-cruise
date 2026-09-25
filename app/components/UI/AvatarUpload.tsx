@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import {
-  MdOutlineCloudUpload,
-  MdOutlineDelete,
-  MdOutlineEdit,
-} from "react-icons/md";
+import { MdOutlineCloudUpload, MdOutlineDelete, MdOutlineEdit } from "react-icons/md";
 
 interface AvatarUploadProps {
   value?: string | null;
@@ -124,18 +120,12 @@ export default function AvatarUpload({
       >
         <div
           className={`w-full h-full rounded-full overflow-hidden border-2 transition-all ${
-            dragActive
-              ? "border-teal-500 border-dashed scale-105"
-              : "border-slate-200"
+            dragActive ? "border-teal-500 border-dashed scale-105" : "border-slate-200"
           }`}
         >
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={value}
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
+            <img src={value} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-3xl font-bold">
               {initials}
@@ -196,17 +186,11 @@ export default function AvatarUpload({
             <MdOutlineCloudUpload className="w-3.5 h-3.5" />
             {value ? "Replace image" : "Upload image"}
           </button>
-          <p className="text-[10px] text-slate-400">
-            JPG, PNG, WEBP · Max 5MB
-          </p>
+          <p className="text-[10px] text-slate-400">JPG, PNG, WEBP · Max 5MB</p>
         </div>
       )}
 
-      {error && (
-        <p className="text-xs text-red-600 text-center max-w-[200px]">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-xs text-red-600 text-center max-w-[200px]">{error}</p>}
     </div>
   );
 }

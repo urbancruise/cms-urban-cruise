@@ -67,18 +67,14 @@ export default function SeoDashboardPage() {
   const score = data?.healthScore ?? 0;
 
   const scoreColor =
-    score >= 80
-      ? "text-green-600"
-      : score >= 60
-      ? "text-amber-500"
-      : "text-red-600";
+    score >= 80 ? "text-green-600" : score >= 60 ? "text-amber-500" : "text-red-600";
 
   const scoreBg =
     score >= 80
       ? "from-green-50 to-green-100"
       : score >= 60
-      ? "from-amber-50 to-amber-100"
-      : "from-red-50 to-red-100";
+        ? "from-amber-50 to-amber-100"
+        : "from-red-50 to-red-100";
 
   return (
     <div className="p-8">
@@ -159,22 +155,18 @@ export default function SeoDashboardPage() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-3xl font-bold ${scoreColor}`}>
-                  {score}
-                </span>
+                <span className={`text-3xl font-bold ${scoreColor}`}>{score}</span>
                 <span className="text-xs text-slate-600">/ 100</span>
               </div>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">
-                SEO Health Score
-              </h2>
+              <h2 className="text-2xl font-bold text-slate-900">SEO Health Score</h2>
               <p className="text-slate-600 mt-1">
                 {score >= 80
                   ? "Excellent — your site is well-optimized"
                   : score >= 60
-                  ? "Good — a few improvements needed"
-                  : "Needs attention — several issues detected"}
+                    ? "Good — a few improvements needed"
+                    : "Needs attention — several issues detected"}
               </p>
             </div>
           </div>
@@ -276,9 +268,7 @@ export default function SeoDashboardPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Quick Actions
-        </h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <QuickAction
             label="Page SEO"
@@ -361,10 +351,7 @@ function StatusCard({
   status: string;
   href: string;
 }) {
-  const statusConfig: Record<
-    string,
-    { color: string; label: string; icon: any }
-  > = {
+  const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
     ok: {
       color: "bg-green-50 text-green-700 border-green-200",
       label: "Healthy",

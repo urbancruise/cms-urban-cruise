@@ -86,20 +86,14 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Recent Activity
-        </h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h2>
         {!data?.recentActivity?.length ? (
-          <p className="text-sm text-slate-400 py-6 text-center">
-            No recent activity
-          </p>
+          <p className="text-sm text-slate-400 py-6 text-center">No recent activity</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.recentActivity.map((a) => (
               <li key={`${a.type}-${a.id}`} className="py-3">
-                <p className="text-sm text-slate-900 font-medium">
-                  {a.description}
-                </p>
+                <p className="text-sm text-slate-900 font-medium">{a.description}</p>
                 <p className="text-xs text-slate-400 mt-0.5">{a.time_ago}</p>
               </li>
             ))}

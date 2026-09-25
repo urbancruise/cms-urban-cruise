@@ -31,15 +31,9 @@ export async function GET(request: NextRequest) {
       [recentRoles],
       [recentCities],
     ] = await Promise.all([
-      pool.query(
-        "SELECT COUNT(*) as total, SUM(is_active) as active FROM users"
-      ) as any,
-      pool.query(
-        "SELECT COUNT(*) as total, SUM(is_active) as active FROM roles"
-      ) as any,
-      pool.query(
-        "SELECT COUNT(*) as total, SUM(is_active) as active FROM cities"
-      ) as any,
+      pool.query("SELECT COUNT(*) as total, SUM(is_active) as active FROM users") as any,
+      pool.query("SELECT COUNT(*) as total, SUM(is_active) as active FROM roles") as any,
+      pool.query("SELECT COUNT(*) as total, SUM(is_active) as active FROM cities") as any,
       pool.query(
         "SELECT COUNT(*) as count FROM users WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
       ) as any,
@@ -96,10 +90,7 @@ export async function GET(request: NextRequest) {
       ...(recentRoles as any[]),
       ...(recentCities as any[]),
     ]
-      .sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 6)
       .map((row) => ({ ...row, time_ago: timeAgo(row.created_at) }));
 

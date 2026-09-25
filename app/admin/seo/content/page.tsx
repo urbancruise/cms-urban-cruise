@@ -3,11 +3,7 @@
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
-import {
-  MdOutlineEdit,
-  MdOutlineRefresh,
-  MdOutlineSearch,
-} from "react-icons/md";
+import { MdOutlineEdit, MdOutlineRefresh, MdOutlineSearch } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
 
 interface SeoPage {
@@ -38,7 +34,9 @@ export default function SeoContentPage() {
     const q = search.trim().toLowerCase();
     if (!q) return pages;
     return pages.filter(
-      (p) => p.page_path.toLowerCase().includes(q) || (p.meta_title || "").toLowerCase().includes(q)
+      (p) =>
+        p.page_path.toLowerCase().includes(q) ||
+        (p.meta_title || "").toLowerCase().includes(q)
     );
   }, [pages, search]);
 
@@ -54,8 +52,12 @@ export default function SeoContentPage() {
       wordCount: wc >= 300,
       titleLength: title.length >= 30 && title.length <= 60,
       descLength: desc.length >= 120 && desc.length <= 160,
-      titleHasKeyword: keyword ? title.toLowerCase().includes(keyword.toLowerCase()) : false,
-      descHasKeyword: keyword ? desc.toLowerCase().includes(keyword.toLowerCase()) : false,
+      titleHasKeyword: keyword
+        ? title.toLowerCase().includes(keyword.toLowerCase())
+        : false,
+      descHasKeyword: keyword
+        ? desc.toLowerCase().includes(keyword.toLowerCase())
+        : false,
       readable: readability >= 60,
     };
 
@@ -74,14 +76,23 @@ export default function SeoContentPage() {
           </h1>
           <p className="text-slate-500 mt-1">Analyze and optimize your page content</p>
         </div>
-        <button onClick={() => mutate()} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+        <button
+          onClick={() => mutate()}
+          className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+        >
           <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
         </button>
       </div>
 
       <div className="relative mb-6 max-w-md">
         <MdOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input type="text" placeholder="Search pages..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white" />
+        <input
+          type="text"
+          placeholder="Search pages..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-white"
+        />
       </div>
 
       {isLoading && !data ? (
@@ -89,7 +100,9 @@ export default function SeoContentPage() {
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
           <MdOutlineEdit className="w-12 h-12 mx-auto text-slate-300" />
-          <p className="mt-3 text-slate-500">No pages found. Create SEO pages first in Page SEO Management.</p>
+          <p className="mt-3 text-slate-500">
+            No pages found. Create SEO pages first in Page SEO Management.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -102,26 +115,52 @@ export default function SeoContentPage() {
                 className="text-left bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-all"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <p className="text-xs font-mono text-slate-500 truncate">{page.page_path}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${analysis.percentage >= 80 ? "bg-green-50 text-green-700" : analysis.percentage >= 60 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                  <p className="text-xs font-mono text-slate-500 truncate">
+                    {page.page_path}
+                  </p>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-bold ${analysis.percentage >= 80 ? "bg-green-50 text-green-700" : analysis.percentage >= 60 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}
+                  >
                     {analysis.percentage}%
                   </span>
                 </div>
 
-                <h3 className="font-semibold text-slate-900 mb-2 line-clamp-2 min-h-[2.5rem]">{page.meta_title || <span className="text-red-500 italic text-sm">No title</span>}</h3>
+                <h3 className="font-semibold text-slate-900 mb-2 line-clamp-2 min-h-[2.5rem]">
+                  {page.meta_title || (
+                    <span className="text-red-500 italic text-sm">No title</span>
+                  )}
+                </h3>
 
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Word count</span>
-                    <span className={page.word_count >= 300 ? "text-green-600 font-medium" : "text-slate-600"}>{page.word_count} {page.word_count >= 300 ? "✓" : "(target 300+)"}</span>
+                    <span
+                      className={
+                        page.word_count >= 300
+                          ? "text-green-600 font-medium"
+                          : "text-slate-600"
+                      }
+                    >
+                      {page.word_count} {page.word_count >= 300 ? "✓" : "(target 300+)"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Readability</span>
-                    <span className={page.readability_score >= 60 ? "text-green-600 font-medium" : "text-slate-600"}>{page.readability_score}/100</span>
+                    <span
+                      className={
+                        page.readability_score >= 60
+                          ? "text-green-600 font-medium"
+                          : "text-slate-600"
+                      }
+                    >
+                      {page.readability_score}/100
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Focus keyword</span>
-                    <span className="text-slate-700 truncate max-w-[120px]">{page.focus_keyword || "—"}</span>
+                    <span className="text-slate-700 truncate max-w-[120px]">
+                      {page.focus_keyword || "—"}
+                    </span>
                   </div>
                 </div>
               </button>
@@ -130,7 +169,9 @@ export default function SeoContentPage() {
         </div>
       )}
 
-      {selected && <ContentAnalysisModal page={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ContentAnalysisModal page={selected} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }
@@ -141,12 +182,36 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
   const keyword = page.focus_keyword || "";
 
   const checks = [
-    { label: "Word count ≥ 300", passed: (page.word_count || 0) >= 300, hint: `Current: ${page.word_count}` },
-    { label: "Meta title 30-60 chars", passed: title.length >= 30 && title.length <= 60, hint: `Current: ${title.length}` },
-    { label: "Meta description 120-160 chars", passed: desc.length >= 120 && desc.length <= 160, hint: `Current: ${desc.length}` },
-    { label: "Focus keyword in title", passed: keyword ? title.toLowerCase().includes(keyword.toLowerCase()) : false, hint: keyword ? "Required" : "Set focus keyword first" },
-    { label: "Focus keyword in description", passed: keyword ? desc.toLowerCase().includes(keyword.toLowerCase()) : false, hint: keyword ? "Required" : "Set focus keyword first" },
-    { label: "Readability ≥ 60", passed: (page.readability_score || 0) >= 60, hint: `Current: ${page.readability_score}` },
+    {
+      label: "Word count ≥ 300",
+      passed: (page.word_count || 0) >= 300,
+      hint: `Current: ${page.word_count}`,
+    },
+    {
+      label: "Meta title 30-60 chars",
+      passed: title.length >= 30 && title.length <= 60,
+      hint: `Current: ${title.length}`,
+    },
+    {
+      label: "Meta description 120-160 chars",
+      passed: desc.length >= 120 && desc.length <= 160,
+      hint: `Current: ${desc.length}`,
+    },
+    {
+      label: "Focus keyword in title",
+      passed: keyword ? title.toLowerCase().includes(keyword.toLowerCase()) : false,
+      hint: keyword ? "Required" : "Set focus keyword first",
+    },
+    {
+      label: "Focus keyword in description",
+      passed: keyword ? desc.toLowerCase().includes(keyword.toLowerCase()) : false,
+      hint: keyword ? "Required" : "Set focus keyword first",
+    },
+    {
+      label: "Readability ≥ 60",
+      passed: (page.readability_score || 0) >= 60,
+      hint: `Current: ${page.readability_score}`,
+    },
   ];
 
   const passed = checks.filter((c) => c.passed).length;
@@ -160,14 +225,23 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
             <h2 className="text-xl font-bold text-slate-900">Content Analysis</h2>
             <p className="text-xs text-slate-400 font-mono mt-1">{page.page_path}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none px-2">✕</button>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-xl leading-none px-2"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="flex-1 overflow-auto p-6 space-y-4">
-          <div className={`rounded-xl p-4 border ${passed === total ? "bg-green-50 border-green-200" : passed >= total / 2 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
+          <div
+            className={`rounded-xl p-4 border ${passed === total ? "bg-green-50 border-green-200" : passed >= total / 2 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}
+          >
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-900">Score</span>
-              <span className={`text-2xl font-bold ${passed === total ? "text-green-600" : passed >= total / 2 ? "text-amber-600" : "text-red-600"}`}>
+              <span
+                className={`text-2xl font-bold ${passed === total ? "text-green-600" : passed >= total / 2 ? "text-amber-600" : "text-red-600"}`}
+              >
                 {passed}/{total}
               </span>
             </div>
@@ -175,8 +249,13 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
 
           <div className="space-y-2">
             {checks.map((c, i) => (
-              <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${c.passed ? "bg-green-50/50 border-green-100" : "bg-red-50/50 border-red-100"}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${c.passed ? "bg-green-500" : "bg-red-500"}`}>
+              <div
+                key={i}
+                className={`flex items-center gap-3 p-3 rounded-lg border ${c.passed ? "bg-green-50/50 border-green-100" : "bg-red-50/50 border-red-100"}`}
+              >
+                <span
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${c.passed ? "bg-green-500" : "bg-red-500"}`}
+                >
                   {c.passed ? "✓" : "✕"}
                 </span>
                 <div className="flex-1">
@@ -191,14 +270,23 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
             <h3 className="text-sm font-semibold text-slate-900 mb-2">Google Preview</h3>
             <div className="bg-white border border-slate-200 rounded-lg p-3">
               <p className="text-xs text-slate-500 mb-1">{page.page_path}</p>
-              <p className="text-base text-blue-700 font-medium line-clamp-1">{title || "No title set"}</p>
-              <p className="text-xs text-slate-600 line-clamp-2 mt-0.5">{desc || "No description set"}</p>
+              <p className="text-base text-blue-700 font-medium line-clamp-1">
+                {title || "No title set"}
+              </p>
+              <p className="text-xs text-slate-600 line-clamp-2 mt-0.5">
+                {desc || "No description set"}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="p-6 border-t border-slate-200 flex justify-end">
-          <button onClick={onClose} className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Close</button>
+          <button
+            onClick={onClose}
+            className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

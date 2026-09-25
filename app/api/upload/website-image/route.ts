@@ -16,10 +16,11 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; username?: string };
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+    userId: number;
+    role: string;
+    username?: string;
+  };
 }
 
 // ============================================================
@@ -81,9 +82,7 @@ export async function POST(request: NextRequest) {
     // Just compress and auto-convert.
     const result = await uploadImage(buffer, {
       folder,
-      transformation: [
-        { quality: "auto:good", fetch_format: "auto" },
-      ],
+      transformation: [{ quality: "auto:good", fetch_format: "auto" }],
     });
 
     // Clean up old image if replacing
@@ -111,10 +110,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("[upload/website-image] error:", err);
-    return NextResponse.json(
-      { error: err.message || "Upload failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
 }
 
@@ -134,10 +130,7 @@ export async function DELETE(request: NextRequest) {
 
     const id = publicId || extractPublicId(url);
     if (!id) {
-      return NextResponse.json(
-        { error: "publicId or url required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "publicId or url required" }, { status: 400 });
     }
 
     const ok = await deleteImage(id);
@@ -151,9 +144,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("[upload/website-image DELETE] error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

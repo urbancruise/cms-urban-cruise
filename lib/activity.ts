@@ -1,10 +1,10 @@
-import pool from '@/lib/db';
+import pool from "@/lib/db";
 
 // ============================================
 // Types
 // ============================================
-export type ActionType = 'create' | 'update' | 'delete';
-export type EntityType = 'user' | 'role' | 'city' | 'profile';
+export type ActionType = "create" | "update" | "delete";
+export type EntityType = "user" | "role" | "city" | "profile";
 
 export interface ActorInfo {
   userId: number;
@@ -25,23 +25,23 @@ export interface LogActivityOptions {
 // Labels
 // ============================================
 const ACTION_LABEL: Record<ActionType, string> = {
-  create: 'created',
-  update: 'updated',
-  delete: 'deleted',
+  create: "created",
+  update: "updated",
+  delete: "deleted",
 };
 
 const ENTITY_LABEL: Record<EntityType, string> = {
-  user: 'User',
-  role: 'Role',
-  city: 'City',
-  profile: 'Profile',
+  user: "User",
+  role: "Role",
+  city: "City",
+  profile: "Profile",
 };
 
 const ENTITY_LINK: Record<EntityType, string> = {
-  user: '/admin/users',
-  role: '/admin/roles',
-  city: '/admin/cities',
-  profile: '/admin/profile',
+  user: "/admin/users",
+  role: "/admin/roles",
+  city: "/admin/cities",
+  profile: "/admin/profile",
 };
 
 // ============================================
@@ -51,11 +51,8 @@ function extractMeta(request?: Request) {
   if (!request) return { ip: null, ua: null };
   const h = request.headers;
   return {
-    ip:
-      h.get('x-forwarded-for')?.split(',')[0].trim() ||
-      h.get('x-real-ip') ||
-      null,
-    ua: h.get('user-agent') || null,
+    ip: h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || null,
+    ua: h.get("user-agent") || null,
   };
 }
 
@@ -71,7 +68,7 @@ async function getAllAdminIds(): Promise<number[]> {
     )) as any;
     return (rows as any[]).map((r) => r.id);
   } catch (e) {
-    console.error('[activity] getAllAdminIds error:', e);
+    console.error("[activity] getAllAdminIds error:", e);
     return [];
   }
 }
@@ -111,7 +108,7 @@ export async function logActivity(opts: LogActivityOptions): Promise<void> {
       ]
     );
   } catch (e) {
-    console.error('[activity] failed to write activity_log:', e);
+    console.error("[activity] failed to write activity_log:", e);
   }
 
   // 2) Fan out notifications to admins
@@ -147,7 +144,7 @@ export async function logActivity(opts: LogActivityOptions): Promise<void> {
       [values]
     );
   } catch (e) {
-    console.error('[activity] failed to fan out notifications:', e);
+    console.error("[activity] failed to fan out notifications:", e);
   }
 }
 
@@ -157,7 +154,7 @@ export async function logActivity(opts: LogActivityOptions): Promise<void> {
 export function diff(
   before: Record<string, any>,
   after: Record<string, any>,
-  ignore: string[] = ['password', 'password_hash', 'updated_at', 'created_at']
+  ignore: string[] = ["password", "password_hash", "updated_at", "created_at"]
 ): Record<string, { from: any; to: any }> {
   const out: Record<string, { from: any; to: any }> = {};
   for (const key of Object.keys(after)) {
@@ -170,4 +167,3 @@ export function diff(
   }
   return out;
 }
-

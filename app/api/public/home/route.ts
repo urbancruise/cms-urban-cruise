@@ -14,9 +14,7 @@ export async function GET(request: NextRequest) {
 
     const auth = await requireApiKey(request);
     if (!auth.ok) {
-      return withCors(
-        NextResponse.json({ error: auth.error }, { status: 401 })
-      );
+      return withCors(NextResponse.json({ error: auth.error }, { status: 401 }));
     }
 
     const { searchParams } = new URL(request.url);
@@ -24,10 +22,7 @@ export async function GET(request: NextRequest) {
 
     if (!citySlug) {
       return withCors(
-        NextResponse.json(
-          { error: "Query param 'city' is required" },
-          { status: 400 }
-        )
+        NextResponse.json({ error: "Query param 'city' is required" }, { status: 400 })
       );
     }
 
@@ -67,9 +62,7 @@ export async function GET(request: NextRequest) {
 
     for (const row of rows as any[]) {
       sections[row.section_key] =
-        typeof row.content === "string"
-          ? JSON.parse(row.content)
-          : row.content;
+        typeof row.content === "string" ? JSON.parse(row.content) : row.content;
 
       const rowDate = new Date(row.updated_at);
       if (rowDate > latestUpdate) latestUpdate = rowDate;

@@ -1,59 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
+import { requireSeoAccess } from "@/lib/auth-guard";
+import { respondError } from "@/lib/api-error";
 
-async function requireAuth(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
-  if (!token) throw { status: 401, message: "Not authenticated" };
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
-}
-
-async function requireSeoAccess(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  const isAdmin =
-    decoded.role === "admin" ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
-  if (isAdmin) return decoded;
-
-  const [rows] = (await pool.query(
-    `SELECT r.permissions FROM user_roles ur
-     JOIN roles r ON r.id = ur.role_id
-     WHERE ur.user_id = ? AND r.is_active = 1`,
-    [decoded.userId]
-  )) as any;
-
-  const set = new Set<string>();
-  (rows as any[]).forEach((r) => {
-    let perms: string[] = [];
-    try {
-      perms = Array.isArray(r.permissions)
-        ? r.permissions
-        : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
-    } catch {}
-    perms.forEach((p) => set.add(p));
-  });
-
-  if (![...set].some((p) => p.startsWith("seo."))) {
-    throw { status: 403, message: "Access denied." };
-  }
-  return decoded;
-}
-
+// ============================================================
 // GET single page
+// ============================================================
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, { windowMs: 60_000, max: 120 });
+    if (!rl.ok) return rl.response;
 
     await requireSeoAccess(request);
     const { id } = await params;
@@ -71,31 +32,32 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    page.is_indexable = Boolean(page.is_indexable);
     page.secondary_keywords =
       typeof page.secondary_keywords === "string"
         ? JSON.parse(page.secondary_keywords)
         : page.secondary_keywords || [];
+    page.schema_json =
+      typeof page.schema_json === "string"
+        ? JSON.parse(page.schema_json)
+        : page.schema_json || null;
 
     return NextResponse.json({ page });
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "GET /api/admin/seo/pages/[id]");
   }
 }
 
-// PUT update page
+// ============================================================
+// PUT — update page
+// ============================================================
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 60 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, { windowMs: 60_000, max: 60 });
+    if (!rl.ok) return rl.response;
 
     const decoded = await requireSeoAccess(request);
     const { id } = await params;
@@ -105,9 +67,13 @@ export async function PUT(
     const values: any[] = [];
 
     const allowed = [
+      "page_title",
+      "favicon_url",
+      "slug",
       "meta_title",
       "meta_description",
       "focus_keyword",
+      "meta_keywords",
       "secondary_keywords",
       "canonical_url",
       "robots_meta",
@@ -115,11 +81,17 @@ export async function PUT(
       "og_title",
       "og_description",
       "og_image",
+      "og_url",
       "og_type",
+      "feature_image",
+      "feature_image_public_id",
       "twitter_card",
+      "twitter_domain",
+      "twitter_url",
+      "twitter_image",
       "twitter_title",
       "twitter_description",
-      "twitter_image",
+      "schema_json",
       "seo_score",
       "word_count",
       "readability_score",
@@ -128,15 +100,15 @@ export async function PUT(
     for (const key of allowed) {
       if (key in body) {
         fields.push(`${key} = ?`);
-        values.push(
-          key === "secondary_keywords"
-            ? JSON.stringify(body[key])
-            : key === "is_indexable"
-            ? body[key]
-              ? 1
-              : 0
-            : body[key]
-        );
+        let val = body[key];
+
+        if (key === "secondary_keywords" || key === "schema_json") {
+          val = val == null ? null : JSON.stringify(val);
+        } else if (key === "is_indexable") {
+          val = val ? 1 : 0;
+        }
+
+        values.push(val);
       }
     }
 
@@ -161,31 +133,27 @@ export async function PUT(
       action: "update",
       entityType: "profile",
       entityId: Number(id),
-      entityName: `seo_page:${body.page_path || id}`,
+      entityName: `seo_page:${body.slug || id}`,
       changes: body,
       request,
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "PUT /api/admin/seo/pages/[id]");
   }
 }
 
+// ============================================================
 // DELETE page
+// ============================================================
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 20 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, { windowMs: 60_000, max: 20 });
+    if (!rl.ok) return rl.response;
 
     await requireSeoAccess(request);
     const { id } = await params;
@@ -193,13 +161,7 @@ export async function DELETE(
     await pool.query("DELETE FROM seo_pages WHERE id = ?", [id]);
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "DELETE /api/admin/seo/pages/[id]");
   }
 }

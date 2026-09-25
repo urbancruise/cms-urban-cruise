@@ -82,9 +82,7 @@ export default function ProfilePage() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
-        <p className="text-slate-500 mt-1">
-          View and manage your account information
-        </p>
+        <p className="text-slate-500 mt-1">View and manage your account information</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -92,9 +90,7 @@ export default function ProfilePage() {
           <div className="absolute -bottom-12 left-8">
             <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg">
               <div className="w-full h-full bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                {(user.full_name || user.username || "U")
-                  .charAt(0)
-                  .toUpperCase()}
+                {(user.full_name || user.username || "U").charAt(0).toUpperCase()}
               </div>
             </div>
           </div>
@@ -163,9 +159,7 @@ export default function ProfilePage() {
                 <MdOutlineBadge className="w-4 h-4" />
                 Full Name
               </div>
-              <p className="text-slate-900 font-medium">
-                {user.full_name || "Not set"}
-              </p>
+              <p className="text-slate-900 font-medium">{user.full_name || "Not set"}</p>
             </div>
 
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
@@ -173,17 +167,12 @@ export default function ProfilePage() {
                 <MdOutlineSecurity className="w-4 h-4" />
                 Role
               </div>
-              <p className="text-slate-900 font-medium capitalize">
-                {user.role}
-              </p>
+              <p className="text-slate-900 font-medium capitalize">{user.role}</p>
             </div>
           </div>
 
           {isEditing && (
-            <form
-              onSubmit={handleSubmit}
-              className="mt-8 pt-8 border-t border-slate-200"
-            >
+            <form onSubmit={handleSubmit} className="mt-8 pt-8 border-t border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">
                 Edit Profile Information
               </h3>

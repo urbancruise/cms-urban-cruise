@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import {
-  MdOutlineCloudUpload,
-  MdOutlineDelete,
-  MdOutlineImage,
-} from "react-icons/md";
+import { MdOutlineCloudUpload, MdOutlineDelete, MdOutlineImage } from "react-icons/md";
 
 const MAX_KB = 300;
 const MAX_BYTES = MAX_KB * 1024;
@@ -170,9 +166,7 @@ export default function ImageUpload({
   return (
     <div className="w-full">
       {label && (
-        <span className="block text-xs font-medium text-slate-700 mb-1.5">
-          {label}
-        </span>
+        <span className="block text-xs font-medium text-slate-700 mb-1.5">{label}</span>
       )}
 
       {/* ====================================================
@@ -184,10 +178,7 @@ export default function ImageUpload({
             isCompact ? "max-w-[240px]" : ""
           }`}
         >
-          <div
-            className="relative w-full"
-            style={{ aspectRatio: aspect }}
-          >
+          <div className="relative w-full" style={{ aspectRatio: aspect }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={value}
@@ -227,9 +218,7 @@ export default function ImageUpload({
 
           {/* Filename / URL info bar */}
           <div className="px-3 py-2 border-t border-slate-200 bg-white flex items-center justify-between gap-2">
-            <p className="text-[10px] text-slate-400 truncate font-mono">
-              {value}
-            </p>
+            <p className="text-[10px] text-slate-400 truncate font-mono">{value}</p>
             {!disabled && (
               <button
                 type="button"
@@ -281,9 +270,7 @@ export default function ImageUpload({
                 {dragActive ? (
                   <MdOutlineImage className={isCompact ? "w-5 h-5" : "w-6 h-6"} />
                 ) : (
-                  <MdOutlineCloudUpload
-                    className={isCompact ? "w-5 h-5" : "w-6 h-6"}
-                  />
+                  <MdOutlineCloudUpload className={isCompact ? "w-5 h-5" : "w-6 h-6"} />
                 )}
               </div>
 
@@ -292,15 +279,11 @@ export default function ImageUpload({
                   isCompact ? "text-xs" : "text-sm"
                 }`}
               >
-                {dragActive
-                  ? "Drop image here"
-                  : "Click to upload or drag & drop"}
+                {dragActive ? "Drop image here" : "Click to upload or drag & drop"}
               </p>
 
               {hint && (
-                <p className="mt-1 text-[11px] text-slate-400 text-center">
-                  {hint}
-                </p>
+                <p className="mt-1 text-[11px] text-slate-400 text-center">{hint}</p>
               )}
             </>
           )}

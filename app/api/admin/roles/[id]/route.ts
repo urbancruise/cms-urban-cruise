@@ -12,10 +12,12 @@ async function requireAdmin(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  const decoded = jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
+  const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+    userId: number;
+    role: string;
+    roles?: string[];
+    username?: string;
+  };
 
   const isAdmin =
     decoded.role === "admin" ||
@@ -95,10 +97,7 @@ export async function GET(
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("Get role error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -203,17 +202,11 @@ export async function PUT(
     }
 
     if (fields.length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
     values.push(roleId);
-    await pool.query(
-      `UPDATE roles SET ${fields.join(", ")} WHERE id = ?`,
-      values
-    );
+    await pool.query(`UPDATE roles SET ${fields.join(", ")} WHERE id = ?`, values);
 
     const [updatedRows] = (await pool.query(`SELECT * FROM roles WHERE id = ?`, [
       roleId,
@@ -245,8 +238,7 @@ export async function PUT(
               permissions !== undefined
                 ? permissions
                 : parsePermissions(existing.permissions),
-            is_active:
-              is_active !== undefined ? is_active : Boolean(existing.is_active),
+            is_active: is_active !== undefined ? is_active : Boolean(existing.is_active),
           },
         },
         request,
@@ -359,4 +351,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}

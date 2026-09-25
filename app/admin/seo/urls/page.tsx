@@ -41,9 +41,7 @@ export default function SeoUrlsPage() {
     const total = pages.length;
     const missingCanonical = pages.filter((p) => !p.canonical_url).length;
     const tooLong = pages.filter((p) => p.page_path.length > 100).length;
-    const good = pages.filter(
-      (p) => p.canonical_url && p.page_path.length <= 100
-    ).length;
+    const good = pages.filter((p) => p.canonical_url && p.page_path.length <= 100).length;
     return { total, missingCanonical, tooLong, good };
   }, [pages]);
 
@@ -55,9 +53,7 @@ export default function SeoUrlsPage() {
             <MdOutlineLink className="w-8 h-8 text-teal-600" />
             URL Management
           </h1>
-          <p className="text-slate-500 mt-1">
-            Canonical URLs and URL structure analysis
-          </p>
+          <p className="text-slate-500 mt-1">Canonical URLs and URL structure analysis</p>
         </div>
         <button
           onClick={() => mutate()}
@@ -70,15 +66,11 @@ export default function SeoUrlsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-500">Total URLs</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">
-            {stats.total}
-          </p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-500">Optimal</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">
-            {stats.good}
-          </p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{stats.good}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-500">Missing Canonical</p>
@@ -88,9 +80,7 @@ export default function SeoUrlsPage() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-500">Too Long</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">
-            {stats.tooLong}
-          </p>
+          <p className="text-2xl font-bold text-red-600 mt-1">{stats.tooLong}</p>
         </div>
       </div>
 
@@ -136,11 +126,7 @@ export default function SeoUrlsPage() {
                 const pathLen = p.page_path.length;
                 const hasCanonical = Boolean(p.canonical_url);
                 const tooLong = pathLen > 100;
-                const status = !hasCanonical
-                  ? "error"
-                  : tooLong
-                  ? "warning"
-                  : "ok";
+                const status = !hasCanonical ? "error" : tooLong ? "warning" : "ok";
                 return (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="px-6 py-3">
@@ -158,9 +144,7 @@ export default function SeoUrlsPage() {
                       <p className="text-sm font-mono text-slate-800 truncate max-w-lg">
                         {p.page_path}
                       </p>
-                      <p className="text-[10px] text-slate-400">
-                        {p.page_type}
-                      </p>
+                      <p className="text-[10px] text-slate-400">{p.page_type}</p>
                     </td>
                     <td className="px-6 py-3">
                       <span

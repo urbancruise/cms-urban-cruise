@@ -23,10 +23,22 @@ export default function SeoAuditPage() {
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<AuditRow[] | null>(null);
 
-  const { data: pagesData } = useSWR<{ pages: any[] }>("/api/admin/seo/pages?limit=500", fetcher);
-  const { data: imgData } = useSWR<{ images: any[] }>("/api/admin/seo/images?limit=500", fetcher);
-  const { data: linkData } = useSWR<{ links: any[] }>("/api/admin/seo/internal-links", fetcher);
-  const { data: schemaData } = useSWR<{ schemas: any[] }>("/api/admin/seo/schema", fetcher);
+  const { data: pagesData } = useSWR<{ pages: any[] }>(
+    "/api/admin/seo/pages?limit=500",
+    fetcher
+  );
+  const { data: imgData } = useSWR<{ images: any[] }>(
+    "/api/admin/seo/images?limit=500",
+    fetcher
+  );
+  const { data: linkData } = useSWR<{ links: any[] }>(
+    "/api/admin/seo/internal-links",
+    fetcher
+  );
+  const { data: schemaData } = useSWR<{ schemas: any[] }>(
+    "/api/admin/seo/schema",
+    fetcher
+  );
 
   const runAudit = async () => {
     setRunning(true);
@@ -44,16 +56,32 @@ export default function SeoAuditPage() {
     rows.push({
       category: "On-Page",
       label: "Meta Titles",
-      status: missingTitle === 0 ? "pass" : missingTitle / Math.max(pages.length, 1) > 0.3 ? "fail" : "warn",
-      message: missingTitle === 0 ? `All ${pages.length} pages have titles` : `${missingTitle} pages missing titles`,
+      status:
+        missingTitle === 0
+          ? "pass"
+          : missingTitle / Math.max(pages.length, 1) > 0.3
+            ? "fail"
+            : "warn",
+      message:
+        missingTitle === 0
+          ? `All ${pages.length} pages have titles`
+          : `${missingTitle} pages missing titles`,
     });
 
     const missingDesc = pages.filter((p) => !p.meta_description).length;
     rows.push({
       category: "On-Page",
       label: "Meta Descriptions",
-      status: missingDesc === 0 ? "pass" : missingDesc / Math.max(pages.length, 1) > 0.3 ? "fail" : "warn",
-      message: missingDesc === 0 ? `All pages have descriptions` : `${missingDesc} pages missing descriptions`,
+      status:
+        missingDesc === 0
+          ? "pass"
+          : missingDesc / Math.max(pages.length, 1) > 0.3
+            ? "fail"
+            : "warn",
+      message:
+        missingDesc === 0
+          ? `All pages have descriptions`
+          : `${missingDesc} pages missing descriptions`,
     });
 
     const longTitles = pages.filter((p) => (p.meta_title || "").length > 60).length;
@@ -61,7 +89,8 @@ export default function SeoAuditPage() {
       category: "On-Page",
       label: "Title Length",
       status: longTitles === 0 ? "pass" : "warn",
-      message: longTitles === 0 ? "All titles under 60 chars" : `${longTitles} titles too long`,
+      message:
+        longTitles === 0 ? "All titles under 60 chars" : `${longTitles} titles too long`,
     });
 
     // Images
@@ -69,8 +98,16 @@ export default function SeoAuditPage() {
     rows.push({
       category: "Images",
       label: "Alt Text",
-      status: missingAlt === 0 ? "pass" : missingAlt / Math.max(images.length, 1) > 0.3 ? "fail" : "warn",
-      message: missingAlt === 0 ? "All images have alt text" : `${missingAlt} images missing alt text`,
+      status:
+        missingAlt === 0
+          ? "pass"
+          : missingAlt / Math.max(images.length, 1) > 0.3
+            ? "fail"
+            : "warn",
+      message:
+        missingAlt === 0
+          ? "All images have alt text"
+          : `${missingAlt} images missing alt text`,
     });
 
     // Links
@@ -79,7 +116,8 @@ export default function SeoAuditPage() {
       category: "Links",
       label: "Broken Links",
       status: brokenLinks === 0 ? "pass" : "fail",
-      message: brokenLinks === 0 ? "No broken links" : `${brokenLinks} broken links found`,
+      message:
+        brokenLinks === 0 ? "No broken links" : `${brokenLinks} broken links found`,
     });
 
     // Canonical
@@ -88,7 +126,10 @@ export default function SeoAuditPage() {
       category: "Technical",
       label: "Canonical URLs",
       status: missingCanonical === 0 ? "pass" : "warn",
-      message: missingCanonical === 0 ? "All pages have canonical URLs" : `${missingCanonical} pages missing canonical`,
+      message:
+        missingCanonical === 0
+          ? "All pages have canonical URLs"
+          : `${missingCanonical} pages missing canonical`,
     });
 
     // Schema
@@ -96,7 +137,8 @@ export default function SeoAuditPage() {
       category: "Structured Data",
       label: "Schemas Defined",
       status: schemas.length > 0 ? "pass" : "warn",
-      message: schemas.length > 0 ? `${schemas.length} active schemas` : "No schemas defined",
+      message:
+        schemas.length > 0 ? `${schemas.length} active schemas` : "No schemas defined",
     });
 
     // Sitemap
@@ -139,12 +181,20 @@ export default function SeoAuditPage() {
         </div>
         <div className="flex gap-2">
           {report && (
-            <button onClick={() => setReport(null)} className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+            <button
+              onClick={() => setReport(null)}
+              className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+            >
               <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
             </button>
           )}
-          <button onClick={runAudit} disabled={running} className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm">
-            <MdOutlinePlayArrow className="w-4 h-4" /> {running ? "Running..." : "Run Full Audit"}
+          <button
+            onClick={runAudit}
+            disabled={running}
+            className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm"
+          >
+            <MdOutlinePlayArrow className="w-4 h-4" />{" "}
+            {running ? "Running..." : "Run Full Audit"}
           </button>
         </div>
       </div>
@@ -153,7 +203,9 @@ export default function SeoAuditPage() {
         <div className="bg-white rounded-xl border border-slate-200 py-20 text-center">
           <MdOutlineFactCheck className="w-16 h-16 mx-auto text-slate-300" />
           <p className="mt-4 text-lg font-medium text-slate-700">Ready to audit</p>
-          <p className="text-sm text-slate-400 mt-1">Click "Run Full Audit" to analyze your site</p>
+          <p className="text-sm text-slate-400 mt-1">
+            Click "Run Full Audit" to analyze your site
+          </p>
         </div>
       ) : (
         <>
@@ -191,21 +243,37 @@ export default function SeoAuditPage() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Check</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Details</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Check
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Details
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {report.map((r, i) => (
                   <tr key={i}>
                     <td className="px-6 py-3">
-                      {r.status === "pass" && <MdOutlineCheckCircle className="w-5 h-5 text-green-600" />}
-                      {r.status === "warn" && <MdOutlineWarning className="w-5 h-5 text-amber-500" />}
-                      {r.status === "fail" && <MdOutlineError className="w-5 h-5 text-red-600" />}
+                      {r.status === "pass" && (
+                        <MdOutlineCheckCircle className="w-5 h-5 text-green-600" />
+                      )}
+                      {r.status === "warn" && (
+                        <MdOutlineWarning className="w-5 h-5 text-amber-500" />
+                      )}
+                      {r.status === "fail" && (
+                        <MdOutlineError className="w-5 h-5 text-red-600" />
+                      )}
                     </td>
-                    <td className="px-6 py-3 text-xs text-slate-500 uppercase font-semibold">{r.category}</td>
+                    <td className="px-6 py-3 text-xs text-slate-500 uppercase font-semibold">
+                      {r.category}
+                    </td>
                     <td className="px-6 py-3 font-medium text-slate-900">{r.label}</td>
                     <td className="px-6 py-3 text-sm text-slate-600">{r.message}</td>
                   </tr>

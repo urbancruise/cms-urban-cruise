@@ -68,7 +68,11 @@ export default function SeoAnalyticsPage() {
           </h1>
           <p className="text-slate-500 mt-1">Track traffic, behavior, and conversions</p>
         </div>
-        <button onClick={save} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 shadow-sm"
+        >
           <MdOutlineSave className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
         </button>
       </div>
@@ -77,14 +81,17 @@ export default function SeoAnalyticsPage() {
         <div className="flex items-start gap-3">
           <MdOutlineInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-blue-900">
-            Add your tracking IDs here. They will be injected into the public website's head automatically.
+            Add your tracking IDs here. They will be injected into the public website's
+            head automatically.
           </p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
         <div>
-          <label className="block text-sm font-medium text-slate-900 mb-2">GA4 Measurement ID</label>
+          <label className="block text-sm font-medium text-slate-900 mb-2">
+            GA4 Measurement ID
+          </label>
           <input
             type="text"
             value={gaId}
@@ -95,7 +102,9 @@ export default function SeoAnalyticsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-900 mb-2">Google Tag Manager ID</label>
+          <label className="block text-sm font-medium text-slate-900 mb-2">
+            Google Tag Manager ID
+          </label>
           <input
             type="text"
             value={gtmId}
@@ -106,7 +115,9 @@ export default function SeoAnalyticsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-900 mb-2">Facebook Pixel ID</label>
+          <label className="block text-sm font-medium text-slate-900 mb-2">
+            Facebook Pixel ID
+          </label>
           <input
             type="text"
             value={pixelId}
@@ -119,7 +130,12 @@ export default function SeoAnalyticsPage() {
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mt-6">
         <h2 className="text-sm font-semibold text-slate-900 mb-3">Quick Links</h2>
-        <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline">
+        <a
+          href="https://analytics.google.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 hover:underline"
+        >
           Open Google Analytics
           <MdOutlineOpenInNew className="w-3.5 h-3.5" />
         </a>

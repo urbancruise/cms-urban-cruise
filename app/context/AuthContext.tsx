@@ -1,12 +1,7 @@
-'use client';
+"use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-} from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 
 interface City {
   id: number;
@@ -56,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch("/api/auth/me");
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
@@ -64,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.status === 401) setUser(null);
       }
     } catch (error) {
-      console.error('Error fetching user:', error);
+      console.error("Error fetching user:", error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -77,11 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch("/api/auth/logout", { method: "POST" });
       setUser(null);
-      window.location.href = '/login';
+      window.location.href = "/login";
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
@@ -95,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const hasPermission = (perm: string) => {
     if (!user) return false;
-    if (user.roles?.includes('admin')) return true;
+    if (user.roles?.includes("admin")) return true;
     return user.permissions?.includes(perm) ?? false;
   };
 
@@ -107,21 +102,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    *  - User has NO entry for this city → fall back to role-level check
    *  - User has entry with items → STRICT: must be in that list
    */
-  const hasCityPermission = (
-    perm: string,
-    cityId: number | null
-  ): boolean => {
+  const hasCityPermission = (perm: string, cityId: number | null): boolean => {
     if (!user) return false;
 
     // Admin bypass
-    if (user.roles?.includes('admin')) return true;
+    if (user.roles?.includes("admin")) return true;
 
     // No city context → role-level only
     if (!cityId) return hasPermission(perm);
 
-    const cityAccess = (user.city_permissions || []).find(
-      (cp) => cp.city_id === cityId
-    );
+    const cityAccess = (user.city_permissions || []).find((cp) => cp.city_id === cityId);
 
     // No explicit entry → fall back to role-level
     if (!cityAccess || cityAccess.permissions.length === 0) {
@@ -152,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

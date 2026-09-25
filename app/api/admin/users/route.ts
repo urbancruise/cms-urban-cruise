@@ -1,40 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
 import { parseBody, UserCreateSchema } from "@/lib/validators";
-
-async function requireAdmin(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
-  if (!token) throw { status: 401, message: "Not authenticated" };
-
-  const decoded = jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[]; username?: string };
-
-  const isAdmin =
-    decoded.role === "admin" ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
-
-  if (!isAdmin) throw { status: 403, message: "Access denied. Admin only." };
-  return decoded;
-}
+import { requireAdmin } from "@/lib/auth-guard";
+import { respondError } from "@/lib/api-error";
+import {
+  RATE_LIMIT_ADMIN_MAX,
+  RATE_LIMIT_WINDOW_MS,
+  PAGE_SIZE_DEFAULT,
+} from "@/lib/constants";
 
 // ============================================
 // GET - paginated list
 // ============================================
 export async function GET(request: NextRequest) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 120 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, {
+      windowMs: RATE_LIMIT_WINDOW_MS,
+      max: RATE_LIMIT_ADMIN_MAX,
+    });
+    if (!rl.ok) return rl.response;
 
     await requireAdmin(request);
 
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(Number(searchParams.get("limit")) || 10, 100);
+    const limit = Math.min(Number(searchParams.get("limit")) || PAGE_SIZE_DEFAULT, 100);
     const offset = Math.max(Number(searchParams.get("offset")) || 0, 0);
     const search = searchParams.get("search")?.trim() || "";
     const roleSlug = searchParams.get("role") || "";
@@ -66,7 +58,6 @@ export async function GET(request: NextRequest) {
         `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
         params
       ) as any,
-      // ✅ avatar_url in SELECT
       pool.query(
         `SELECT u.id, u.username, u.email, u.full_name, u.avatar_url,
                 u.role, u.role_id, u.is_active, u.created_at, u.last_login
@@ -129,8 +120,7 @@ export async function GET(request: NextRequest) {
       const permMap: Record<number, Record<number, string[]>> = {};
       (permRows as any[]).forEach((row) => {
         if (!permMap[row.user_id]) permMap[row.user_id] = {};
-        if (!permMap[row.user_id][row.city_id])
-          permMap[row.user_id][row.city_id] = [];
+        if (!permMap[row.user_id][row.city_id]) permMap[row.user_id][row.city_id] = [];
         permMap[row.user_id][row.city_id].push(row.permission_key);
       });
 
@@ -162,15 +152,8 @@ export async function GET(request: NextRequest) {
         },
       }
     );
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    console.error("Get users error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "GET /api/admin/users");
   }
 }
 
@@ -180,8 +163,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const connection = await pool.getConnection();
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 30 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, {
+      windowMs: RATE_LIMIT_WINDOW_MS,
+      max: 30,
+    });
+    if (!rl.ok) return rl.response;
 
     const decoded = await requireAdmin(request);
 
@@ -196,7 +182,8 @@ export async function POST(request: NextRequest) {
       email,
       password,
       full_name,
-      avatar_url, // ✅
+      avatar_url,
+      avatar_public_id,
       role_ids,
       is_active,
       city_ids,
@@ -223,10 +210,7 @@ export async function POST(request: NextRequest) {
     if (existing.length > 0) {
       const found = existing[0];
       if (found.username === username) {
-        return NextResponse.json(
-          { error: "Username is already taken" },
-          { status: 409 }
-        );
+        return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
       }
       if (found.email === email) {
         return NextResponse.json(
@@ -245,17 +229,17 @@ export async function POST(request: NextRequest) {
     try {
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // ✅ avatar_url in INSERT
       const [result] = await connection.query(
-        `INSERT INTO users 
-         (username, email, password_hash, full_name, avatar_url, role, role_id, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO users
+         (username, email, password_hash, full_name, avatar_url, avatar_public_id, role, role_id, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           username,
           email,
           passwordHash,
           full_name || username,
           avatar_url || null,
+          avatar_public_id || null,
           primarySlug,
           primaryRoleId,
           is_active !== undefined ? (is_active ? 1 : 0) : 1,
@@ -265,14 +249,16 @@ export async function POST(request: NextRequest) {
       const newUserId = (result as any).insertId;
 
       const roleValues = role_ids.map((rid: number) => [newUserId, rid]);
-      await connection.query(
-        "INSERT INTO user_roles (user_id, role_id) VALUES ?",
-        [roleValues]
-      );
+      await connection.query("INSERT INTO user_roles (user_id, role_id) VALUES ?", [
+        roleValues,
+      ]);
 
       const cityList: number[] = Array.isArray(city_ids) ? [...city_ids] : [];
-      const permList: { city_id: number; permissions: string[] }[] =
-        Array.isArray(city_permissions) ? city_permissions : [];
+      const permList: { city_id: number; permissions: string[] }[] = Array.isArray(
+        city_permissions
+      )
+        ? city_permissions
+        : [];
 
       const citySet = new Set<number>(cityList);
       permList.forEach((cp) => {
@@ -283,10 +269,9 @@ export async function POST(request: NextRequest) {
 
       if (citySet.size > 0) {
         const cityValues = Array.from(citySet).map((cid) => [newUserId, cid]);
-        await connection.query(
-          "INSERT INTO user_cities (user_id, city_id) VALUES ?",
-          [cityValues]
-        );
+        await connection.query("INSERT INTO user_cities (user_id, city_id) VALUES ?", [
+          cityValues,
+        ]);
       }
 
       const permValues: any[] = [];
@@ -304,7 +289,6 @@ export async function POST(request: NextRequest) {
 
       await connection.commit();
 
-      // ✅ avatar_url in SELECT
       const [newUserRows] = await connection.query(
         `SELECT id, username, email, full_name, avatar_url, role, role_id, is_active, created_at
          FROM users WHERE id = ?`,
@@ -371,15 +355,8 @@ export async function POST(request: NextRequest) {
       await connection.rollback();
       throw txErr;
     }
-  } catch (err: any) {
-    if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
-    console.error("Create user error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    return respondError(err, "POST /api/admin/users");
   } finally {
     connection.release();
   }

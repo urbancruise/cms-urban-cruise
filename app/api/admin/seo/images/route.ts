@@ -6,10 +6,11 @@ import { rateLimit } from "@/lib/rate-limit";
 async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET || "fallback_secret"
-  ) as { userId: number; role: string; roles?: string[] };
+  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+    userId: number;
+    role: string;
+    roles?: string[];
+  };
 }
 
 async function requireSeoAccess(request: NextRequest) {
@@ -33,8 +34,8 @@ async function requireSeoAccess(request: NextRequest) {
       perms = Array.isArray(r.permissions)
         ? r.permissions
         : typeof r.permissions === "string"
-        ? JSON.parse(r.permissions)
-        : [];
+          ? JSON.parse(r.permissions)
+          : [];
     } catch {}
     perms.forEach((p) => set.add(p));
   });
@@ -95,10 +96,7 @@ export async function GET(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -141,10 +139,7 @@ export async function POST(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -175,9 +170,6 @@ export async function PATCH(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

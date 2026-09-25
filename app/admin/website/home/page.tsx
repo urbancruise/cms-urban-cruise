@@ -14,10 +14,7 @@ import {
   MdOutlineLocationOn,
 } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
-import {
-  FormEditor,
-  JsonEditor,
-} from "@/app/components/UI/SectionEditors";
+import { FormEditor, JsonEditor } from "@/app/components/UI/SectionEditors";
 import { useAuth } from "@/app/context/AuthContext";
 
 // ============================================================
@@ -106,9 +103,7 @@ export default function WebsiteHomePage() {
   const { user, hasCityPermission } = useAuth();
 
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
-  const [selectedSection, setSelectedSection] = useState<SectionKey | null>(
-    null
-  );
+  const [selectedSection, setSelectedSection] = useState<SectionKey | null>(null);
   const [previewSection, setPreviewSection] = useState<SectionKey | null>(null);
   const [deleteSection, setDeleteSection] = useState<SectionKey | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -147,10 +142,7 @@ export default function WebsiteHomePage() {
 
   // Filter sections by BOTH role permission AND city permission
   const visibleSections = useMemo(
-    () =>
-      HOME_SECTIONS.filter((s) =>
-        hasCityPermission(s.perm, selectedCityId)
-      ),
+    () => HOME_SECTIONS.filter((s) => hasCityPermission(s.perm, selectedCityId)),
     [hasCityPermission, selectedCityId]
   );
 
@@ -328,27 +320,23 @@ export default function WebsiteHomePage() {
                     className="group bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-all flex flex-col"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-slate-900">
-                        {s.label}
-                      </h3>
+                      <h3 className="font-semibold text-slate-900">{s.label}</h3>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           status === "published"
                             ? "bg-teal-50 text-teal-700 border border-teal-200"
                             : status === "draft"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : status === "archived"
-                            ? "bg-slate-100 text-slate-600 border border-slate-200"
-                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : status === "archived"
+                                ? "bg-slate-100 text-slate-600 border border-slate-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200"
                         }`}
                       >
                         {status}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-400 font-mono mb-1">
-                      {s.key}
-                    </p>
+                    <p className="text-xs text-slate-400 font-mono mb-1">{s.key}</p>
 
                     {lastUpdated && (
                       <p className="text-[10px] text-slate-400 mb-3">
@@ -392,55 +380,48 @@ export default function WebsiteHomePage() {
       )}
 
       {/* Editor Modal */}
-      {selectedSection &&
-        selectedCityId &&
-        canAccessSection(selectedSection) && (
-          <SectionEditor
-            cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
-            sectionKey={selectedSection}
-            sectionLabel={
-              HOME_SECTIONS.find((s) => s.key === selectedSection)?.label ||
-              selectedSection
-            }
-            initial={sectionMap[selectedSection]?.content || {}}
-            initialStatus={sectionMap[selectedSection]?.status || "draft"}
-            onSave={handleSave}
-            onDelete={async (key) => {
-              setSelectedSection(null);
-              setDeleteSection(key as SectionKey);
-            }}
-            onClose={() => setSelectedSection(null)}
-          />
-        )}
+      {selectedSection && selectedCityId && canAccessSection(selectedSection) && (
+        <SectionEditor
+          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          sectionKey={selectedSection}
+          sectionLabel={
+            HOME_SECTIONS.find((s) => s.key === selectedSection)?.label || selectedSection
+          }
+          initial={sectionMap[selectedSection]?.content || {}}
+          initialStatus={sectionMap[selectedSection]?.status || "draft"}
+          onSave={handleSave}
+          onDelete={async (key) => {
+            setSelectedSection(null);
+            setDeleteSection(key as SectionKey);
+          }}
+          onClose={() => setSelectedSection(null)}
+        />
+      )}
 
       {/* Preview Modal */}
-      {previewSection &&
-        selectedCityId &&
-        canAccessSection(previewSection) && (
-          <PreviewModal
-            sectionLabel={
-              HOME_SECTIONS.find((s) => s.key === previewSection)?.label ||
-              previewSection
-            }
-            sectionKey={previewSection}
-            cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
-            content={sectionMap[previewSection]?.content || {}}
-            status={sectionMap[previewSection]?.status || "draft"}
-            updatedAt={sectionMap[previewSection]?.updated_at}
-            onClose={() => setPreviewSection(null)}
-            onEdit={() => {
-              setPreviewSection(null);
-              setSelectedSection(previewSection);
-            }}
-          />
-        )}
+      {previewSection && selectedCityId && canAccessSection(previewSection) && (
+        <PreviewModal
+          sectionLabel={
+            HOME_SECTIONS.find((s) => s.key === previewSection)?.label || previewSection
+          }
+          sectionKey={previewSection}
+          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          content={sectionMap[previewSection]?.content || {}}
+          status={sectionMap[previewSection]?.status || "draft"}
+          updatedAt={sectionMap[previewSection]?.updated_at}
+          onClose={() => setPreviewSection(null)}
+          onEdit={() => {
+            setPreviewSection(null);
+            setSelectedSection(previewSection);
+          }}
+        />
+      )}
 
       {/* Delete Modal */}
       {deleteSection && canAccessSection(deleteSection) && (
         <DeleteConfirmModal
           sectionLabel={
-            HOME_SECTIONS.find((s) => s.key === deleteSection)?.label ||
-            deleteSection
+            HOME_SECTIONS.find((s) => s.key === deleteSection)?.label || deleteSection
           }
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
           loading={deleting}
@@ -479,13 +460,9 @@ function SectionEditor({
   onClose: () => void;
 }) {
   const [content, setContent] = useState<any>(() => initial || {});
-  const [status, setStatus] = useState<"draft" | "published" | "archived">(
-    initialStatus
-  );
+  const [status, setStatus] = useState<"draft" | "published" | "archived">(initialStatus);
   const [mode, setMode] = useState<"form" | "json">("form");
-  const [jsonText, setJsonText] = useState(() =>
-    JSON.stringify(initial || {}, null, 2)
-  );
+  const [jsonText, setJsonText] = useState(() => JSON.stringify(initial || {}, null, 2));
   const [jsonError, setJsonError] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -529,9 +506,7 @@ function SectionEditor({
       <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl max-h-[94vh] flex flex-col">
         <div className="p-6 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {sectionLabel}
-            </h2>
+            <h2 className="text-xl font-bold text-slate-900">{sectionLabel}</h2>
             <p className="text-xs text-slate-400 font-mono">
               {cityName} · {sectionKey}
             </p>
@@ -598,11 +573,7 @@ function SectionEditor({
           {mode === "json" ? (
             <JsonEditor value={jsonText} onChange={setJsonText} />
           ) : (
-            <FormEditor
-              sectionKey={sectionKey}
-              value={content}
-              onChange={setContent}
-            />
+            <FormEditor sectionKey={sectionKey} value={content} onChange={setContent} />
           )}
         </div>
 
@@ -667,16 +638,14 @@ function PreviewModal({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <MdOutlineVisibility className="w-5 h-5 text-teal-600" />
-              <h2 className="text-xl font-bold text-slate-900">
-                {sectionLabel}
-              </h2>
+              <h2 className="text-xl font-bold text-slate-900">{sectionLabel}</h2>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   status === "published"
                     ? "bg-teal-50 text-teal-700 border border-teal-200"
                     : status === "draft"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                      ? "bg-amber-50 text-amber-700 border border-amber-200"
+                      : "bg-slate-100 text-slate-600 border border-slate-200"
                 }`}
               >
                 {status}
@@ -778,10 +747,7 @@ function VisualPreview({ content }: { content: any }) {
   return (
     <div className="space-y-4">
       {Object.entries(content).map(([key, value]) => (
-        <div
-          key={key}
-          className="bg-white border border-slate-200 rounded-lg p-4"
-        >
+        <div key={key} className="bg-white border border-slate-200 rounded-lg p-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             {key}
           </p>
@@ -881,17 +847,13 @@ function DeleteConfirmModal({
           <div className="w-16 h-16 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
             <MdOutlineWarning className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
-            Delete Section?
-          </h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Delete Section?</h2>
           <p className="text-slate-500 text-sm mb-1">
             You are about to delete content for:
           </p>
           <p className="font-semibold text-slate-900 mb-1">{sectionLabel}</p>
           <p className="text-xs text-slate-400 font-mono mb-4">{cityName}</p>
-          <p className="text-xs text-slate-400 mb-4">
-            This action cannot be undone.
-          </p>
+          <p className="text-xs text-slate-400 mb-4">This action cannot be undone.</p>
 
           <div className="flex gap-3">
             <button

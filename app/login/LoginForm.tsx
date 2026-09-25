@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   MdOutlineEmail,
   MdOutlineLock,
   MdOutlinePerson,
   MdOutlineVisibility,
   MdOutlineVisibilityOff,
-} from 'react-icons/md';
+} from "react-icons/md";
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{
     identifier?: string;
     password?: string;
     general?: string;
   }>({});
-  const [success, setSuccess] = useState('');
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEmail, setIsEmail] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -30,9 +30,9 @@ export default function LoginForm() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch("/api/auth/me");
         if (response.ok) {
-          router.push('/admin/dashboard');
+          router.push("/admin/dashboard");
           return;
         }
       } catch {
@@ -44,29 +44,27 @@ export default function LoginForm() {
 
     checkAuth();
 
-    if (searchParams.get('registered') === 'true') {
-      setSuccess('Account created successfully! Please sign in.');
+    if (searchParams.get("registered") === "true") {
+      setSuccess("Account created successfully! Please sign in.");
     }
-    if (searchParams.get('reset') === 'true') {
-      setSuccess(
-        'Password reset successful! Please sign in with your new password.'
-      );
+    if (searchParams.get("reset") === "true") {
+      setSuccess("Password reset successful! Please sign in with your new password.");
     }
   }, [router, searchParams]);
 
   const validateIdentifier = (value: string) => {
     if (!value || value.trim().length === 0) {
-      return 'Email or username is required';
+      return "Email or username is required";
     }
     if (value.trim().length < 2) {
-      return 'Email or username must be at least 2 characters';
+      return "Email or username must be at least 2 characters";
     }
     return null;
   };
 
   const validatePassword = (value: string) => {
-    if (!value || value.length === 0) return 'Password is required';
-    if (value.length < 6) return 'Password must be at least 6 characters';
+    if (!value || value.length === 0) return "Password is required";
+    if (value.length < 6) return "Password must be at least 6 characters";
     return null;
   };
 
@@ -83,16 +81,16 @@ export default function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    setSuccess('');
+    setSuccess("");
 
     if (!validateForm()) return;
 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
 
@@ -100,15 +98,15 @@ export default function LoginForm() {
 
       if (!response.ok) {
         setErrors({
-          general: data.error || 'Login failed. Please try again.',
+          general: data.error || "Login failed. Please try again.",
         });
         return;
       }
 
-      router.push('/admin/dashboard');
+      router.push("/admin/dashboard");
     } catch (err: any) {
       setErrors({
-        general: err.message || 'An error occurred during login',
+        general: err.message || "An error occurred during login",
       });
     } finally {
       setLoading(false);
@@ -134,12 +132,8 @@ export default function LoginForm() {
             <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto shadow-md">
               <span className="text-2xl font-bold text-white">UC</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mt-4">
-              Welcome Back
-            </h1>
-            <p className="text-slate-500 mt-1">
-              Sign in to your Urban Cruise account
-            </p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-4">Welcome Back</h1>
+            <p className="text-slate-500 mt-1">Sign in to your Urban Cruise account</p>
           </div>
 
           {success && (
@@ -172,22 +166,20 @@ export default function LoginForm() {
                   value={identifier}
                   onChange={(e) => {
                     setIdentifier(e.target.value);
-                    setIsEmail(e.target.value.includes('@'));
+                    setIsEmail(e.target.value.includes("@"));
                     if (errors.identifier) {
                       setErrors({ ...errors, identifier: undefined });
                     }
                   }}
                   className={`w-full pl-10 pr-4 py-3 border ${
-                    errors.identifier ? 'border-red-400' : 'border-slate-200'
+                    errors.identifier ? "border-red-400" : "border-slate-200"
                   } rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all`}
                   placeholder="Enter email or username"
                   required
                 />
               </div>
               {errors.identifier && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.identifier}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.identifier}</p>
               )}
             </div>
 
@@ -200,7 +192,7 @@ export default function LoginForm() {
                   <MdOutlineLock className="w-5 h-5 text-slate-400" />
                 </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -209,7 +201,7 @@ export default function LoginForm() {
                     }
                   }}
                   className={`w-full pl-10 pr-12 py-3 border ${
-                    errors.password ? 'border-red-400' : 'border-slate-200'
+                    errors.password ? "border-red-400" : "border-slate-200"
                   } rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all`}
                   placeholder="Enter your password"
                   required
@@ -218,7 +210,7 @@ export default function LoginForm() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <MdOutlineVisibilityOff className="w-5 h-5" />
@@ -239,10 +231,7 @@ export default function LoginForm() {
                   id="remember"
                   className="w-4 h-4 text-teal-600 border-slate-300 rounded focus:ring-teal-500"
                 />
-                <label
-                  htmlFor="remember"
-                  className="ml-2 text-sm text-slate-600"
-                >
+                <label htmlFor="remember" className="ml-2 text-sm text-slate-600">
                   Remember me
                 </label>
               </div>
@@ -284,7 +273,7 @@ export default function LoginForm() {
                   Signing in...
                 </span>
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </button>
           </form>

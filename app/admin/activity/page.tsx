@@ -13,10 +13,7 @@ import {
 } from "react-icons/md";
 import { useChunkedSWR } from "@/lib/use-chunked-swr";
 import InfiniteScrollSentinel from "@/app/components/UI/InfiniteScrollSentinel";
-import {
-  ChunkSpinner,
-  EndOfList,
-} from "@/app/components/UI/ChunkLoader";
+import { ChunkSpinner, EndOfList } from "@/app/components/UI/ChunkLoader";
 import { ActivitySkeleton } from "@/app/components/UI/PageSkeletons";
 
 interface Activity {
@@ -32,10 +29,7 @@ interface Activity {
   created_at: string;
 }
 
-const ACTION_STYLE: Record<
-  string,
-  { bg: string; icon: any; label: string }
-> = {
+const ACTION_STYLE: Record<string, { bg: string; icon: any; label: string }> = {
   create: {
     bg: "bg-teal-50 text-teal-700 border border-teal-200",
     icon: MdOutlineAdd,
@@ -166,9 +160,7 @@ export default function ActivityPage() {
             <MdOutlineHistory className="w-8 h-8 text-teal-600" />
             Activity History
           </h1>
-          <p className="text-slate-500 mt-1">
-            Full audit trail ({total} entries)
-          </p>
+          <p className="text-slate-500 mt-1">Full audit trail ({total} entries)</p>
         </div>
         <button
           onClick={refresh}
@@ -240,10 +232,7 @@ export default function ActivityPage() {
                   Object.keys(a.changes).length > 0;
 
                 return (
-                  <div
-                    key={a.id}
-                    className="p-4 hover:bg-slate-50 transition-colors"
-                  >
+                  <div key={a.id} className="p-4 hover:bg-slate-50 transition-colors">
                     <div className="flex items-start gap-4">
                       <div
                         className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${style.bg}`}
@@ -308,10 +297,7 @@ export default function ActivityPage() {
 
           {hasMore ? (
             <>
-              <InfiniteScrollSentinel
-                onIntersect={handleLoadMore}
-                disabled={loading}
-              />
+              <InfiniteScrollSentinel onIntersect={handleLoadMore} disabled={loading} />
               {loading && <ChunkSpinner />}
               {!loading && (
                 <div className="flex justify-center py-6">
