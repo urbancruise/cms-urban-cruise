@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 // ============================================
 // Auth helpers
@@ -110,6 +111,56 @@ export async function GET(request: NextRequest) {
 // ============================================================
 // PUT upsert section
 // ============================================================
+// export async function PUT(request: NextRequest) {
+//   try {
+//     const rl = rateLimit(request, { windowMs: 60000, max: 60 });
+//     if (!rl.ok) return rl.response!;
+
+//     const decoded = await requireSiteContentAccess(request);
+//     const body = await request.json();
+
+//     const { cityId, sectionKey, content, status } = body;
+
+//     if (!cityId || !sectionKey || content === undefined) {
+//       return NextResponse.json(
+//         { error: "cityId, sectionKey, content required" },
+//         { status: 400 }
+//       );
+//     }
+
+//     await pool.query(
+//       `INSERT INTO site_home_content
+//          (city_id, section_key, content, status, updated_by)
+//        VALUES (?, ?, ?, ?, ?)
+//        ON DUPLICATE KEY UPDATE
+//          content = VALUES(content),
+//          status = VALUES(status),
+//          updated_by = VALUES(updated_by)`,
+//       [cityId, sectionKey, JSON.stringify(content), status || "draft", decoded.userId]
+//     );
+
+//     await logActivity({
+//       actor: {
+//         userId: decoded.userId,
+//         userName: decoded.username || `User #${decoded.userId}`,
+//       },
+//       action: "update",
+//       entityType: "profile",
+//       entityId: cityId,
+//       entityName: `home:${sectionKey}`,
+//       changes: { cityId, sectionKey, status },
+//       request,
+//     });
+
+//     return NextResponse.json({ success: true });
+//   } catch (err: any) {
+//     if (err.status) {
+//       return NextResponse.json({ error: err.message }, { status: err.status });
+//     }
+//     console.error("[admin/site-content/home PUT]", err);
+//     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+//   }
+// }
 export async function PUT(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60000, max: 60 });
@@ -137,6 +188,19 @@ export async function PUT(request: NextRequest) {
          updated_by = VALUES(updated_by)`,
       [cityId, sectionKey, JSON.stringify(content), status || "draft", decoded.userId]
     );
+
+    // ✅ Fetch city slug for tag naming
+    const [cityRows] = (await pool.query(
+      "SELECT name FROM cities WHERE id = ?",
+      [cityId]
+    )) as any;
+    const citySlug = ((cityRows as any[])[0]?.name || "").toLowerCase();
+
+    // ✅ Fire revalidation
+    await revalidateWebsite({
+      tags: [`home:${citySlug}`],
+      paths: [`/${citySlug}`],
+    });
 
     await logActivity({
       actor: {

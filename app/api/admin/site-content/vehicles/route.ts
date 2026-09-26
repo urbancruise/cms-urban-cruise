@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 // ============================================
 // Auth helpers
@@ -126,6 +127,66 @@ export async function GET(request: NextRequest) {
 // ============================================
 // PUT upsert vehicle
 // ============================================
+// export async function PUT(request: NextRequest) {
+//   try {
+//     const rl = rateLimit(request, { windowMs: 60000, max: 60 });
+//     if (!rl.ok) return rl.response!;
+
+//     const decoded = await requireSiteContentAccess(request);
+//     const body = await request.json();
+
+//     const { cityId, vehicleSlug, meta, sections, status, sortOrder } = body;
+
+//     if (!cityId || !vehicleSlug || !meta || !sections) {
+//       return NextResponse.json(
+//         { error: "cityId, vehicleSlug, meta, sections required" },
+//         { status: 400 }
+//       );
+//     }
+
+//     await pool.query(
+//       `INSERT INTO site_vehicle_content
+//          (city_id, vehicle_slug, meta, sections, status, sort_order, updated_by)
+//        VALUES (?, ?, ?, ?, ?, ?, ?)
+//        ON DUPLICATE KEY UPDATE
+//          meta = VALUES(meta),
+//          sections = VALUES(sections),
+//          status = VALUES(status),
+//          sort_order = VALUES(sort_order),
+//          updated_by = VALUES(updated_by)`,
+//       [
+//         cityId,
+//         vehicleSlug,
+//         JSON.stringify(meta),
+//         JSON.stringify(sections),
+//         status || "draft",
+//         sortOrder ?? 0,
+//         decoded.userId,
+//       ]
+//     );
+
+//     await logActivity({
+//       actor: {
+//         userId: decoded.userId,
+//         userName: decoded.username || `User #${decoded.userId}`,
+//       },
+//       action: "update",
+//       entityType: "profile",
+//       entityId: cityId,
+//       entityName: `vehicle:${vehicleSlug}`,
+//       changes: { cityId, vehicleSlug, status },
+//       request,
+//     });
+
+//     return NextResponse.json({ success: true });
+//   } catch (err: any) {
+//     if (err.status) {
+//       return NextResponse.json({ error: err.message }, { status: err.status });
+//     }
+//     console.error("[admin/site-content/vehicles PUT]", err);
+//     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+//   }
+// }
 export async function PUT(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60000, max: 60 });
@@ -163,6 +224,21 @@ export async function PUT(request: NextRequest) {
         decoded.userId,
       ]
     );
+
+    const [cityRows] = (await pool.query(
+      "SELECT name FROM cities WHERE id = ?",
+      [cityId]
+    )) as any;
+    const citySlug = ((cityRows as any[])[0]?.name || "").toLowerCase();
+
+    // ✅ Fire revalidation
+    await revalidateWebsite({
+      tags: [
+        `vehicle:${citySlug}:${vehicleSlug}`,
+        `vehicles:${citySlug}`,
+      ],
+      paths: [`/${citySlug}/${vehicleSlug}`],
+    });
 
     await logActivity({
       actor: {
