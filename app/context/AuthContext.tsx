@@ -45,9 +45,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ============================================================
+// CSRF helper — read cookie from document
+// ============================================================
+export function getCsrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  return match?.[1] ?? null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Ensure CSRF cookie exists on mount
+  useEffect(() => {
+    fetch("/api/auth/csrf").catch(() => {});
+  }, []);
 
   const fetchUser = async () => {
     try {
@@ -72,7 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const csrf = getCsrfToken();
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: csrf ? { "x-csrf-token": csrf } : {},
+      });
       setUser(null);
       window.location.href = "/login";
     } catch (error) {
@@ -84,41 +103,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchUser();
   };
 
-  /**
-   * Role-level permission check.
-   * Admin always passes.
-   */
   const hasPermission = (perm: string) => {
     if (!user) return false;
     if (user.roles?.includes("admin")) return true;
     return user.permissions?.includes(perm) ?? false;
   };
 
-  /**
-   * City-aware permission check.
-   *
-   *  - Admin → always true
-   *  - No cityId → fall back to role-level check
-   *  - User has NO entry for this city → fall back to role-level check
-   *  - User has entry with items → STRICT: must be in that list
-   */
   const hasCityPermission = (perm: string, cityId: number | null): boolean => {
     if (!user) return false;
-
-    // Admin bypass
     if (user.roles?.includes("admin")) return true;
-
-    // No city context → role-level only
     if (!cityId) return hasPermission(perm);
 
-    const cityAccess = (user.city_permissions || []).find((cp) => cp.city_id === cityId);
+    const cityAccess = (user.city_permissions || []).find(
+      (cp) => cp.city_id === cityId
+    );
 
-    // No explicit entry → fall back to role-level
     if (!cityAccess || cityAccess.permissions.length === 0) {
       return hasPermission(perm);
     }
-
-    // Strict city-level check
     return cityAccess.permissions.includes(perm);
   };
 

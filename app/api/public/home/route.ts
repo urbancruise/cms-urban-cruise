@@ -9,12 +9,14 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const rl = rateLimit(request, { windowMs: 60000, max: 300 });
-    if (!rl.ok) return rl.response!;
+    const rl = rateLimit(request, { windowMs: 60_000, max: 300 });
+    if (!rl.ok) return withCors(rl.response);
 
     const auth = await requireApiKey(request);
     if (!auth.ok) {
-      return withCors(NextResponse.json({ error: auth.error }, { status: 401 }));
+      return withCors(
+        NextResponse.json({ error: auth.error }, { status: 401 })
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -22,13 +24,14 @@ export async function GET(request: NextRequest) {
 
     if (!citySlug) {
       return withCors(
-        NextResponse.json({ error: "Query param 'city' is required" }, { status: 400 })
+        NextResponse.json(
+          { error: "Query param 'city' is required" },
+          { status: 400 }
+        )
       );
     }
 
-    // ============================================================
     // Find city
-    // ============================================================
     const [cityRows] = (await pool.query(
       `SELECT id, name, state, country, code
        FROM cities
@@ -47,9 +50,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ============================================================
-    // Fetch all published sections
-    // ============================================================
+    // Fetch published sections
     const [rows] = (await pool.query(
       `SELECT section_key, content, updated_at
        FROM site_home_content
@@ -62,7 +63,9 @@ export async function GET(request: NextRequest) {
 
     for (const row of rows as any[]) {
       sections[row.section_key] =
-        typeof row.content === "string" ? JSON.parse(row.content) : row.content;
+        typeof row.content === "string"
+          ? JSON.parse(row.content)
+          : row.content;
 
       const rowDate = new Date(row.updated_at);
       if (rowDate > latestUpdate) latestUpdate = rowDate;
@@ -91,7 +94,10 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error("[public/home] error:", err);
     return withCors(
-      NextResponse.json({ error: "Internal server error" }, { status: 500 })
+      NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      )
     );
   }
 }

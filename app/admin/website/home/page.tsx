@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineSave,
   MdOutlineRefresh,
@@ -22,65 +23,22 @@ import { useAuth } from "@/app/context/AuthContext";
 // ============================================================
 const HOME_SECTIONS = [
   { key: "hero", label: "Hero", perm: "urbancruise.home.hero.view" },
-  {
-    key: "quickcall",
-    label: "Get a Quick Call",
-    perm: "urbancruise.home.quickcall.view",
-  },
+  { key: "quickcall", label: "Get a Quick Call", perm: "urbancruise.home.quickcall.view" },
   { key: "about", label: "About", perm: "urbancruise.home.about.view" },
-  {
-    key: "howitworks",
-    label: "How It Works",
-    perm: "urbancruise.home.howitworks.view",
-  },
-  {
-    key: "vehiclebudget",
-    label: "Vehicle For Every Budget",
-    perm: "urbancruise.home.services.view",
-  },
-  {
-    key: "groupsize",
-    label: "Vehicle For Every Group Size",
-    perm: "urbancruise.home.groupsize.view",
-  },
-  {
-    key: "occasion",
-    label: "Vehicle For Every Occasion",
-    perm: "urbancruise.home.tempotraveller.view",
-  },
-  {
-    key: "whychoose",
-    label: "Why Choose Urban Cruise",
-    perm: "urbancruise.home.whychoose.view",
-  },
-  {
-    key: "testimonials",
-    label: "Testimonials",
-    perm: "urbancruise.home.testimonials.view",
-  },
+  { key: "howitworks", label: "How It Works", perm: "urbancruise.home.howitworks.view" },
+  { key: "vehiclebudget", label: "Vehicle For Every Budget", perm: "urbancruise.home.services.view" },
+  { key: "groupsize", label: "Vehicle For Every Group Size", perm: "urbancruise.home.groupsize.view" },
+  { key: "occasion", label: "Vehicle For Every Occasion", perm: "urbancruise.home.tempotraveller.view" },
+  { key: "whychoose", label: "Why Choose Urban Cruise", perm: "urbancruise.home.whychoose.view" },
+  { key: "testimonials", label: "Testimonials", perm: "urbancruise.home.testimonials.view" },
   { key: "faq", label: "FAQs", perm: "urbancruise.home.faqs.view" },
-  {
-    key: "servicelocations",
-    label: "Vehicle Rental Service In India",
-    perm: "urbancruise.home.locations.view",
-  },
-  {
-    key: "partners",
-    label: "Our Trusted Partners",
-    perm: "urbancruise.home.partners.view",
-  },
-  {
-    key: "downloadapp",
-    label: "Download App",
-    perm: "urbancruise.home.downloadapp.view",
-  },
+  { key: "servicelocations", label: "Vehicle Rental Service In India", perm: "urbancruise.home.locations.view" },
+  { key: "partners", label: "Our Trusted Partners", perm: "urbancruise.home.partners.view" },
+  { key: "downloadapp", label: "Download App", perm: "urbancruise.home.downloadapp.view" },
 ] as const;
 
 type SectionKey = (typeof HOME_SECTIONS)[number]["key"];
 
-// ============================================================
-// Types
-// ============================================================
 interface City {
   id: number;
   name: string;
@@ -96,9 +54,6 @@ interface Section {
   updated_at: string;
 }
 
-// ============================================================
-// PAGE
-// ============================================================
 export default function WebsiteHomePage() {
   const { user, hasCityPermission } = useAuth();
 
@@ -114,33 +69,22 @@ export default function WebsiteHomePage() {
   );
   const allCities = citiesData?.cities || [];
 
-  // ✅ Restrict cities to user's accessible cities (admin sees all)
   const cities = useMemo(() => {
     if (!user) return [];
-
-    // Admin sees all
-    if (user.roles?.includes("admin")) {
-      return allCities;
-    }
-
-    // Non-admin: only cities from user.cities
+    if (user.roles?.includes("admin")) return allCities;
     const allowedIds = new Set((user.cities || []).map((c) => c.id));
     return allCities.filter((c) => allowedIds.has(c.id));
   }, [allCities, user]);
 
-  // ✅ Ensure selectedCityId is valid
   useEffect(() => {
     if (cities.length === 0) {
       if (selectedCityId !== null) setSelectedCityId(null);
       return;
     }
     const currentIsValid = cities.some((c) => c.id === selectedCityId);
-    if (!currentIsValid) {
-      setSelectedCityId(cities[0].id);
-    }
+    if (!currentIsValid) setSelectedCityId(cities[0].id);
   }, [cities, selectedCityId]);
 
-  // Filter sections by BOTH role permission AND city permission
   const visibleSections = useMemo(
     () => HOME_SECTIONS.filter((s) => hasCityPermission(s.perm, selectedCityId)),
     [hasCityPermission, selectedCityId]
@@ -164,7 +108,7 @@ export default function WebsiteHomePage() {
   }, [sections]);
 
   // ============================================================
-  // SAVE
+  // SAVE — uses CSRF-aware api() wrapper
   // ============================================================
   const handleSave = async (
     sectionKey: string,
@@ -173,37 +117,30 @@ export default function WebsiteHomePage() {
   ) => {
     if (!selectedCityId) throw new Error("No city selected");
 
-    const res = await fetch("/api/admin/site-content/home", {
+    await api("/api/admin/site-content/home", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: {
         cityId: selectedCityId,
         sectionKey,
         content,
         status,
-      }),
+      },
     });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || "Failed to save");
+
     await mutate();
   };
 
   // ============================================================
-  // DELETE
+  // DELETE — uses CSRF-aware api() wrapper
   // ============================================================
   const confirmDelete = async () => {
     if (!selectedCityId || !deleteSection) return;
     setDeleting(true);
     try {
-      const res = await fetch(
+      await api(
         `/api/admin/site-content/home?city_id=${selectedCityId}&section_key=${deleteSection}`,
         { method: "DELETE" }
       );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        alert(body.error || "Failed to delete");
-        return;
-      }
       await mutate();
       if (selectedSection === deleteSection) setSelectedSection(null);
       setDeleteSection(null);
@@ -214,18 +151,12 @@ export default function WebsiteHomePage() {
     }
   };
 
-  // ============================================================
-  // Permission guard for modals
-  // ============================================================
   const canAccessSection = (key: string | null) => {
     if (!key) return false;
     const sec = HOME_SECTIONS.find((s) => s.key === key);
     return sec ? hasCityPermission(sec.perm, selectedCityId) : false;
   };
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -247,7 +178,6 @@ export default function WebsiteHomePage() {
         </button>
       </div>
 
-      {/* No cities at all */}
       {!isLoading && cities.length === 0 && (
         <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
           <MdOutlineLocationOn className="w-12 h-12 mx-auto text-slate-300" />
@@ -260,7 +190,6 @@ export default function WebsiteHomePage() {
         </div>
       )}
 
-      {/* City selector */}
       {cities.length > 0 && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2">
@@ -285,7 +214,6 @@ export default function WebsiteHomePage() {
         </div>
       )}
 
-      {/* Sections grid — only when we have a city selected */}
       {cities.length > 0 && (
         <>
           {isLoading ? (
@@ -295,9 +223,6 @@ export default function WebsiteHomePage() {
               <MdOutlinePublic className="w-12 h-12 mx-auto text-slate-300" />
               <p className="mt-3 text-slate-500 font-medium">
                 You don&apos;t have access to any Home sections.
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Contact your administrator to request access.
               </p>
             </div>
           ) : (
@@ -348,7 +273,7 @@ export default function WebsiteHomePage() {
                       <button
                         onClick={() => setPreviewSection(s.key)}
                         disabled={!hasContent}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <MdOutlineVisibility className="w-3.5 h-3.5" />
                         Preview
@@ -356,7 +281,7 @@ export default function WebsiteHomePage() {
 
                       <button
                         onClick={() => setSelectedSection(s.key)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 hover:border-teal-300 transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100"
                       >
                         <MdOutlineEdit className="w-3.5 h-3.5" />
                         {hasContent ? "Edit" : "Create"}
@@ -365,7 +290,7 @@ export default function WebsiteHomePage() {
                       <button
                         onClick={() => setDeleteSection(s.key)}
                         disabled={!hasContent}
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
                         aria-label="Delete"
                       >
                         <MdOutlineDelete className="w-3.5 h-3.5" />
@@ -379,13 +304,13 @@ export default function WebsiteHomePage() {
         </>
       )}
 
-      {/* Editor Modal */}
       {selectedSection && selectedCityId && canAccessSection(selectedSection) && (
         <SectionEditor
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
           sectionKey={selectedSection}
           sectionLabel={
-            HOME_SECTIONS.find((s) => s.key === selectedSection)?.label || selectedSection
+            HOME_SECTIONS.find((s) => s.key === selectedSection)?.label ||
+            selectedSection
           }
           initial={sectionMap[selectedSection]?.content || {}}
           initialStatus={sectionMap[selectedSection]?.status || "draft"}
@@ -398,11 +323,11 @@ export default function WebsiteHomePage() {
         />
       )}
 
-      {/* Preview Modal */}
       {previewSection && selectedCityId && canAccessSection(previewSection) && (
         <PreviewModal
           sectionLabel={
-            HOME_SECTIONS.find((s) => s.key === previewSection)?.label || previewSection
+            HOME_SECTIONS.find((s) => s.key === previewSection)?.label ||
+            previewSection
           }
           sectionKey={previewSection}
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
@@ -417,11 +342,11 @@ export default function WebsiteHomePage() {
         />
       )}
 
-      {/* Delete Modal */}
       {deleteSection && canAccessSection(deleteSection) && (
         <DeleteConfirmModal
           sectionLabel={
-            HOME_SECTIONS.find((s) => s.key === deleteSection)?.label || deleteSection
+            HOME_SECTIONS.find((s) => s.key === deleteSection)?.label ||
+            deleteSection
           }
           cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
           loading={deleting}
@@ -434,7 +359,7 @@ export default function WebsiteHomePage() {
 }
 
 // ============================================================
-// SECTION EDITOR MODAL
+// SECTION EDITOR MODAL (unchanged)
 // ============================================================
 function SectionEditor({
   cityName,
@@ -518,9 +443,7 @@ function SectionEditor({
                 type="button"
                 onClick={mode === "json" ? switchToForm : undefined}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  mode === "form"
-                    ? "bg-teal-600 text-white"
-                    : "text-slate-600 hover:bg-slate-50"
+                  mode === "form" ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 Form
@@ -529,9 +452,7 @@ function SectionEditor({
                 type="button"
                 onClick={mode === "form" ? switchToJson : undefined}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  mode === "json"
-                    ? "bg-teal-600 text-white"
-                    : "text-slate-600 hover:bg-slate-50"
+                  mode === "json" ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 JSON
@@ -580,7 +501,7 @@ function SectionEditor({
         <div className="p-6 border-t border-slate-200 flex justify-between">
           <button
             onClick={() => onDelete(sectionKey)}
-            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium"
           >
             <MdOutlineDelete className="w-4 h-4" />
             Delete
@@ -588,14 +509,14 @@ function SectionEditor({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700 transition-colors"
+              className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+              className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg disabled:opacity-50 font-medium"
             >
               <MdOutlineSave className="w-4 h-4" />
               {saving ? "Saving..." : "Save"}
@@ -608,7 +529,7 @@ function SectionEditor({
 }
 
 // ============================================================
-// PREVIEW MODAL
+// PREVIEW MODAL (unchanged)
 // ============================================================
 function PreviewModal({
   sectionLabel,
@@ -715,13 +636,13 @@ function PreviewModal({
         <div className="p-6 border-t border-slate-200 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700 transition-colors"
+            className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700"
           >
             Close
           </button>
           <button
             onClick={onEdit}
-            className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors"
+            className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium"
           >
             <MdOutlineEdit className="w-4 h-4" />
             Edit Section
@@ -732,9 +653,6 @@ function PreviewModal({
   );
 }
 
-// ============================================================
-// VISUAL PREVIEW
-// ============================================================
 function VisualPreview({ content }: { content: any }) {
   if (!content || Object.keys(content).length === 0) {
     return (
@@ -743,7 +661,6 @@ function VisualPreview({ content }: { content: any }) {
       </p>
     );
   }
-
   return (
     <div className="space-y-4">
       {Object.entries(content).map(([key, value]) => (
@@ -825,7 +742,7 @@ function PreviewValue({ value }: { value: any }) {
 }
 
 // ============================================================
-// DELETE CONFIRM MODAL
+// DELETE CONFIRM MODAL (unchanged)
 // ============================================================
 function DeleteConfirmModal({
   sectionLabel,
@@ -853,7 +770,9 @@ function DeleteConfirmModal({
           </p>
           <p className="font-semibold text-slate-900 mb-1">{sectionLabel}</p>
           <p className="text-xs text-slate-400 font-mono mb-4">{cityName}</p>
-          <p className="text-xs text-slate-400 mb-4">This action cannot be undone.</p>
+          <p className="text-xs text-slate-400 mb-4">
+            This action cannot be undone.
+          </p>
 
           <div className="flex gap-3">
             <button

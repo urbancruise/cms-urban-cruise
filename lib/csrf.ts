@@ -2,19 +2,21 @@ import crypto from "crypto";
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "./constants";
 
 // ============================================================
-// CSRF token — generate, read, verify
+// Node.js-only CSRF helpers.
 //
-// ⚠️ Cookies can only be SET in:
-//   - Proxy (middleware)
-//   - Server Actions
-//   - Route Handlers
+// ⚠️ Import from this file ONLY in Node.js runtime contexts:
+//   - Route handlers (app/api/**/route.ts)
+//   - Server actions
+//   - Server components
 //
-// We set it in proxy.ts on the response. This module provides
-// read + verify helpers for all other contexts.
+// For middleware (Edge Runtime), import from lib/csrf-edge.ts
 // ============================================================
 
+// Re-export constants so existing imports from "@/lib/csrf" keep working
+export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME };
+
 /**
- * Generate a fresh random CSRF token.
+ * Generate a fresh random CSRF token (Node.js).
  */
 export function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString("hex");
@@ -22,17 +24,16 @@ export function generateCsrfToken(): string {
 
 /**
  * Read the CSRF token from a raw Cookie header string.
- * Used by proxy.ts (which has access to request.headers).
  */
 export function readCsrfFromCookieHeader(cookieHeader: string): string | null {
-  const re = new RegExp(`(?:^|;\\s*)${CSRF_COOKIE_NAME}=([^;]+)`);
+  const escaped = CSRF_COOKIE_NAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?:^|;\\s*)${escaped}=([^;]+)`);
   const match = cookieHeader.match(re);
   return match?.[1] ?? null;
 }
 
 /**
- * Verify CSRF token on an incoming request.
- * Compares cookie value with the header value.
+ * Verify CSRF token using constant-time comparison.
  */
 export function verifyCsrf(request: Request): boolean {
   const cookieHeader = request.headers.get("cookie") || "";
@@ -41,22 +42,18 @@ export function verifyCsrf(request: Request): boolean {
 
   if (!cookieToken || !headerToken) return false;
 
-  // Constant-time comparison to prevent timing attacks
   try {
     return crypto.timingSafeEqual(
       Buffer.from(cookieToken),
       Buffer.from(headerToken)
     );
   } catch {
-    // Buffer length mismatch → not equal
     return false;
   }
 }
 
 /**
- * Cookie options for the CSRF token — used by proxy.ts.
- * Note: httpOnly must be FALSE so client JS can read it
- * and send it as a header.
+ * Cookie options for the CSRF token.
  */
 export function csrfCookieOptions() {
   return {
@@ -64,6 +61,6 @@ export function csrfCookieOptions() {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: 60 * 60 * 24,
   };
 }

@@ -24,7 +24,7 @@ export async function OPTIONS() {
 export async function GET(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60_000, max: 300 });
-    if (!rl.ok) return rl.response;
+    if (!rl.ok) return withCors(rl.response);
 
     const auth = await requireApiKey(request);
     if (!auth.ok) {
@@ -40,9 +40,7 @@ export async function GET(request: NextRequest) {
 
     let row: any = null;
 
-    // ── Lookup by path ──
     if (path) {
-      // Normalize: strip trailing slash, ensure leading slash
       const normalized = "/" + path.replace(/^\/+|\/+$/g, "");
 
       const [rows] = (await pool.query(
@@ -55,7 +53,6 @@ export async function GET(request: NextRequest) {
       )) as any;
       row = (rows as any[])[0] || null;
 
-      // Fallback: try the raw path as-is
       if (!row && normalized !== path) {
         const [rows2] = (await pool.query(
           `SELECT sp.*, c.name AS city_name
@@ -67,9 +64,7 @@ export async function GET(request: NextRequest) {
         )) as any;
         row = (rows2 as any[])[0] || null;
       }
-    }
-    // ── Lookup by slug ──
-    else if (slug) {
+    } else if (slug) {
       if (citySlug) {
         const [rows] = (await pool.query(
           `SELECT sp.*, c.name AS city_name
@@ -103,11 +98,13 @@ export async function GET(request: NextRequest) {
 
     if (!row) {
       return withCors(
-        NextResponse.json({ error: "SEO entry not found" }, { status: 404 })
+        NextResponse.json(
+          { error: "SEO entry not found" },
+          { status: 404 }
+        )
       );
     }
 
-    // ── Normalize ──
     const schemas: any[] = Array.isArray(row.schema_json)
       ? row.schema_json
       : row.schema_json
@@ -115,10 +112,7 @@ export async function GET(request: NextRequest) {
       : [];
 
     const keywords = row.meta_keywords
-      ? row.meta_keywords
-          .split(",")
-          .map((k: string) => k.trim())
-          .filter(Boolean)
+      ? row.meta_keywords.split(",").map((k: string) => k.trim()).filter(Boolean)
       : [];
 
     const seo = {
@@ -127,33 +121,21 @@ export async function GET(request: NextRequest) {
       slug: row.slug,
       page_type: row.page_type,
       city_name: row.city_name,
-
-      // <title> and <link rel="icon">
       title: row.page_title || row.meta_title || null,
       favicon_url: row.favicon_url || null,
-
-      // Meta tags
       meta_title: row.meta_title || null,
       meta_description: row.meta_description || null,
       meta_keywords: keywords,
       focus_keyword: row.focus_keyword || null,
-
-      // Canonical + Robots
       canonical_url: row.canonical_url || null,
       robots_meta: row.robots_meta || "index, follow",
       is_indexable: Boolean(row.is_indexable),
-
-      // Feature image (used as fallback for og/twitter images)
       feature_image: row.feature_image || null,
-
-      // Open Graph
       og_title: row.og_title || row.meta_title || null,
       og_description: row.og_description || row.meta_description || null,
       og_image: row.og_image || row.feature_image || null,
       og_url: row.og_url || row.canonical_url || null,
       og_type: row.og_type || "website",
-
-      // Twitter
       twitter_card: row.twitter_card || "summary_large_image",
       twitter_domain: row.twitter_domain || null,
       twitter_url: row.twitter_url || row.canonical_url || null,
@@ -161,10 +143,7 @@ export async function GET(request: NextRequest) {
       twitter_title: row.twitter_title || row.meta_title || null,
       twitter_description:
         row.twitter_description || row.meta_description || null,
-
-      // JSON-LD array — each becomes its own <script type="application/ld+json">
       schemas,
-
       updated_at: row.updated_at,
     };
 
@@ -182,7 +161,10 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error("[public/seo] error:", err);
     return withCors(
-      NextResponse.json({ error: "Internal server error" }, { status: 500 })
+      NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      )
     );
   }
 }

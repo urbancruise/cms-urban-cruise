@@ -1,4 +1,7 @@
-// Centralized constants — no magic numbers in code
+// Auth
+export const JWT_COOKIE_NAME = "token";
+export const CSRF_COOKIE_NAME = "csrf_token";
+export const CSRF_HEADER_NAME = "x-csrf-token";
 
 // Pagination
 export const PAGE_SIZE_DEFAULT = 20;
@@ -40,8 +43,3 @@ export const SEARCH_DEBOUNCE_MS = 400;
 // Cache
 export const SWR_DEDUPE_MS = 5_000;
 export const CHUNKED_CACHE_MAX_ENTRIES = 50;
-
-// Auth
-export const JWT_COOKIE_NAME = "token";
-export const CSRF_COOKIE_NAME = "csrf_token";
-export const CSRF_HEADER_NAME = "x-csrf-token";

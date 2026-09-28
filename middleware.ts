@@ -1,11 +1,13 @@
 // ============================================================
-// Next.js 16 — proxy.ts (replaces middleware.ts)
+// Next.js 16 — middleware.ts (Edge Runtime)
 //
 // Responsibilities:
 //   1. Issue CSRF cookie if missing (on response)
 //   2. Enforce CSRF token on API mutations
 //   3. Auth redirect for /admin/* pages
 //   4. Add noindex to admin pages
+//
+// ⚠️ Edge-safe: only imports from lib/csrf-edge.ts
 // ============================================================
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -17,26 +19,27 @@ import {
   generateCsrfToken,
   readCsrfFromCookieHeader,
   csrfCookieOptions,
-} from "@/lib/csrf";
+} from "@/lib/csrf-edge";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-// Endpoints exempt from CSRF (no cookie exists yet during login flow)
 const CSRF_EXEMPT = new Set([
   "/api/auth/login",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/csrf",
 ]);
 
 const PROTECTED_PAGE_ROUTES = ["/admin"];
 const AUTH_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 
 function readCookie(cookieHeader: string, name: string): string | null {
-  const re = new RegExp(`(?:^|;\\s*)${name}=([^;]+)`);
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?:^|;\\s*)${escaped}=([^;]+)`);
   return cookieHeader.match(re)?.[1] ?? null;
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method.toUpperCase();
   const cookieHeader = request.headers.get("cookie") || "";
@@ -82,7 +85,6 @@ export function proxy(request: NextRequest) {
   // ── 3. Build response + ensure CSRF cookie ──
   const response = NextResponse.next();
 
-  // If no CSRF token yet, issue one
   const existingCsrf = readCookie(cookieHeader, CSRF_COOKIE_NAME);
   if (!existingCsrf) {
     response.cookies.set(
@@ -102,7 +104,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip static files, images, favicon, and Next.js internals
     "/((?!_next/static|_next/image|favicon.ico|public|images|fonts).*)",
   ],
 };
