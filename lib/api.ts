@@ -1,5 +1,6 @@
 // ============================================================
 // Browser-side fetch wrapper — sends CSRF automatically
+// Supports JSON and multipart/form-data
 // ============================================================
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "./constants";
 
@@ -24,6 +25,8 @@ interface ApiOptions {
   body?: unknown;
   signal?: AbortSignal;
   cache?: RequestCache;
+  /** Set to true when body is a FormData (file upload) — skips JSON Content-Type */
+  formData?: boolean;
 }
 
 export async function api<T = any>(
@@ -35,8 +38,13 @@ export async function api<T = any>(
     Accept: "application/json",
   };
 
-  if (opts.body !== undefined) {
+  let body: BodyInit | undefined;
+
+  if (opts.formData) {
+    body = opts.body as FormData;
+  } else if (opts.body !== undefined) {
     headers["Content-Type"] = "application/json";
+    body = JSON.stringify(opts.body);
   }
 
   if (method !== "GET") {
@@ -48,7 +56,7 @@ export async function api<T = any>(
     method,
     headers,
     credentials: "same-origin",
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body,
     signal: opts.signal,
     cache: opts.cache,
   });

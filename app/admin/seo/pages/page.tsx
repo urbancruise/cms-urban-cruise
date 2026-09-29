@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -98,7 +99,6 @@ function isVehiclePageType(value: string): boolean {
   return value.startsWith("vehicle:");
 }
 
-// Open Graph type options
 const OG_TYPE_OPTIONS = [
   { value: "website", label: "Website" },
   { value: "article", label: "Article" },
@@ -108,7 +108,6 @@ const OG_TYPE_OPTIONS = [
   { value: "book", label: "Book" },
 ];
 
-// Twitter card type options
 const TWITTER_CARD_OPTIONS = [
   { value: "summary", label: "Summary" },
   { value: "summary_large_image", label: "Summary Large Image" },
@@ -193,8 +192,6 @@ function parseSchemaFromEditor(text: string): any[] | null {
   return parsed.length > 0 ? parsed : null;
 }
 
-// Small helper: score → color tokens, reused by the table pill and the
-// progress bar in the modal so the language stays consistent everywhere.
 function scoreTone(score: number): {
   text: string;
   bg: string;
@@ -270,10 +267,8 @@ export default function SeoPagesPage() {
   const handleDelete = async (page: SeoPage) => {
     if (!confirm(`Delete SEO entry for "${page.page_path}"?`)) return;
     try {
-      const res = await fetch(`/api/admin/seo/pages/${page.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete");
+      // ✅ CSRF-aware
+      await api(`/api/admin/seo/pages/${page.id}`, { method: "DELETE" });
       await mutate();
       showToast("success", "SEO entry deleted");
     } catch (e: any) {
@@ -648,7 +643,7 @@ export default function SeoPagesPage() {
 }
 
 // ============================================================
-// Preview widgets — grounded in what the fields actually control
+// Preview widgets
 // ============================================================
 function GoogleSerpPreview({
   favicon,
@@ -764,18 +759,15 @@ function SeoPageModal({
     robots_meta: page?.robots_meta || "index, follow",
     is_indexable: page?.is_indexable ?? true,
 
-    // Open Graph
     og_title: page?.og_title || "",
     og_description: page?.og_description || "",
     og_image: page?.og_image || "",
     og_url: page?.og_url || "",
     og_type: page?.og_type || "website",
 
-    // Feature image
     feature_image: page?.feature_image || "",
     feature_image_public_id: page?.feature_image_public_id || "",
 
-    // Twitter
     twitter_card: page?.twitter_card || "summary_large_image",
     twitter_domain: page?.twitter_domain || "",
     twitter_url: page?.twitter_url || "",
@@ -783,7 +775,6 @@ function SeoPageModal({
     twitter_title: page?.twitter_title || "",
     twitter_description: page?.twitter_description || "",
 
-    // Schema
     schema_text: formatSchemaForEditor(page?.schema_json),
   });
 
@@ -855,18 +846,15 @@ function SeoPageModal({
         robots_meta: formData.robots_meta || "index, follow",
         is_indexable: formData.is_indexable,
 
-        // OG
         og_title: formData.og_title || null,
         og_description: formData.og_description || null,
         og_image: formData.og_image || null,
         og_url: formData.og_url || null,
         og_type: formData.og_type || "website",
 
-        // Feature image
         feature_image: formData.feature_image || null,
         feature_image_public_id: formData.feature_image_public_id || null,
 
-        // Twitter
         twitter_card: formData.twitter_card || null,
         twitter_domain: formData.twitter_domain || null,
         twitter_url: formData.twitter_url || null,
@@ -874,7 +862,6 @@ function SeoPageModal({
         twitter_title: formData.twitter_title || null,
         twitter_description: formData.twitter_description || null,
 
-        // Schema
         schema_json: parsedSchema,
       };
 
@@ -883,14 +870,9 @@ function SeoPageModal({
         : "/api/admin/seo/pages";
       const method = isEdit ? "PUT" : "POST";
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // ✅ CSRF-aware
+      await api(url, { method, body: payload });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save");
       onSaved();
     } catch (e: any) {
       setError(e.message);
@@ -912,8 +894,6 @@ function SeoPageModal({
 
   const cityName = cities.find((c) => String(c.id) === formData.city_id)?.name;
 
-  // Fields that still need attention, surfaced as a small tab badge so
-  // issues are visible without opening every section.
   const metaIssues =
     (formData.meta_title ? 0 : 1) + (formData.meta_description ? 0 : 1);
 
@@ -978,7 +958,7 @@ function SeoPageModal({
             </div>
           )}
 
-          {/* ── Tab: Page Details ── */}
+          {/* Tab: Page Details */}
           {activeTab === "details" && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1167,7 +1147,7 @@ function SeoPageModal({
             </div>
           )}
 
-          {/* ── Tab: Search & Meta ── */}
+          {/* Tab: Search & Meta */}
           {activeTab === "meta" && (
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-3 space-y-5">
@@ -1286,7 +1266,7 @@ function SeoPageModal({
             </div>
           )}
 
-          {/* ── Tab: Social Cards ── */}
+          {/* Tab: Social Cards */}
           {activeTab === "social" && (
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-3 space-y-6">
@@ -1478,7 +1458,7 @@ function SeoPageModal({
             </div>
           )}
 
-          {/* ── Tab: Schema ── */}
+          {/* Tab: Schema */}
           {activeTab === "schema" && (
             <div>
               <div className="mb-3">

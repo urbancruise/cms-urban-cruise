@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { MdOutlineCloudUpload, MdOutlineDelete, MdOutlineAdd } from "react-icons/md";
+import { api } from "@/lib/api";
 
 const MAX_KB = 300;
 const MAX_BYTES = MAX_KB * 1024;
@@ -74,16 +75,15 @@ export default function ImageList({
           formData.append("file", file);
           formData.append("scope", scope);
 
-          const res = await fetch("/api/upload/website-image", {
-            method: "POST",
-            body: formData,
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(data.error || "Upload failed");
-          }
+          // ✅ CSRF-aware + FormData mode
+          const data = await api<{ url: string; publicId: string }>(
+            "/api/upload/website-image",
+            {
+              method: "POST",
+              body: formData,
+              formData: true,
+            }
+          );
 
           added.push({
             url: data.url,
@@ -114,11 +114,12 @@ export default function ImageList({
       if (target.publicId) params.set("publicId", target.publicId);
       else params.set("url", target.url);
 
-      await fetch(`/api/upload/website-image?${params.toString()}`, {
+      // ✅ CSRF-aware
+      await api(`/api/upload/website-image?${params.toString()}`, {
         method: "DELETE",
       });
     } catch {
-      // ignore
+      // ignore — still remove from UI
     }
 
     const next = items.filter((_, i) => i !== index);
@@ -152,7 +153,7 @@ export default function ImageList({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
           {items.map((item, i) => (
             <div
-              key={i}
+              key={`${item.publicId}-${i}`}
               className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
             >
               <div className="relative w-full" style={{ aspectRatio: aspect }}>

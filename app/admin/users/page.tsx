@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import { TableSkeleton, ModalFormSkeleton } from "@/app/components/UI/PageSkeletons";
 import {
   MdOutlinePersonAdd,
@@ -48,7 +49,7 @@ interface User {
   username: string;
   email: string;
   full_name: string;
-  avatar_url: string | null; // ✅ ADD
+  avatar_url: string | null;
   role: string;
   role_id: number | null;
   role_name?: string | null;
@@ -79,7 +80,7 @@ interface FormData {
 const PAGE_SIZE = 10;
 
 // ============================================
-// UserForm
+// UserForm Component
 // ============================================
 const UserForm = ({
   onSubmit,
@@ -118,17 +119,14 @@ const UserForm = ({
     if (formData.role_ids.length === 0) return [];
 
     const selectedRoles = roles.filter((r) => formData.role_ids.includes(r.id));
-
     const set = new Set<string>();
 
     selectedRoles.forEach((role) => {
       const perms = role.permissions || [];
-
       if (role.slug === "admin" || perms.includes("all")) {
         collectAllKeys(WEBSITE_PERMISSION_TREE).forEach((k) => set.add(k));
         return;
       }
-
       perms.forEach((p) => {
         if (p.startsWith("urbancruise") || p.startsWith("urbancruisewebsite")) {
           set.add(p);
@@ -147,7 +145,7 @@ const UserForm = ({
         </div>
       )}
 
-      {/* ✅ AVATAR UPLOAD */}
+      {/* AVATAR UPLOAD */}
       <div className="flex flex-col items-center pb-4 border-b border-slate-100">
         <AvatarUpload
           value={formData.avatar_url}
@@ -439,9 +437,7 @@ export default function UsersManagementPage() {
     setPage(1);
   }, [debouncedSearch, selectedRole, selectedStatus]);
 
-  // ============================================
   // Users — SWR
-  // ============================================
   const usersKey = useMemo(() => {
     const p = new URLSearchParams();
     p.set("limit", String(PAGE_SIZE));
@@ -464,9 +460,7 @@ export default function UsersManagementPage() {
   const total = Number(usersData?.total) || 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // ============================================
   // Roles + Cities
-  // ============================================
   const { data: rolesData } = useSWR<{ roles: Role[] }>("/api/admin/roles", fetcher);
   const roles = (rolesData?.roles || []).filter((r) => r.is_active);
 
@@ -477,7 +471,7 @@ export default function UsersManagementPage() {
   const cities = citiesData?.cities || [];
 
   // ============================================
-  // Handlers
+  // Handlers — All mutations use CSRF-aware api()
   // ============================================
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -491,31 +485,20 @@ export default function UsersManagementPage() {
         full_name: formData.full_name,
         avatar_url: formData.avatar_url,
         role_ids: formData.role_ids,
-        is_active: Boolean(formData.is_active), // ✅
+        is_active: Boolean(formData.is_active),
         city_ids: formData.city_ids,
         city_permissions: formData.city_permissions,
       };
 
-      console.log("POST payload:", payload);
+      await api("/api/admin/users", { method: "POST", body: payload });
 
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      console.log("POST response:", data);
-      if (!res.ok) {
-        setFormErrors({ general: data.error || "Failed to create user" });
-        return;
-      }
       await mutateUsers();
       resetForm();
       setIsCreateModalOpen(false);
       alert("User created successfully!");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setFormErrors({ general: "Failed to create user. Please try again." });
+      setFormErrors({ general: error.message || "Failed to create user." });
     } finally {
       setFormLoading(false);
     }
@@ -534,35 +517,24 @@ export default function UsersManagementPage() {
         full_name: formData.full_name,
         avatar_url: formData.avatar_url,
         role_ids: formData.role_ids,
-        is_active: Boolean(formData.is_active), // ✅ Boolean में convert करें
+        is_active: Boolean(formData.is_active),
         city_ids: formData.city_ids,
         city_permissions: formData.city_permissions,
       };
       if (formData.password) payload.password = formData.password;
 
-      // ✅ Debug log — browser console में देखें
-      console.log("PUT payload:", payload);
-
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+      await api(`/api/admin/users/${selectedUser.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payload,
       });
 
-      const data = await res.json();
-      console.log("PUT response:", data); // ✅ Debug log
-
-      if (!res.ok) {
-        setFormErrors({ general: data.error || "Failed to update user" });
-        return;
-      }
       await mutateUsers();
       resetForm();
       setIsEditModalOpen(false);
       alert("User updated successfully!");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setFormErrors({ general: "Failed to update user. Please try again." });
+      setFormErrors({ general: error.message || "Failed to update user." });
     } finally {
       setFormLoading(false);
     }
@@ -576,13 +548,7 @@ export default function UsersManagementPage() {
     if (!confirm(`Delete user "${user.username}"? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete user");
-      }
+      await api(`/api/admin/users/${user.id}`, { method: "DELETE" });
       await mutateUsers();
       alert("User deleted successfully!");
     } catch (error: any) {
@@ -601,7 +567,7 @@ export default function UsersManagementPage() {
       avatar_url: user.avatar_url || null,
       avatar_public_id: null,
       role_ids: user.role_ids || (user.role_id ? [user.role_id] : []),
-      is_active: Boolean(user.is_active), // ✅ number → boolean
+      is_active: Boolean(user.is_active),
       city_ids: user.city_ids || [],
       city_permissions: user.city_permissions || [],
     });
@@ -620,8 +586,8 @@ export default function UsersManagementPage() {
       email: "",
       password: "",
       full_name: "",
-      avatar_url: null, // ✅
-      avatar_public_id: null, // ✅
+      avatar_url: null,
+      avatar_public_id: null,
       role_ids: [],
       is_active: true,
       city_ids: [],
@@ -746,7 +712,6 @@ export default function UsersManagementPage() {
               <tbody className="divide-y divide-slate-100">
                 {users.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                    {/* ✅ User cell with avatar */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         {user.avatar_url ? (
@@ -982,7 +947,6 @@ export default function UsersManagementPage() {
             </div>
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
-                {/* ✅ Avatar in view modal */}
                 {selectedUser.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

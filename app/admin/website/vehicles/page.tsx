@@ -19,6 +19,7 @@ import { CardGridSkeleton } from "@/app/components/UI/PageSkeletons";
 import ImageUpload from "@/app/components/UI/ImageUpload";
 import { FormEditor, Field } from "@/app/components/UI/SectionEditors";
 import { useAuth } from "@/app/context/AuthContext";
+import { api } from "@/lib/api";
 
 // ============================================================
 // Vehicle slugs (with permissions)
@@ -268,57 +269,98 @@ export default function WebsiteVehiclesPage() {
   // ============================================================
   // SAVE
   // ============================================================
-  const handleSave = async (
-    vehicleSlug: string,
-    meta: any,
-    sections: any,
-    status: "draft" | "published" | "archived",
-    sortOrder: number
-  ) => {
-    if (!selectedCityId) throw new Error("No city selected");
+  // const handleSave = async (
+  //   vehicleSlug: string,
+  //   meta: any,
+  //   sections: any,
+  //   status: "draft" | "published" | "archived",
+  //   sortOrder: number
+  // ) => {
+  //   if (!selectedCityId) throw new Error("No city selected");
 
-    const res = await fetch("/api/admin/site-content/vehicles", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cityId: selectedCityId,
-        vehicleSlug,
-        meta,
-        sections,
-        status,
-        sortOrder,
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || "Failed to save");
-    await mutate();
-  };
+  //   const res = await fetch("/api/admin/site-content/vehicles", {
+  //     method: "PUT",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({
+  //       cityId: selectedCityId,
+  //       vehicleSlug,
+  //       meta,
+  //       sections,
+  //       status,
+  //       sortOrder,
+  //     }),
+  //   });
+  //   const body = await res.json().catch(() => ({}));
+  //   if (!res.ok) throw new Error(body.error || "Failed to save");
+  //   await mutate();
+  // };
+  const handleSave = async (
+  vehicleSlug: string,
+  meta: any,
+  sections: any,
+  status: "draft" | "published" | "archived",
+  sortOrder: number
+) => {
+  if (!selectedCityId) throw new Error("No city selected");
+
+  // ✅ CSRF-aware
+  await api("/api/admin/site-content/vehicles", {
+    method: "PUT",
+    body: {
+      cityId: selectedCityId,
+      vehicleSlug,
+      meta,
+      sections,
+      status,
+      sortOrder,
+    },
+  });
+  await mutate();
+};
 
   // ============================================================
   // DELETE
   // ============================================================
+  // const confirmDelete = async () => {
+  //   if (!selectedCityId || !deleteSlug) return;
+  //   setDeleting(true);
+  //   try {
+  //     const res = await fetch(
+  //       `/api/admin/site-content/vehicles?city_id=${selectedCityId}&slug=${deleteSlug}`,
+  //       { method: "DELETE" }
+  //     );
+  //     if (!res.ok) {
+  //       const body = await res.json().catch(() => ({}));
+  //       alert(body.error || "Failed to delete");
+  //       return;
+  //     }
+  //     await mutate();
+  //     if (editingSlug === deleteSlug) setEditingSlug(null);
+  //     setDeleteSlug(null);
+  //   } catch (err: any) {
+  //     alert(err.message || "Failed to delete");
+  //   } finally {
+  //     setDeleting(false);
+  //   }
+  // };
   const confirmDelete = async () => {
-    if (!selectedCityId || !deleteSlug) return;
-    setDeleting(true);
-    try {
-      const res = await fetch(
-        `/api/admin/site-content/vehicles?city_id=${selectedCityId}&slug=${deleteSlug}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        alert(body.error || "Failed to delete");
-        return;
-      }
-      await mutate();
-      if (editingSlug === deleteSlug) setEditingSlug(null);
-      setDeleteSlug(null);
-    } catch (err: any) {
-      alert(err.message || "Failed to delete");
-    } finally {
-      setDeleting(false);
-    }
-  };
+  if (!selectedCityId || !deleteSlug) return;
+  setDeleting(true);
+  try {
+    // ✅ CSRF-aware
+    await api(
+      `/api/admin/site-content/vehicles?city_id=${selectedCityId}&slug=${deleteSlug}`,
+      { method: "DELETE" }
+    );
+    await mutate();
+    if (editingSlug === deleteSlug) setEditingSlug(null);
+    setDeleteSlug(null);
+  } catch (err: any) {
+    alert(err.message || "Failed to delete");
+  } finally {
+    setDeleting(false);
+  }
+};
 
   // ============================================================
   // LOAD FULL VEHICLE

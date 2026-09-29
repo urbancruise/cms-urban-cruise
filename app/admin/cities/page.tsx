@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import { CardGridSkeleton, ModalFormSkeleton } from "@/app/components/UI/PageSkeletons";
 import {
   MdOutlineAdd,
@@ -48,7 +49,6 @@ export default function CitiesPage() {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // ✅ SWR — cached + dedup
   const citiesKey = useMemo(() => {
     const p = new URLSearchParams();
     if (debouncedSearch) p.set("search", debouncedSearch);
@@ -90,13 +90,10 @@ export default function CitiesPage() {
     try {
       const url = editing ? `/api/admin/cities/${editing.id}` : "/api/admin/cities";
       const method = editing ? "PUT" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save city");
+
+      // ✅ CSRF-aware
+      await api(url, { method, body: formData });
+
       await mutate();
       setIsModalOpen(false);
     } catch (e: any) {
@@ -109,11 +106,8 @@ export default function CitiesPage() {
   const handleDelete = async (city: City) => {
     if (!confirm(`Delete city "${city.name}"? This cannot be undone.`)) return;
     try {
-      const res = await fetch(`/api/admin/cities/${city.id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      // ✅ CSRF-aware
+      await api(`/api/admin/cities/${city.id}`, { method: "DELETE" });
       await mutate();
     } catch (e: any) {
       alert(e.message);
@@ -159,13 +153,13 @@ export default function CitiesPage() {
         />
       </div>
 
-      {/* ✅ Skeleton */}
+      {/* Skeleton */}
       {isLoading && !data ? (
         <CardGridSkeleton count={6} />
       ) : cities.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
           <p className="text-slate-400">
-            No cities found. Click "Add City" to create one.
+            No cities found. Click &quot;Add City&quot; to create one.
           </p>
         </div>
       ) : (

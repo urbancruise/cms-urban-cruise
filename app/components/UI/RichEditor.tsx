@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type EditorJS from "@editorjs/editorjs";
+import { api } from "@/lib/api";
 
 interface RichEditorProps {
   value: any;
@@ -134,24 +135,29 @@ export default function RichEditor({
             class: ImageTool as any,
             config: {
               uploader: {
+                // ✅ CSRF-aware + FormData mode
                 uploadByFile: async (file: File) => {
                   const formData = new FormData();
                   formData.append("file", file);
-                  const res = await fetch("/api/upload/editor-image", {
-                    method: "POST",
-                    body: formData,
-                  });
-                  const data = await res.json();
-                  if (!res.ok) {
+                  try {
+                    const data = await api<{ url: string }>(
+                      "/api/upload/editor-image",
+                      {
+                        method: "POST",
+                        body: formData,
+                        formData: true,
+                      }
+                    );
+                    return {
+                      success: 1,
+                      file: { url: data.url },
+                    };
+                  } catch (err: any) {
                     return {
                       success: 0,
-                      message: data.error || "Upload failed",
+                      message: err.message || "Upload failed",
                     };
                   }
-                  return {
-                    success: 1,
-                    file: { url: data.url },
-                  };
                 },
               },
             },

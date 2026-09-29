@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { MdOutlineCloudUpload, MdOutlineDelete, MdOutlineImage } from "react-icons/md";
+import { api } from "@/lib/api";
 
 const MAX_KB = 300;
 const MAX_BYTES = MAX_KB * 1024;
@@ -78,16 +79,15 @@ export default function ImageUpload({
         formData.append("scope", scope);
         if (publicId) formData.append("oldPublicId", publicId);
 
-        const res = await fetch("/api/upload/website-image", {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Upload failed");
-        }
+        // ✅ CSRF-aware + FormData mode
+        const data = await api<{ url: string; publicId: string }>(
+          "/api/upload/website-image",
+          {
+            method: "POST",
+            body: formData,
+            formData: true,
+          }
+        );
 
         onChange(data.url, data.publicId);
       } catch (err: any) {
@@ -112,12 +112,14 @@ export default function ImageUpload({
       if (publicId) params.set("publicId", publicId);
       else params.set("url", value);
 
-      await fetch(`/api/upload/website-image?${params.toString()}`, {
+      // ✅ CSRF-aware
+      await api(`/api/upload/website-image?${params.toString()}`, {
         method: "DELETE",
       });
       onChange(null, null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || "Failed to remove image");
     } finally {
       setUploading(false);
     }

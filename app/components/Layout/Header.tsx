@@ -18,6 +18,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { fetcher } from "@/lib/swr-config";
 import { NotificationSkeleton } from "@/app/components/UI/PageSkeletons";
+import { api } from "@/lib/api";
 
 interface HeaderProps {
   toggleSidebar?: () => void;
@@ -84,40 +85,73 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const displayInitials = getInitials(displayName);
   const avatarUrl = user?.avatar_url || null; // ✅
 
+  // const markAllRead = useCallback(async () => {
+  //   await fetch("/api/notifications", {
+  //     method: "PATCH",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ markAll: true }),
+  //   });
+  //   mutate();
+  // }, [mutate]);
   const markAllRead = useCallback(async () => {
-    await fetch("/api/notifications", {
+  // ✅ CSRF-aware
+  await api("/api/notifications", {
+    method: "PATCH",
+    body: { markAll: true },
+  });
+  mutate();
+}, [mutate]);
+
+  // const markOneRead = useCallback(
+  //   async (id: number) => {
+  //     await fetch("/api/notifications", {
+  //       method: "PATCH",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ id }),
+  //     });
+  //     mutate();
+  //   },
+  //   [mutate]
+  // );
+  const markOneRead = useCallback(
+  async (id: number) => {
+    // ✅ CSRF-aware
+    await api("/api/notifications", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markAll: true }),
+      body: { id },
     });
     mutate();
-  }, [mutate]);
+  },
+  [mutate]
+);
 
-  const markOneRead = useCallback(
-    async (id: number) => {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      mutate();
-    },
-    [mutate]
-  );
-
+  // const deleteOne = useCallback(
+  //   async (id: number) => {
+  //     await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
+  //     mutate();
+  //   },
+  //   [mutate]
+  // );
   const deleteOne = useCallback(
-    async (id: number) => {
-      await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
-      mutate();
-    },
-    [mutate]
-  );
-
-  const clearAll = useCallback(async () => {
-    if (!confirm("Clear all notifications?")) return;
-    await fetch("/api/notifications?all=true", { method: "DELETE" });
+  async (id: number) => {
+    // ✅ CSRF-aware
+    await api(`/api/notifications?id=${id}`, { method: "DELETE" });
     mutate();
-  }, [mutate]);
+  },
+  [mutate]
+);
+
+  // const clearAll = useCallback(async () => {
+  //   if (!confirm("Clear all notifications?")) return;
+  //   await fetch("/api/notifications?all=true", { method: "DELETE" });
+  //   mutate();
+  // }, [mutate]);
+  const clearAll = useCallback(async () => {
+  if (!confirm("Clear all notifications?")) return;
+  // ✅ CSRF-aware
+  await api("/api/notifications?all=true", { method: "DELETE" });
+  mutate();
+}, [mutate]);
 
   const timeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -57,7 +58,7 @@ interface PermissionGroup {
 }
 
 // ============================================================
-// ALL PERMISSIONS — nested tree matching Sidebar structure
+// PERMISSION TREE (same as your existing)
 // ============================================================
 const PERMISSION_TREE: PermissionGroup[] = [
   {
@@ -456,7 +457,7 @@ export default function RolesPage() {
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/roles");
+      const res = await fetch("/api/admin/roles"); // GET — no CSRF needed
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load roles");
       setRoles(data.roles || []);
@@ -579,16 +580,13 @@ export default function RolesPage() {
 
       const url = editingRole ? `/api/admin/roles/${editingRole.id}` : "/api/admin/roles";
       const method = editingRole ? "PUT" : "POST";
-      const res = await fetch(url, {
+
+      // ✅ CSRF-aware
+      await api(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          permissions: finalPermissions,
-        }),
+        body: { ...formData, permissions: finalPermissions },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save role");
+
       await fetchRoles();
       setIsModalOpen(false);
       pushToast(
@@ -612,11 +610,8 @@ export default function RolesPage() {
     setDeleteLoading(true);
     setDeleteError("");
     try {
-      const res = await fetch(`/api/admin/roles/${deletingRole.id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete role");
+      // ✅ CSRF-aware
+      await api(`/api/admin/roles/${deletingRole.id}`, { method: "DELETE" });
       await fetchRoles();
       pushToast("success", `Role "${deletingRole.name}" deleted`);
       setDeletingRole(null);

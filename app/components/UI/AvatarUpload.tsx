@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { MdOutlineCloudUpload, MdOutlineDelete, MdOutlineEdit } from "react-icons/md";
+import { api } from "@/lib/api";
 
 interface AvatarUploadProps {
   value?: string | null;
@@ -42,16 +43,15 @@ export default function AvatarUpload({
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("/api/upload/avatar", {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Upload failed");
-        }
+        // ✅ CSRF-aware + FormData mode
+        const data = await api<{ url: string; publicId: string }>(
+          "/api/upload/avatar",
+          {
+            method: "POST",
+            body: formData,
+            formData: true,
+          }
+        );
 
         onChange(data.url, data.publicId);
       } catch (err: any) {
@@ -69,7 +69,8 @@ export default function AvatarUpload({
 
     try {
       setUploading(true);
-      await fetch(`/api/upload/avatar?url=${encodeURIComponent(value)}`, {
+      // ✅ CSRF-aware
+      await api(`/api/upload/avatar?url=${encodeURIComponent(value)}`, {
         method: "DELETE",
       });
       onChange(null, null);

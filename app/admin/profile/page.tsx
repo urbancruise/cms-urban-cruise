@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { ProfileSkeleton } from "@/app/components/UI/PageSkeletons";
+import { api } from "@/lib/api";
 import {
   MdOutlinePerson,
   MdOutlineEmail,
@@ -27,7 +28,6 @@ export default function ProfilePage() {
     text: string;
   } | null>(null);
 
-  // Sync form data when user loads
   useEffect(() => {
     if (user) {
       setFormData({
@@ -38,7 +38,6 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  // ✅ Skeleton while user loads
   if (!user) {
     return <ProfileSkeleton />;
   }
@@ -56,17 +55,11 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/auth/profile", {
+      // ✅ CSRF-aware
+      await api("/api/auth/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: formData,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to update profile");
-      }
 
       await refreshUser();
       setMessage({ type: "success", text: "Profile updated successfully!" });
