@@ -19,13 +19,25 @@ interface ImageItemShape {
   publicId: string;
 }
 
+// interface GroupSizeVehicle {
+//   name: string;
+//   tagline: string;
+//   seats: string;
+//   price: string;
+//   description: string;
+//   images: ImageItemShape[];
+// }
 interface GroupSizeVehicle {
+  type?: string;
   name: string;
   tagline: string;
   seats: string;
   price: string;
   description: string;
-  images: ImageItemShape[];
+  mainImage: string;
+  mainImagePublicId?: string;
+  gallery: ImageItemShape[];
+  features: Array<{ label: string; color: string }>;
 }
 
 interface OccasionCard {
@@ -501,7 +513,7 @@ export function FormEditor({
     );
   }
 
-  // ============================================================
+    // ============================================================
   // VEHICLE FOR EVERY BUDGET
   // ============================================================
   if (sectionKey === "vehiclebudget") {
@@ -513,19 +525,32 @@ export function FormEditor({
             value={value.eyebrow || ""}
             onChange={(e) => set("eyebrow", e.target.value)}
             className={inputCls}
-            placeholder="Vehicle Options"
+            placeholder="We Offer Best Services"
           />
         </Field>
-        <Field label="Title">
-          <input
-            type="text"
-            value={value.title || ""}
-            onChange={(e) => set("title", e.target.value)}
-            className={inputCls}
-            placeholder="A VEHICLE FOR EVERY BUDGET"
-          />
-        </Field>
-        <Field label="Subtitle">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Title">
+            <input
+              type="text"
+              value={value.title || ""}
+              onChange={(e) => set("title", e.target.value)}
+              className={inputCls}
+              placeholder="A VEHICLE FOR"
+            />
+          </Field>
+          <Field label="Title Highlight (green)">
+            <input
+              type="text"
+              value={value.titleHighlight || ""}
+              onChange={(e) => set("titleHighlight", e.target.value)}
+              className={inputCls}
+              placeholder="EVERY BUDGET"
+            />
+          </Field>
+        </div>
+
+        <Field label="Subtitle (italic green)">
           <input
             type="text"
             value={value.subtitle || ""}
@@ -534,44 +559,83 @@ export function FormEditor({
             placeholder="Vehicles For Every Journey, Every Budget"
           />
         </Field>
+
         <Field label="Description">
           <textarea
             rows={3}
             value={value.description || ""}
             onChange={(e) => set("description", e.target.value)}
             className={inputCls}
-            placeholder="Short paragraph..."
+            placeholder="From economical rides to premium and luxury vehicles..."
           />
         </Field>
 
+        <Field label="Illustration (right side image)">
+          <ImageUpload
+            value={value.illustration || null}
+            publicId={value.illustrationPublicId || null}
+            onChange={(url, publicId) =>
+              onChange({
+                ...value,
+                illustration: url || "",
+                illustrationPublicId: publicId || "",
+              })
+            }
+            scope="general"
+            aspect="16 / 9"
+            hint="Decorative vehicle illustration · Max 300 KB"
+          />
+        </Field>
+
+        {/* ----------------------------------------
+            CATEGORIES
+        ---------------------------------------- */}
         <RichList<{
           title: string;
           description: string;
-          image: string;
-          imagePublicId: string;
+          icon: string;
+          color: "green" | "orange";
         }>
           label="Categories"
-          items={value.items || []}
-          onChange={(items) => set("items", items)}
+          items={value.categories || []}
+          onChange={(items) => set("categories", items)}
           emptyItem={{
             title: "",
             description: "",
-            image: "",
-            imagePublicId: "",
+            icon: "",
+            color: "green",
           }}
           renderItem={(item, update) => (
-            <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-              <Field label="Title">
-                <input
-                  type="text"
-                  value={item.title || ""}
-                  onChange={(e) =>
-                    update({ ...item, title: e.target.value })
-                  }
-                  className={inputCls}
-                  placeholder="ECONOMY"
-                />
-              </Field>
+            <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Title">
+                  <input
+                    type="text"
+                    value={item.title || ""}
+                    onChange={(e) =>
+                      update({ ...item, title: e.target.value })
+                    }
+                    className={inputCls}
+                    placeholder="ECONOMY"
+                  />
+                </Field>
+                <Field label="Badge Color">
+                  <select
+                    value={item.color || "green"}
+                    onChange={(e) =>
+                      update({
+                        ...item,
+                        color: e.target.value as "green" | "orange",
+                      })
+                    }
+                    className={inputCls}
+                  >
+                    <option value="green">Green</option>
+                    <option value="orange">Orange</option>
+                  </select>
+                </Field>
+              </div>
+
               <Field label="Description">
                 <textarea
                   rows={2}
@@ -580,23 +644,19 @@ export function FormEditor({
                     update({ ...item, description: e.target.value })
                   }
                   className={inputCls}
-                  placeholder="Vehicles with basic amenities..."
+                  placeholder="Vehicles with basic Amenities for Budget Travellers"
                 />
               </Field>
-              <Field label="Category Image">
+
+              <Field label="Category Icon">
                 <ImageUpload
-                  value={item.image || null}
-                  publicId={item.imagePublicId || null}
-                  onChange={(url, publicId) =>
-                    update({
-                      ...item,
-                      image: url || "",
-                      imagePublicId: publicId || "",
-                    })
-                  }
+                  value={item.icon || null}
+                  publicId={null}
+                  onChange={(url) => update({ ...item, icon: url || "" })}
                   scope="general"
-                  aspect="4 / 3"
-                  hint="JPG, PNG, WEBP · Max 300 KB"
+                  aspect="1 / 1"
+                  variant="compact"
+                  hint="Square icon · Max 300 KB"
                 />
               </Field>
             </div>
@@ -606,7 +666,136 @@ export function FormEditor({
     );
   }
 
-  // ============================================================
+  // // ============================================================
+  // // VEHICLE FOR EVERY GROUP SIZE
+  // // ============================================================
+  // if (sectionKey === "groupsize") {
+  //   return (
+  //     <div className="space-y-5">
+  //       <Field label="Eyebrow">
+  //         <input
+  //           type="text"
+  //           value={value.eyebrow || ""}
+  //           onChange={(e) => set("eyebrow", e.target.value)}
+  //           className={inputCls}
+  //           placeholder="Fleet Options"
+  //         />
+  //       </Field>
+  //       <Field label="Title">
+  //         <input
+  //           type="text"
+  //           value={value.title || ""}
+  //           onChange={(e) => set("title", e.target.value)}
+  //           className={inputCls}
+  //           placeholder="VEHICLES FOR EVERY GROUP SIZE"
+  //         />
+  //       </Field>
+  //       <Field label="Subtitle">
+  //         <input
+  //           type="text"
+  //           value={value.subtitle || ""}
+  //           onChange={(e) => set("subtitle", e.target.value)}
+  //           className={inputCls}
+  //           placeholder="The Right Vehicle For Every Group Size"
+  //         />
+  //       </Field>
+  //       <Field label="Description">
+  //         <textarea
+  //           rows={3}
+  //           value={value.description || ""}
+  //           onChange={(e) => set("description", e.target.value)}
+  //           className={inputCls}
+  //           placeholder="Intro copy for the section"
+  //         />
+  //       </Field>
+
+  //       <RichList<GroupSizeVehicle>
+  //         label="Vehicles"
+  //         items={value.vehicles || []}
+  //         onChange={(items) => set("vehicles", items)}
+  //         emptyItem={{
+  //           name: "",
+  //           tagline: "",
+  //           seats: "",
+  //           price: "",
+  //           description: "",
+  //           images: [],
+  //         }}
+  //         renderItem={(item, update) => (
+  //           <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+  //             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  //               <Field label="Name">
+  //                 <input
+  //                   type="text"
+  //                   value={item.name || ""}
+  //                   onChange={(e) =>
+  //                     update({ ...item, name: e.target.value })
+  //                   }
+  //                   className={inputCls}
+  //                   placeholder="Maruti Suzuki Dzire"
+  //                 />
+  //               </Field>
+  //               <Field label="Tagline">
+  //                 <input
+  //                   type="text"
+  //                   value={item.tagline || ""}
+  //                   onChange={(e) =>
+  //                     update({ ...item, tagline: e.target.value })
+  //                   }
+  //                   className={inputCls}
+  //                   placeholder="Perfect Sedan for City & Outstation"
+  //                 />
+  //               </Field>
+  //               <Field label="Seats">
+  //                 <input
+  //                   type="text"
+  //                   value={item.seats || ""}
+  //                   onChange={(e) =>
+  //                     update({ ...item, seats: e.target.value })
+  //                   }
+  //                   className={inputCls}
+  //                   placeholder="4 Seater"
+  //                 />
+  //               </Field>
+  //               <Field label="Price (₹/day)">
+  //                 <input
+  //                   type="text"
+  //                   value={item.price || ""}
+  //                   onChange={(e) =>
+  //                     update({ ...item, price: e.target.value })
+  //                   }
+  //                   className={inputCls}
+  //                   placeholder="1999"
+  //                 />
+  //               </Field>
+  //             </div>
+  //             <Field label="Description">
+  //               <textarea
+  //                 rows={3}
+  //                 value={item.description || ""}
+  //                 onChange={(e) =>
+  //                   update({ ...item, description: e.target.value })
+  //                 }
+  //                 className={inputCls}
+  //                 placeholder="Detailed description..."
+  //               />
+  //             </Field>
+  //             <Field label="Vehicle Images">
+  //               <ImageList
+  //                 items={item.images || []}
+  //                 onChange={(images) => update({ ...item, images })}
+  //                 scope="vehicle"
+  //                 aspect="4 / 3"
+  //                 maxImages={8}
+  //               />
+  //             </Field>
+  //           </div>
+  //         )}
+  //       />
+  //     </div>
+  //   );
+  // }
+    // ============================================================
   // VEHICLE FOR EVERY GROUP SIZE
   // ============================================================
   if (sectionKey === "groupsize") {
@@ -654,17 +843,38 @@ export function FormEditor({
           items={value.vehicles || []}
           onChange={(items) => set("vehicles", items)}
           emptyItem={{
+            type: "",
             name: "",
             tagline: "",
             seats: "",
             price: "",
             description: "",
-            images: [],
+            mainImage: "",
+            gallery: [],
+            features: [
+              { label: "Seats", color: "#F7941E" },
+              { label: "AC", color: "#2F80ED" },
+              { label: "GPS", color: "#F26B5B" },
+              { label: "Manual", color: "#03C35E" },
+              { label: "Luggage", color: "#1E293B" },
+            ],
           }}
           renderItem={(item, update) => (
             <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              {/* Row: type + name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Name">
+                <Field label="Type (internal)">
+                  <input
+                    type="text"
+                    value={item.type || ""}
+                    onChange={(e) =>
+                      update({ ...item, type: e.target.value })
+                    }
+                    className={inputCls}
+                    placeholder="Sedan / SUV / Tempo Traveller / Luxury"
+                  />
+                </Field>
+                <Field label="Vehicle Name">
                   <input
                     type="text"
                     value={item.name || ""}
@@ -675,6 +885,10 @@ export function FormEditor({
                     placeholder="Maruti Suzuki Dzire"
                   />
                 </Field>
+              </div>
+
+              {/* Row: tagline + seats + price */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Field label="Tagline">
                   <input
                     type="text"
@@ -686,7 +900,7 @@ export function FormEditor({
                     placeholder="Perfect Sedan for City & Outstation"
                   />
                 </Field>
-                <Field label="Seats">
+                <Field label="Seats (chip)">
                   <input
                     type="text"
                     value={item.seats || ""}
@@ -694,7 +908,7 @@ export function FormEditor({
                       update({ ...item, seats: e.target.value })
                     }
                     className={inputCls}
-                    placeholder="4 Seater"
+                    placeholder="4 Seats"
                   />
                 </Field>
                 <Field label="Price (₹/day)">
@@ -709,6 +923,7 @@ export function FormEditor({
                   />
                 </Field>
               </div>
+
               <Field label="Description">
                 <textarea
                   rows={3}
@@ -720,13 +935,79 @@ export function FormEditor({
                   placeholder="Detailed description..."
                 />
               </Field>
-              <Field label="Vehicle Images">
+
+              {/* Main Image (single hero image) */}
+              <Field label="Main Image">
+                <ImageUpload
+                  value={item.mainImage || null}
+                  publicId={item.mainImagePublicId || null}
+                  onChange={(url, publicId) =>
+                    update({
+                      ...item,
+                      mainImage: url || "",
+                      mainImagePublicId: publicId || "",
+                    })
+                  }
+                  scope="vehicle"
+                  aspect="16 / 10"
+                  hint="JPG, PNG, WEBP · Max 300 KB"
+                />
+              </Field>
+
+              {/* Gallery (multiple stacked images) */}
+              <Field label="Gallery Images">
                 <ImageList
-                  items={item.images || []}
-                  onChange={(images) => update({ ...item, images })}
+                  items={item.gallery || []}
+                  onChange={(gallery) => update({ ...item, gallery })}
                   scope="vehicle"
                   aspect="4 / 3"
                   maxImages={8}
+                />
+              </Field>
+
+              {/* Features — 5 chips */}
+              <Field label="Features (up to 5 chips)">
+                <RichList<{
+                  label: string;
+                  color: string;
+                }>
+                  label=""
+                  items={item.features || []}
+                  onChange={(features) =>
+                    update({ ...item, features })
+                  }
+                  emptyItem={{ label: "", color: "#03C35E" }}
+                  renderItem={(feat, updateFeat) => (
+                    <div className="grid grid-cols-[1fr_140px] gap-2 p-3 rounded-lg border border-slate-200 bg-white">
+                      <Field label="Label">
+                        <input
+                          type="text"
+                          value={feat.label || ""}
+                          onChange={(e) =>
+                            updateFeat({
+                              ...feat,
+                              label: e.target.value,
+                            })
+                          }
+                          className={inputCls}
+                          placeholder="4 Seats"
+                        />
+                      </Field>
+                      <Field label="Color">
+                        <input
+                          type="color"
+                          value={feat.color || "#03C35E"}
+                          onChange={(e) =>
+                            updateFeat({
+                              ...feat,
+                              color: e.target.value,
+                            })
+                          }
+                          className="w-full h-9 rounded border border-slate-200 cursor-pointer"
+                        />
+                      </Field>
+                    </div>
+                  )}
                 />
               </Field>
             </div>
