@@ -1,9 +1,11 @@
+// cms-urban-cruise/app/api/admin/cities/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
 import { parseBody, CityCreateSchema } from "@/lib/validators";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 // ============================================
 // Auth helpers
@@ -12,7 +14,10 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+  return jwt.verify(
+    token,
+    process.env.JWT_SECRET || "fallback_secret"
+  ) as {
     userId: number;
     role: string;
     roles?: string[];
@@ -82,6 +87,11 @@ async function requireAdmin(request: NextRequest) {
 }
 
 // ============================================
+// Normalize empty strings → null
+// ============================================
+const norm = (v: any) => (v === "" || v === undefined ? null : v);
+
+// ============================================
 // GET all cities
 // ============================================
 export async function GET(request: NextRequest) {
@@ -95,7 +105,8 @@ export async function GET(request: NextRequest) {
     const activeOnly = searchParams.get("active") === "true";
     const search = searchParams.get("search") || "";
 
-    let query = `SELECT id, name, state, country, code, description, is_active, created_at
+    let query = `SELECT id, name, state, country, code, description,
+                        image_url, image_public_id, is_active, created_at
                  FROM cities WHERE 1=1`;
     const params: any[] = [];
 
@@ -120,15 +131,21 @@ export async function GET(request: NextRequest) {
     );
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.status }
+      );
     }
     console.error("Get cities error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
 // ============================================
-// POST create city  (admin only)
+// POST create city
 // ============================================
 export async function POST(request: NextRequest) {
   try {
@@ -136,19 +153,30 @@ export async function POST(request: NextRequest) {
     if (!rl.ok) return rl.response!;
 
     const decoded = await requireAdmin(request);
-
     const body = await request.json();
+
+    console.log("[POST city] body:", JSON.stringify(body, null, 2));
 
     const parsed = parseBody(CityCreateSchema, body);
     if (!parsed.ok) {
+      console.error("[POST city] Validation failed:", parsed.error);
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    const { name, state, country, code, description, is_active } = parsed.data;
+    const {
+      name,
+      state,
+      country,
+      code,
+      description,
+      image_url,
+      image_public_id,
+      is_active,
+    } = parsed.data;
 
     const [existing] = await pool.query(
       "SELECT id FROM cities WHERE name = ? AND (state = ? OR (state IS NULL AND ? IS NULL))",
-      [name, state || null, state || null]
+      [name, norm(state), norm(state)]
     );
     if ((existing as any[]).length > 0) {
       return NextResponse.json(
@@ -158,22 +186,32 @@ export async function POST(request: NextRequest) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO cities (name, state, country, code, description, is_active)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO cities
+         (name, state, country, code, description, image_url, image_public_id, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
-        state || null,
-        country || "India",
-        code || null,
-        description || null,
+        norm(state),
+        norm(country) || "India",
+        norm(code),
+        norm(description),
+        norm(image_url),
+        norm(image_public_id),
         is_active !== false ? 1 : 0,
       ]
     );
 
     const insertResult = result as any;
-    const [newCity] = await pool.query("SELECT * FROM cities WHERE id = ?", [
-      insertResult.insertId,
-    ]);
+    const [newCity] = await pool.query(
+      "SELECT * FROM cities WHERE id = ?",
+      [insertResult.insertId]
+    );
+
+    // Revalidate public website
+    await revalidateWebsite({
+      tags: ["cities"],
+      paths: ["/", "/sitemap.xml"],
+    });
 
     await logActivity({
       actor: {
@@ -186,9 +224,10 @@ export async function POST(request: NextRequest) {
       entityName: name,
       changes: {
         name,
-        state: state || null,
-        country: country || "India",
-        code: code || null,
+        state: norm(state),
+        country: norm(country) || "India",
+        code: norm(code),
+        image_url: norm(image_url),
         is_active: is_active !== false,
       },
       request,
@@ -204,9 +243,15 @@ export async function POST(request: NextRequest) {
     );
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.status }
+      );
     }
     console.error("Create city error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

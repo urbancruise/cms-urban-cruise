@@ -1,4 +1,4 @@
-
+// cms-urban-cruise/app/api/public/home/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { requireApiKey, withCors } from "@/lib/public-auth";
@@ -8,22 +8,9 @@ export async function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-// ============================================================
-// Normalize a section key from the DB into the canonical form
-// expected by the public website.
-//
-// Accepts (case-insensitive, ignores dashes/underscores):
-//   vehiclebudget, vehicleBudget, vehicle-budget,
-//   vehicle_for_every_budget, vehicles-budget, vehicleBudgetSection
-//   → "vehiclebudget"
-// ============================================================
 function normalizeSectionKey(raw: string): string {
-  const clean = raw
-    .trim()
-    .toLowerCase()
-    .replace(/[-_\s]+/g, "");
+  const clean = raw.trim().toLowerCase().replace(/[-_\s]+/g, "");
 
-  // Map aliases to canonical keys
   const aliases: Record<string, string> = {
     hero: "hero",
     quickcall: "quickcall",
@@ -58,7 +45,7 @@ function normalizeSectionKey(raw: string): string {
 export async function GET(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60_000, max: 300 });
-    if (!rl.ok) return withCors(rl.response);
+    if (!rl.ok) return withCors(rl.response!);
 
     const auth = await requireApiKey(request);
     if (!auth.ok) {
@@ -79,7 +66,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find city
     const [cityRows] = (await pool.query(
       `SELECT id, name, state, country, code
        FROM cities
@@ -98,7 +84,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch published sections
     const [rows] = (await pool.query(
       `SELECT section_key, content, updated_at
        FROM site_home_content
@@ -117,8 +102,6 @@ export async function GET(request: NextRequest) {
           ? JSON.parse(row.content)
           : row.content;
 
-      // If two rows normalize to the same canonical key,
-      // prefer the most recently updated one.
       const existing = sections[canonicalKey];
       if (
         existing &&
@@ -136,7 +119,6 @@ export async function GET(request: NextRequest) {
       if (rowDate > latestUpdate) latestUpdate = rowDate;
     }
 
-    // Strip the internal __updated_at marker before returning
     for (const key of Object.keys(sections)) {
       delete sections[key].__updated_at;
     }

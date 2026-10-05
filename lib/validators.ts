@@ -1,26 +1,34 @@
+// cms-urban-cruise/lib/validators.ts
 import { z } from "zod";
 
 // ============================================================
-// Input schemas
+// User schemas
 // ============================================================
-
 export const UserCreateSchema = z.object({
   username: z
     .string()
     .min(3, "Username must be at least 3 characters")
     .max(50)
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, _, ., -"),
+    .regex(
+      /^[a-zA-Z0-9_.-]+$/,
+      "Username can only contain letters, numbers, _, ., -"
+    ),
 
   email: z.string().email("Invalid email address").max(100).toLowerCase(),
 
-  password: z.string().min(6, "Password must be at least 6 characters").max(100),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(100),
 
   full_name: z.string().max(100).optional().or(z.literal("")),
 
   avatar_url: z.string().url().max(500).optional().nullable(),
   avatar_public_id: z.string().max(255).optional().nullable(),
 
-  role_ids: z.array(z.number().int().positive()).min(1, "At least one role is required"),
+  role_ids: z
+    .array(z.number().int().positive())
+    .min(1, "At least one role is required"),
 
   is_active: z.boolean().optional(),
 
@@ -41,6 +49,9 @@ export const UserUpdateSchema = UserCreateSchema.partial().extend({
   password: z.string().min(6).max(100).optional(),
 });
 
+// ============================================================
+// Role schemas
+// ============================================================
 export const RoleCreateSchema = z.object({
   name: z.string().min(2).max(50),
   slug: z
@@ -58,17 +69,63 @@ export const RoleCreateSchema = z.object({
 
 export const RoleUpdateSchema = RoleCreateSchema.partial();
 
+// ============================================================
+// City schemas — FIXED for image fields + empty strings
+// ============================================================
 export const CityCreateSchema = z.object({
-  name: z.string().min(2).max(100),
-  state: z.string().max(100).optional().or(z.literal("")),
-  country: z.string().max(100).optional(),
-  code: z.string().max(20).optional().or(z.literal("")),
-  description: z.string().max(500).optional().or(z.literal("")),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+
+  state: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+
+  country: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+
+  code: z
+    .string()
+    .max(20)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+
+  description: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+
+  // Image fields — no .url() because Cloudinary URLs can have tracking params
+  image_url: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+
+  image_public_id: z
+    .string()
+    .max(255)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+
   is_active: z.boolean().optional(),
 });
 
 export const CityUpdateSchema = CityCreateSchema.partial();
 
+// ============================================================
+// Helper
+// ============================================================
 export function parseBody<T extends z.ZodTypeAny>(
   schema: T,
   body: any
@@ -78,7 +135,9 @@ export function parseBody<T extends z.ZodTypeAny>(
     const first = result.error.issues[0];
     return {
       ok: false,
-      error: first ? `${first.path.join(".")}: ${first.message}` : "Invalid input",
+      error: first
+        ? `${first.path.join(".")}: ${first.message}`
+        : "Invalid input",
     };
   }
   return { ok: true, data: result.data };

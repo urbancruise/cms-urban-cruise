@@ -1,9 +1,12 @@
+// cms-urban-cruise/app/api/admin/cities/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { rateLimit } from "@/lib/rate-limit";
 import { parseBody, CityUpdateSchema } from "@/lib/validators";
+import { revalidateWebsite } from "@/lib/revalidate";
+import { deleteImage } from "@/lib/cloudinary";
 
 // ============================================
 // Auth helpers
@@ -12,7 +15,10 @@ async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   if (!token) throw { status: 401, message: "Not authenticated" };
 
-  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
+  return jwt.verify(
+    token,
+    process.env.JWT_SECRET || "fallback_secret"
+  ) as {
     userId: number;
     role: string;
     roles?: string[];
@@ -82,6 +88,11 @@ async function requireAdmin(request: NextRequest) {
 }
 
 // ============================================
+// Normalize empty strings → null
+// ============================================
+const norm = (v: any) => (v === "" || v === undefined ? null : v);
+
+// ============================================
 // GET single city
 // ============================================
 export async function GET(
@@ -97,18 +108,25 @@ export async function GET(
     const { id } = await params;
     const cityId = parseInt(id, 10);
     if (isNaN(cityId)) {
-      return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid city ID" },
+        { status: 400 }
+      );
     }
 
     const [rows] = (await pool.query(
-      `SELECT id, name, state, country, code, description, is_active, created_at, updated_at
+      `SELECT id, name, state, country, code, description,
+              image_url, image_public_id, is_active, created_at, updated_at
        FROM cities WHERE id = ?`,
       [cityId]
     )) as any;
 
     const city = (rows as any[])[0];
     if (!city) {
-      return NextResponse.json({ error: "City not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "City not found" },
+        { status: 404 }
+      );
     }
 
     const [userCountRows] = (await pool.query(
@@ -132,15 +150,21 @@ export async function GET(
     );
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.status }
+      );
     }
     console.error("Get city error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
 // ============================================
-// PUT — update city  (admin only)
+// PUT update city
 // ============================================
 export async function PUT(
   request: NextRequest,
@@ -155,39 +179,63 @@ export async function PUT(
     const cityId = parseInt(id, 10);
 
     if (isNaN(cityId)) {
-      return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid city ID" },
+        { status: 400 }
+      );
     }
 
     let body: any;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
     }
+
+    console.log("[PUT city] body:", JSON.stringify(body, null, 2));
 
     const parsed = parseBody(CityUpdateSchema, body);
     if (!parsed.ok) {
+      console.error("[PUT city] Validation failed:", parsed.error);
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    const { name, state, country, code, description, is_active } = parsed.data;
+    const {
+      name,
+      state,
+      country,
+      code,
+      description,
+      image_url,
+      image_public_id,
+      is_active,
+    } = parsed.data;
 
     const [existingRows] = (await pool.query(
-      "SELECT name, state, country, code, description, is_active FROM cities WHERE id = ?",
+      `SELECT name, state, country, code, description,
+              image_url, image_public_id, is_active
+       FROM cities WHERE id = ?`,
       [cityId]
     )) as any;
     const existing = (existingRows as any[])[0];
     if (!existing) {
-      return NextResponse.json({ error: "City not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "City not found" },
+        { status: 404 }
+      );
     }
 
+    // Uniqueness check
     if (name || state !== undefined) {
       const newName = name || existing.name;
       const newState = state !== undefined ? state : existing.state;
       const [dupCheck] = (await pool.query(
         `SELECT id FROM cities
          WHERE name = ? AND (state = ? OR (state IS NULL AND ? IS NULL)) AND id != ?`,
-        [newName, newState || null, newState || null, cityId]
+        [newName, norm(newState), norm(newState), cityId]
       )) as any;
       if ((dupCheck as any[]).length > 0) {
         return NextResponse.json(
@@ -200,40 +248,75 @@ export async function PUT(
     const fields: string[] = [];
     const values: any[] = [];
 
-    if (name) {
+    if (name !== undefined) {
       fields.push("name = ?");
       values.push(name);
     }
     if (state !== undefined) {
       fields.push("state = ?");
-      values.push(state || null);
+      values.push(norm(state));
     }
-    if (country) {
+    if (country !== undefined) {
       fields.push("country = ?");
-      values.push(country);
+      values.push(norm(country) || "India");
     }
     if (code !== undefined) {
       fields.push("code = ?");
-      values.push(code || null);
+      values.push(norm(code));
     }
     if (description !== undefined) {
       fields.push("description = ?");
-      values.push(description || null);
+      values.push(norm(description));
     }
+
+    // Image handling
+    if (image_url !== undefined) {
+      fields.push("image_url = ?");
+      values.push(norm(image_url));
+
+      // Clean up old Cloudinary asset if replaced with a different one
+      if (
+        image_url &&
+        existing.image_public_id &&
+        existing.image_public_id !== image_public_id
+      ) {
+        deleteImage(existing.image_public_id).catch(() => {});
+      }
+    }
+    if (image_public_id !== undefined) {
+      fields.push("image_public_id = ?");
+      values.push(norm(image_public_id));
+    }
+
     if (is_active !== undefined) {
       fields.push("is_active = ?");
       values.push(is_active ? 1 : 0);
     }
 
     if (fields.length === 0) {
-      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 }
+      );
     }
 
     values.push(cityId);
-    await pool.query(`UPDATE cities SET ${fields.join(", ")} WHERE id = ?`, values);
+    await pool.query(
+      `UPDATE cities SET ${fields.join(", ")} WHERE id = ?`,
+      values
+    );
 
-    const [updated] = await pool.query("SELECT * FROM cities WHERE id = ?", [cityId]);
+    const [updated] = await pool.query(
+      "SELECT * FROM cities WHERE id = ?",
+      [cityId]
+    );
     const updatedCity = (updated as any[])[0];
+
+    // Revalidate public website
+    await revalidateWebsite({
+      tags: ["cities"],
+      paths: ["/", "/sitemap.xml"],
+    });
 
     try {
       await logActivity({
@@ -251,6 +334,7 @@ export async function PUT(
             state: existing.state,
             country: existing.country,
             code: existing.code,
+            image_url: existing.image_url,
             is_active: Boolean(existing.is_active),
           },
           after: {
@@ -258,7 +342,12 @@ export async function PUT(
             state: state ?? existing.state,
             country: country || existing.country,
             code: code ?? existing.code,
-            is_active: is_active !== undefined ? is_active : Boolean(existing.is_active),
+            image_url:
+              image_url !== undefined ? image_url : existing.image_url,
+            is_active:
+              is_active !== undefined
+                ? is_active
+                : Boolean(existing.is_active),
           },
         },
         request,
@@ -274,15 +363,21 @@ export async function PUT(
     });
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.status }
+      );
     }
     console.error("Update city error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
 // ============================================
-// DELETE — delete city  (admin only)
+// DELETE city
 // ============================================
 export async function DELETE(
   request: NextRequest,
@@ -297,13 +392,22 @@ export async function DELETE(
     const cityId = parseInt(id, 10);
 
     if (isNaN(cityId)) {
-      return NextResponse.json({ error: "Invalid city ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid city ID" },
+        { status: 400 }
+      );
     }
 
-    const [rows] = await pool.query("SELECT id, name FROM cities WHERE id = ?", [cityId]);
+    const [rows] = await pool.query(
+      "SELECT id, name, image_public_id FROM cities WHERE id = ?",
+      [cityId]
+    );
     const city = (rows as any[])[0];
     if (!city) {
-      return NextResponse.json({ error: "City not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "City not found" },
+        { status: 404 }
+      );
     }
 
     const [userRows] = (await pool.query(
@@ -320,7 +424,17 @@ export async function DELETE(
       );
     }
 
+    // Clean up Cloudinary image
+    if (city.image_public_id) {
+      deleteImage(city.image_public_id).catch(() => {});
+    }
+
     await pool.query("DELETE FROM cities WHERE id = ?", [cityId]);
+
+    await revalidateWebsite({
+      tags: ["cities"],
+      paths: ["/", "/sitemap.xml"],
+    });
 
     try {
       await logActivity({
@@ -345,9 +459,15 @@ export async function DELETE(
     });
   } catch (err: any) {
     if (err.status) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.status }
+      );
     }
     console.error("Delete city error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

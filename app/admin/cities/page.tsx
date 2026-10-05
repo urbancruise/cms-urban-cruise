@@ -1,10 +1,15 @@
+// cms-urban-cruise/app/admin/cities/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
 import { api } from "@/lib/api";
-import { CardGridSkeleton, ModalFormSkeleton } from "@/app/components/UI/PageSkeletons";
+import {
+  CardGridSkeleton,
+  ModalFormSkeleton,
+} from "@/app/components/UI/PageSkeletons";
+import ImageUpload from "@/app/components/UI/ImageUpload";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -23,6 +28,8 @@ interface City {
   country: string;
   code: string | null;
   description: string | null;
+  image_url: string | null;
+  image_public_id: string | null;
   is_active: boolean;
 }
 
@@ -32,6 +39,8 @@ const emptyForm = {
   country: "India",
   code: "",
   description: "",
+  image_url: null as string | null,
+  image_public_id: null as string | null,
   is_active: true,
 };
 
@@ -56,9 +65,11 @@ export default function CitiesPage() {
     return `/api/admin/cities${qs ? `?${qs}` : ""}`;
   }, [debouncedSearch]);
 
-  const { data, isLoading, mutate } = useSWR<{ cities: City[] }>(citiesKey, fetcher, {
-    keepPreviousData: true,
-  });
+  const { data, isLoading, mutate } = useSWR<{ cities: City[] }>(
+    citiesKey,
+    fetcher,
+    { keepPreviousData: true }
+  );
 
   const cities = data?.cities || [];
 
@@ -77,6 +88,8 @@ export default function CitiesPage() {
       country: city.country,
       code: city.code || "",
       description: city.description || "",
+      image_url: city.image_url || null,
+      image_public_id: city.image_public_id || null,
       is_active: city.is_active,
     });
     setFormError("");
@@ -88,10 +101,11 @@ export default function CitiesPage() {
     setSaving(true);
     setFormError("");
     try {
-      const url = editing ? `/api/admin/cities/${editing.id}` : "/api/admin/cities";
+      const url = editing
+        ? `/api/admin/cities/${editing.id}`
+        : "/api/admin/cities";
       const method = editing ? "PUT" : "POST";
 
-      // ✅ CSRF-aware
       await api(url, { method, body: formData });
 
       await mutate();
@@ -106,7 +120,6 @@ export default function CitiesPage() {
   const handleDelete = async (city: City) => {
     if (!confirm(`Delete city "${city.name}"? This cannot be undone.`)) return;
     try {
-      // ✅ CSRF-aware
       await api(`/api/admin/cities/${city.id}`, { method: "DELETE" });
       await mutate();
     } catch (e: any) {
@@ -119,7 +132,9 @@ export default function CitiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Cities Management</h1>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Cities Management
+          </h1>
           <p className="text-slate-500 mt-1">
             Manage cruise destination cities ({cities.length} total)
           </p>
@@ -153,7 +168,7 @@ export default function CitiesPage() {
         />
       </div>
 
-      {/* Skeleton */}
+      {/* Skeleton / Grid */}
       {isLoading && !data ? (
         <CardGridSkeleton count={6} />
       ) : cities.length === 0 ? (
@@ -170,19 +185,33 @@ export default function CitiesPage() {
               className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-center">
-                    <MdOutlineLocationOn className="w-5 h-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{city.name}</h3>
-                    <p className="text-xs text-slate-500">
+                <div className="flex items-center gap-3">
+                  {/* City image thumbnail */}
+                  {city.image_url ? (
+                    <div className="relative w-12 h-12 rounded-lg border border-teal-200 bg-teal-50 overflow-hidden flex-shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={city.image_url}
+                        alt={city.name}
+                        className="w-full h-full object-contain p-1"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MdOutlineLocationOn className="w-6 h-6 text-teal-600" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-900 truncate">
+                      {city.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 truncate">
                       {city.state || "—"}, {city.country}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ${
                     city.is_active
                       ? "bg-teal-50 text-teal-700 border border-teal-200"
                       : "bg-slate-100 text-slate-600 border border-slate-200"
@@ -191,8 +220,9 @@ export default function CitiesPage() {
                   {city.is_active ? "Active" : "Inactive"}
                 </span>
               </div>
+
               {city.code && (
-                <p className="text-xs text-slate-500 mb-3">
+                <p className="text-xs text-slate-500 mb-2">
                   Code:{" "}
                   <span className="font-mono font-medium text-slate-700">
                     {city.code}
@@ -204,6 +234,7 @@ export default function CitiesPage() {
                   {city.description}
                 </p>
               )}
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   onClick={() => openEdit(city)}
@@ -240,12 +271,39 @@ export default function CitiesPage() {
                 <MdOutlineClose className="w-5 h-5 text-slate-500" />
               </button>
             </div>
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
                   {formError}
                 </div>
               )}
+
+              {/* ⭐ City image upload */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  City Icon / Image
+                </label>
+                <ImageUpload
+                  value={formData.image_url}
+                  publicId={formData.image_public_id}
+                  onChange={(url, publicId) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      image_url: url,
+                      image_public_id: publicId || null,
+                    }))
+                  }
+                  scope="general"
+                  aspect="1 / 1"
+                  variant="compact"
+                  hint="Square PNG/WebP · Transparent bg recommended · Max 300 KB"
+                />
+                <p className="text-xs text-slate-400 mt-1.5">
+                  This icon appears next to the city name in the location
+                  picker on the public website.
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -255,7 +313,9 @@ export default function CitiesPage() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="e.g., Mumbai"
                     required
@@ -267,7 +327,7 @@ export default function CitiesPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.code}
+                    value={formData.code || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -288,8 +348,10 @@ export default function CitiesPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    value={formData.state || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                     placeholder="e.g., Maharashtra"
                   />
@@ -333,9 +395,12 @@ export default function CitiesPage() {
                   Description
                 </label>
                 <textarea
-                  value={formData.description}
+                  value={formData.description || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
+                    setFormData({
+                      ...formData,
+                      description: e.target.value,
+                    })
                   }
                   className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   rows={2}
