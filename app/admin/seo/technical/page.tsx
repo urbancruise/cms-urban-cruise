@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineBuild,
   MdOutlineRefresh,
@@ -30,7 +31,7 @@ const CHECK_LABELS: Record<string, string> = {
   sitemap: "Sitemap",
   robots: "Robots.txt",
   https: "HTTPS / SSL",
-  mobile: "Mobile Friendly",
+  mobile: "Mobile Viewport",
   speed: "Page Speed",
   canonical: "Canonical Tags",
   broken_link: "Broken Links",
@@ -39,6 +40,7 @@ const CHECK_LABELS: Record<string, string> = {
 
 export default function SeoTechnicalPage() {
   const [running, setRunning] = useState(false);
+  const [auditError, setAuditError] = useState("");
 
   const { data, isLoading, mutate } = useSWR<{ checks: TechnicalCheck[] }>(
     "/api/admin/seo/technical",
@@ -49,9 +51,14 @@ export default function SeoTechnicalPage() {
 
   const runAudit = async () => {
     setRunning(true);
+    setAuditError("");
     try {
-      await fetch("/api/admin/seo/technical/run", { method: "POST" });
+      await api("/api/admin/seo/technical/run", { method: "POST" });
       await mutate();
+    } catch (error) {
+      setAuditError(
+        error instanceof Error ? error.message : "Failed to run technical audit"
+      );
     } finally {
       setRunning(false);
     }
@@ -87,6 +94,12 @@ export default function SeoTechnicalPage() {
           </button>
         </div>
       </div>
+
+      {auditError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {auditError}
+        </div>
+      )}
 
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

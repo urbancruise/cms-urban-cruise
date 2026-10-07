@@ -24,6 +24,10 @@ interface SeoPage {
 export default function SeoSitemapPage() {
   const [copied, setCopied] = useState(false);
 
+  const { data: settingsData } = useSWR<{ settings: Record<string, string> }>(
+    "/api/admin/seo/settings",
+    fetcher
+  );
   const { data, isLoading, mutate } = useSWR<{ pages: SeoPage[]; total: number }>(
     "/api/admin/seo/pages?limit=200",
     fetcher
@@ -33,16 +37,24 @@ export default function SeoSitemapPage() {
 
   const sitemapUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/sitemap.xml`
+      ? `${(settingsData?.settings?.site_url || window.location.origin).replace(/\/+$/, "")}/sitemap.xml`
       : "/sitemap.xml";
 
   const generateXml = () => {
-    const urls = pages
-      .map(
-        (p) =>
-          `  <url>\n    <loc>${p.page_path}</loc>\n    <lastmod>${new Date(p.updated_at).toISOString().split("T")[0]}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>${p.page_type === "home" ? "1.0" : "0.8"}</priority>\n  </url>`
-      )
-      .join("\n");
+    const baseUrl = new URL(
+      settingsData?.settings?.site_url || window.location.origin
+    );
+    const urls = pages.map((page) => {
+      const path = page.page_path.startsWith("/")
+        ? page.page_path
+        : `/${page.page_path}`;
+      const location = new URL(path, baseUrl).toString();
+      const lastModified = new Date(page.updated_at);
+      const lastmod = Number.isNaN(lastModified.getTime())
+        ? ""
+        : `\n    <lastmod>${lastModified.toISOString().split("T")[0]}</lastmod>`;
+      return `  <url>\n    <loc>${escapeXml(location)}</loc>${lastmod}\n    <changefreq>weekly</changefreq>\n    <priority>${page.page_type === "home" ? "1.0" : "0.8"}</priority>\n  </url>`;
+    }).join("\n");
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`;
   };
 
@@ -102,7 +114,7 @@ export default function SeoSitemapPage() {
             {copied ? "✓ Copied" : "Copy"}
           </button>
           <a
-            href="/sitemap.xml"
+            href={sitemapUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
@@ -152,4 +164,13 @@ export default function SeoSitemapPage() {
       </div>
     </div>
   );
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }

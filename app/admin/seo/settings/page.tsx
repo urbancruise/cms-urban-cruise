@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
 import {
@@ -91,6 +91,11 @@ const GROUPS: SettingGroup[] = [
         placeholder: "google-site-verification=...",
       },
       {
+        key: "gsc_site_url",
+        label: "Search Console Property URL",
+        placeholder: "https://urbancruise.com/ or sc-domain:urbancruise.com",
+      },
+      {
         key: "ga_measurement_id",
         label: "Google Analytics Measurement ID",
         placeholder: "G-XXXXXXXXXX",
@@ -126,11 +131,6 @@ const GROUPS: SettingGroup[] = [
     title: "Sitemap & Robots",
     fields: [
       {
-        key: "sitemap_auto_update",
-        label: "Auto-update Sitemap",
-        placeholder: "true / false",
-      },
-      {
         key: "robots_txt_content",
         label: "Robots.txt Content",
         type: "textarea",
@@ -150,19 +150,15 @@ export default function SeoSettingsPage() {
     fetcher
   );
 
-  const [form, setForm] = useState<Settings>({});
+  const [form, setForm] = useState<Settings | undefined>();
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (data?.settings) setForm(data.settings);
-  }, [data]);
-
   const set = (key: string, value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => ({ ...(prev ?? data?.settings ?? {}), [key]: value }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -170,14 +166,17 @@ export default function SeoSettingsPage() {
       const res = await fetch("/api/admin/seo/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(form ?? data?.settings ?? {}),
       });
       if (!res.ok) throw new Error("Failed to save");
       await mutate();
       setToast({ type: "success", message: "Settings saved successfully" });
       setTimeout(() => setToast(null), 3000);
-    } catch (e: any) {
-      setToast({ type: "error", message: e.message });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to save settings",
+      });
     } finally {
       setSaving(false);
     }
@@ -244,7 +243,7 @@ export default function SeoSettingsPage() {
                     {field.type === "textarea" ? (
                       <textarea
                         rows={field.rows ?? 3}
-                        value={form[field.key] || ""}
+                        value={form?.[field.key] ?? data?.settings?.[field.key] ?? ""}
                         onChange={(e) => set(field.key, e.target.value)}
                         placeholder={field.placeholder}
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -252,7 +251,7 @@ export default function SeoSettingsPage() {
                     ) : (
                       <input
                         type="text"
-                        value={form[field.key] || ""}
+                        value={form?.[field.key] ?? data?.settings?.[field.key] ?? ""}
                         onChange={(e) => set(field.key, e.target.value)}
                         placeholder={field.placeholder}
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"

@@ -756,5 +756,175 @@ ORDER BY u.id;
 
 
 -- ============================================================
+-- SEO MANAGEMENT TABLES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS seo_pages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    city_id INT NULL,
+    page_path VARCHAR(500) NOT NULL,
+    slug VARCHAR(255) NULL,
+    page_type VARCHAR(50) NOT NULL,
+    page_title VARCHAR(255) NULL,
+    favicon_url VARCHAR(2048) NULL,
+    meta_title VARCHAR(255) NULL,
+    meta_description TEXT NULL,
+    focus_keyword VARCHAR(255) NULL,
+    meta_keywords TEXT NULL,
+    secondary_keywords JSON NULL,
+    content_json JSON NULL,
+    canonical_url VARCHAR(2048) NULL,
+    robots_meta VARCHAR(255) NOT NULL DEFAULT 'index, follow',
+    is_indexable BOOLEAN NOT NULL DEFAULT TRUE,
+    og_title VARCHAR(255) NULL,
+    og_description TEXT NULL,
+    og_image VARCHAR(2048) NULL,
+    og_url VARCHAR(2048) NULL,
+    og_type VARCHAR(50) NOT NULL DEFAULT 'website',
+    feature_image VARCHAR(2048) NULL,
+    feature_image_public_id VARCHAR(255) NULL,
+    twitter_card VARCHAR(50) NOT NULL DEFAULT 'summary_large_image',
+    twitter_domain VARCHAR(255) NULL,
+    twitter_url VARCHAR(2048) NULL,
+    twitter_image VARCHAR(2048) NULL,
+    twitter_title VARCHAR(255) NULL,
+    twitter_description TEXT NULL,
+    schema_json JSON NULL,
+    seo_score DECIMAL(5,2) NOT NULL DEFAULT 0,
+    word_count INT UNSIGNED NOT NULL DEFAULT 0,
+    readability_score DECIMAL(5,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_seo_pages_path (page_path),
+    INDEX idx_seo_pages_city (city_id),
+    INDEX idx_seo_pages_type (page_type),
+    INDEX idx_seo_pages_indexable (is_indexable),
+    INDEX idx_seo_pages_updated (updated_at),
+    CONSTRAINT fk_seo_pages_city FOREIGN KEY (city_id)
+        REFERENCES cities(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add content_json to seo_pages tables created before the content editor.
+SET @seo_pages_content_json_migration = (
+    SELECT IF(
+        COUNT(*) = 0,
+        'ALTER TABLE seo_pages ADD COLUMN content_json JSON NULL AFTER secondary_keywords',
+        'SELECT 1'
+    )
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'seo_pages'
+      AND COLUMN_NAME = 'content_json'
+);
+PREPARE seo_pages_content_json_stmt FROM @seo_pages_content_json_migration;
+EXECUTE seo_pages_content_json_stmt;
+DEALLOCATE PREPARE seo_pages_content_json_stmt;
+
+CREATE TABLE IF NOT EXISTS seo_keywords (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    keyword VARCHAR(255) NOT NULL,
+    keyword_type VARCHAR(50) NOT NULL DEFAULT 'secondary',
+    search_volume INT UNSIGNED NOT NULL DEFAULT 0,
+    difficulty DECIMAL(5,2) NOT NULL DEFAULT 0,
+    current_rank INT UNSIGNED NULL,
+    target_rank INT UNSIGNED NULL,
+    page_path VARCHAR(500) NULL,
+    city_id INT NULL,
+    is_tracked BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_seo_keywords_keyword (keyword),
+    INDEX idx_seo_keywords_type (keyword_type),
+    INDEX idx_seo_keywords_city (city_id),
+    INDEX idx_seo_keywords_tracked (is_tracked),
+    CONSTRAINT fk_seo_keywords_city FOREIGN KEY (city_id)
+        REFERENCES cities(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value LONGTEXT NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_schemas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    city_id INT NULL,
+    page_path VARCHAR(500) NULL,
+    schema_type VARCHAR(100) NOT NULL,
+    schema_json JSON NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_seo_schemas_type (schema_type),
+    INDEX idx_seo_schemas_path (page_path(191)),
+    INDEX idx_seo_schemas_active (is_active),
+    CONSTRAINT fk_seo_schemas_city FOREIGN KEY (city_id)
+        REFERENCES cities(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    city_id INT NULL,
+    page_path VARCHAR(500) NOT NULL,
+    image_url VARCHAR(2048) NOT NULL,
+    public_id VARCHAR(255) NULL,
+    alt_text TEXT NULL,
+    has_alt BOOLEAN NOT NULL DEFAULT FALSE,
+    title_text VARCHAR(255) NULL,
+    caption TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_seo_images_path (page_path(191)),
+    INDEX idx_seo_images_city (city_id),
+    INDEX idx_seo_images_alt (has_alt),
+    CONSTRAINT fk_seo_images_city FOREIGN KEY (city_id)
+        REFERENCES cities(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_internal_links (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    source_path VARCHAR(500) NOT NULL,
+    target_path VARCHAR(2048) NOT NULL,
+    anchor_text VARCHAR(1000) NULL,
+    is_broken BOOLEAN NOT NULL DEFAULT FALSE,
+    last_checked_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_seo_links_source (source_path(191)),
+    INDEX idx_seo_links_target (target_path(191)),
+    INDEX idx_seo_links_broken (is_broken)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_technical (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    check_type VARCHAR(100) NOT NULL,
+    check_key VARCHAR(500) NULL,
+    status ENUM('ok', 'warning', 'error') NOT NULL,
+    message TEXT NULL,
+    checked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_seo_technical_type (check_type),
+    INDEX idx_seo_technical_checked (checked_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS seo_core_web_vitals (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    page_path VARCHAR(500) NOT NULL,
+    device ENUM('mobile', 'desktop') NOT NULL,
+    lcp DECIMAL(8,3) NULL,
+    fid DECIMAL(8,3) NULL,
+    cls DECIMAL(8,4) NULL,
+    inp DECIMAL(8,3) NULL,
+    ttfb DECIMAL(8,3) NULL,
+    status ENUM('good', 'needs_improvement', 'poor', 'no_data') NOT NULL,
+    measured_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_seo_cwv_page_device (page_path(191), device),
+    INDEX idx_seo_cwv_measured (measured_at),
+    INDEX idx_seo_cwv_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SHOW TABLES LIKE 'seo_%';
+
+-- ============================================================
 -- END OF URBAN CRUISE CMS DATABASE
 -- ============================================================

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
 import {
   MdOutlineError,
   MdOutlineCheckCircle,
-  MdOutlineWarning,
   MdOutlineRefresh,
 } from "react-icons/md";
 
@@ -19,6 +18,20 @@ interface Issue {
   fix_url?: string;
 }
 
+interface SeoIssuePageRecord {
+  meta_title: string | null;
+  meta_description: string | null;
+  canonical_url: string | null;
+}
+
+interface SeoIssueImageRecord {
+  has_alt: boolean;
+}
+
+interface SeoIssueLinkRecord {
+  is_broken: boolean;
+}
+
 const SEV_COLORS = {
   critical: "bg-red-50 text-red-700 border-red-200",
   high: "bg-orange-50 text-orange-700 border-orange-200",
@@ -27,18 +40,37 @@ const SEV_COLORS = {
 };
 
 export default function SeoIssuesPage() {
-  const { data: pagesData, mutate } = useSWR<{ pages: any[] }>(
+  const {
+    data: pagesData,
+    error: pagesError,
+    isLoading: pagesLoading,
+    mutate: mutatePages,
+  } = useSWR<{ pages: SeoIssuePageRecord[] }>(
     "/api/admin/seo/pages?limit=500",
     fetcher
   );
-  const { data: imgData } = useSWR<{ images: any[] }>(
+  const {
+    data: imgData,
+    error: imagesError,
+    isLoading: imagesLoading,
+    mutate: mutateImages,
+  } = useSWR<{ images: SeoIssueImageRecord[] }>(
     "/api/admin/seo/images?limit=500",
     fetcher
   );
-  const { data: linkData } = useSWR<{ links: any[] }>(
+  const {
+    data: linkData,
+    error: linksError,
+    isLoading: linksLoading,
+    mutate: mutateLinks,
+  } = useSWR<{ links: SeoIssueLinkRecord[] }>(
     "/api/admin/seo/internal-links",
     fetcher
   );
+  const loading = pagesLoading || imagesLoading || linksLoading;
+  const loadError = pagesError || imagesError || linksError;
+
+  const refresh = () => Promise.all([mutatePages(), mutateImages(), mutateLinks()]);
 
   const issues = useMemo<Issue[]>(() => {
     const pages = pagesData?.pages || [];
@@ -132,20 +164,33 @@ export default function SeoIssuesPage() {
             SEO Issues Center
           </h1>
           <p className="text-slate-500 mt-1">
-            {issues.length === 0
+            {loading
+              ? "Loading SEO checks..."
+              : loadError
+                ? "SEO checks could not be loaded"
+                : issues.length === 0
               ? "No issues found 🎉"
               : `${issues.length} issue${issues.length > 1 ? "s" : ""} detected`}
           </p>
         </div>
         <button
-          onClick={() => mutate()}
+          onClick={refresh}
           className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
         >
           <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
         </button>
       </div>
 
-      {issues.length === 0 ? (
+      {loading ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-3 text-sm text-slate-500">Loading SEO checks...</p>
+        </div>
+      ) : loadError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {loadError.message}
+        </div>
+      ) : issues.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 py-20 text-center">
           <MdOutlineCheckCircle className="w-16 h-16 mx-auto text-green-500" />
           <p className="mt-4 text-lg font-medium text-slate-700">All clear!</p>

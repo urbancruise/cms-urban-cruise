@@ -10,6 +10,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requireSeoAccess } from "@/lib/auth-guard";
 import { respondError } from "@/lib/api-error";
 import { revalidateWebsite } from "@/lib/revalidate";
+import { calculateSeoScore } from "@/lib/seo-score";
 
 // ============================================================
 // GET single page
@@ -48,6 +49,10 @@ export async function GET(
       typeof page.schema_json === "string"
         ? safeJsonParse(page.schema_json, null)
         : page.schema_json || null;
+    page.content_json =
+      typeof page.content_json === "string"
+        ? safeJsonParse(page.content_json, null)
+        : page.content_json || null;
 
     return NextResponse.json({ page });
   } catch (err) {
@@ -72,7 +77,7 @@ export async function PUT(
 
     // Load existing row so we can diff for revalidation
     const [existingRows] = (await pool.query(
-      "SELECT id, page_path FROM seo_pages WHERE id = ? LIMIT 1",
+      "SELECT * FROM seo_pages WHERE id = ? LIMIT 1",
       [id]
     )) as any;
     const existing = (existingRows as any[])[0];
@@ -109,7 +114,7 @@ export async function PUT(
       "twitter_title",
       "twitter_description",
       "schema_json",
-      "seo_score",
+      "content_json",
       "word_count",
       "readability_score",
       "page_path",
@@ -122,7 +127,11 @@ export async function PUT(
         fields.push(`${key} = ?`);
         let val = body[key];
 
-        if (key === "secondary_keywords" || key === "schema_json") {
+        if (
+          key === "secondary_keywords" ||
+          key === "schema_json" ||
+          key === "content_json"
+        ) {
           val = val == null ? null : JSON.stringify(val);
         } else if (key === "is_indexable") {
           val = val ? 1 : 0;
@@ -141,6 +150,10 @@ export async function PUT(
       );
     }
 
+    const updatedPage = { ...existing, ...body };
+    updatedPage.seo_score = calculateSeoScore(updatedPage);
+    fields.push("seo_score = ?");
+    values.push(updatedPage.seo_score);
     values.push(id);
     await pool.query(
       `UPDATE seo_pages SET ${fields.join(", ")} WHERE id = ?`,
@@ -173,7 +186,9 @@ export async function PUT(
       entityType: "profile",
       entityId: Number(id),
       entityName: `seo_page:${body.slug || newPath}`,
-      changes: body,
+      changes: Object.fromEntries(
+        Object.entries(body).filter(([key]) => key !== "content_json")
+      ),
       request,
     });
 

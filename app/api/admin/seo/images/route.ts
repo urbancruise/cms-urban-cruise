@@ -110,12 +110,33 @@ export async function POST(request: NextRequest) {
 
     const { city_id, page_path, image_url, public_id, alt_text } = body;
 
-    if (!page_path || !image_url) {
+    if (
+      typeof page_path !== "string" ||
+      !page_path.startsWith("/") ||
+      typeof image_url !== "string" ||
+      !image_url.trim()
+    ) {
       return NextResponse.json(
         { error: "page_path and image_url required" },
         { status: 400 }
       );
     }
+    let imageUrl: URL;
+    try {
+      imageUrl = new URL(image_url);
+    } catch {
+      return NextResponse.json(
+        { error: "image_url must be an absolute HTTP or HTTPS URL" },
+        { status: 400 }
+      );
+    }
+    if (!["http:", "https:"].includes(imageUrl.protocol)) {
+      return NextResponse.json(
+        { error: "image_url must use HTTP or HTTPS" },
+        { status: 400 }
+      );
+    }
+    const safeAltText = typeof alt_text === "string" ? alt_text.trim() : "";
 
     const [result] = await pool.query(
       `INSERT INTO seo_images
@@ -123,11 +144,11 @@ export async function POST(request: NextRequest) {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         city_id || null,
-        page_path,
-        image_url,
+        page_path.trim(),
+        imageUrl.toString(),
         public_id || null,
-        alt_text || null,
-        alt_text && alt_text.trim() ? 1 : 0,
+        safeAltText || null,
+        safeAltText ? 1 : 0,
       ]
     );
 
@@ -139,6 +160,31 @@ export async function POST(request: NextRequest) {
     if (err.status) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const rl = rateLimit(request, { windowMs: 60_000, max: 30 });
+    if (!rl.ok) return rl.response!;
+    await requireSeoAccess(request);
+    const body = await request.json();
+    const id = Number(body.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A valid image id is required." }, { status: 400 });
+    }
+
+    const [result] = await pool.query("DELETE FROM seo_images WHERE id = ?", [id]);
+    if ((result as any).affectedRows === 0) {
+      return NextResponse.json({ error: "Image not found." }, { status: 404 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    if (err.status) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    console.error("[seo/images DELETE]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -3,8 +3,10 @@
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import RichEditor from "@/app/components/UI/RichEditor";
 import { MdOutlineEdit, MdOutlineRefresh, MdOutlineSearch } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
+import { api } from "@/lib/api";
 
 interface SeoPage {
   id: number;
@@ -17,6 +19,7 @@ interface SeoPage {
   meta_title: string | null;
   meta_description: string | null;
   updated_at: string;
+  content_json: unknown;
 }
 
 export default function SeoContentPage() {
@@ -28,9 +31,8 @@ export default function SeoContentPage() {
     fetcher
   );
 
-  const pages = data?.pages || [];
-
   const filtered = useMemo(() => {
+    const pages = data?.pages || [];
     const q = search.trim().toLowerCase();
     if (!q) return pages;
     return pages.filter(
@@ -38,7 +40,7 @@ export default function SeoContentPage() {
         p.page_path.toLowerCase().includes(q) ||
         (p.meta_title || "").toLowerCase().includes(q)
     );
-  }, [pages, search]);
+  }, [data?.pages, search]);
 
   const analyze = (page: SeoPage) => {
     // Content analysis scoring
@@ -170,13 +172,34 @@ export default function SeoContentPage() {
       )}
 
       {selected && (
-        <ContentAnalysisModal page={selected} onClose={() => setSelected(null)} />
+        <ContentAnalysisModal
+          page={selected}
+          onClose={() => setSelected(null)}
+          onSaved={async () => {
+            await mutate();
+            setSelected(null);
+          }}
+        />
       )}
     </div>
   );
 }
 
-function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () => void }) {
+function ContentAnalysisModal({
+  page,
+  onClose,
+  onSaved,
+}: {
+  page: SeoPage;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [content, setContent] = useState<unknown>(page.content_json);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const contentText = extractEditorText(content);
+  const wordCount = countWords(contentText);
+  const readabilityScore = estimateReadability(contentText);
   const title = page.meta_title || "";
   const desc = page.meta_description || "";
   const keyword = page.focus_keyword || "";
@@ -184,8 +207,8 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
   const checks = [
     {
       label: "Word count ≥ 300",
-      passed: (page.word_count || 0) >= 300,
-      hint: `Current: ${page.word_count}`,
+      passed: wordCount >= 300,
+      hint: `Current: ${wordCount}`,
     },
     {
       label: "Meta title 30-60 chars",
@@ -209,20 +232,44 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
     },
     {
       label: "Readability ≥ 60",
-      passed: (page.readability_score || 0) >= 60,
-      hint: `Current: ${page.readability_score}`,
+      passed: readabilityScore >= 60,
+      hint: `Estimated: ${readabilityScore}/100`,
     },
   ];
 
   const passed = checks.filter((c) => c.passed).length;
   const total = checks.length;
 
+  const saveContent = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await api(`/api/admin/seo/pages/${page.id}`, {
+        method: "PUT",
+        body: {
+          content_json: content,
+          word_count: wordCount,
+          readability_score: readabilityScore,
+        },
+      });
+      await onSaved();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save page content"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl max-h-[92vh] flex flex-col">
         <div className="p-6 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Content Analysis</h2>
+            <h2 className="text-xl font-bold text-slate-900">SEO Content Editor</h2>
             <p className="text-xs text-slate-400 font-mono mt-1">{page.page_path}</p>
           </div>
           <button
@@ -234,6 +281,23 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
         </div>
 
         <div className="flex-1 overflow-auto p-6 space-y-4">
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Page content
+              </h3>
+              <p className="text-xs text-slate-500">
+                {wordCount} words · Estimated readability {readabilityScore}/100
+              </p>
+            </div>
+            <RichEditor
+              value={content}
+              onChange={setContent}
+              placeholder="Write search-friendly page content..."
+              minHeight={280}
+            />
+          </section>
+
           <div
             className={`rounded-xl p-4 border ${passed === total ? "bg-green-50 border-green-200" : passed >= total / 2 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}
           >
@@ -280,15 +344,73 @@ function ContentAnalysisModal({ page, onClose }: { page: SeoPage; onClose: () =>
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-200 flex justify-end">
+        <div className="p-6 border-t border-slate-200">
+          {error && (
+            <p className="mb-3 text-sm text-red-700" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
             className="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium text-slate-700"
           >
             Close
           </button>
+          <button
+            onClick={saveContent}
+            disabled={saving}
+            className="px-6 py-2 rounded-lg bg-teal-600 text-white font-medium hover:bg-teal-700 disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save content"}
+          </button>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function extractEditorText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(extractEditorText).join(" ");
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .filter(([key]) => !["url", "id", "time", "version", "type"].includes(key))
+      .map(([, child]) => extractEditorText(child))
+      .join(" ");
+  }
+  return "";
+}
+
+function countWords(value: string): number {
+  const plainText = value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .trim();
+  return plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function estimateReadability(value: string): number {
+  const words = value
+    .replace(/<[^>]*>/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return 0;
+
+  const sentences = value.split(/[.!?]+/).filter((sentence) => sentence.trim()).length || 1;
+  const averageSentenceLength = words.length / sentences;
+  const averageWordLength =
+    words.reduce((total, word) => total + word.length, 0) / words.length;
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        100 -
+          Math.max(0, averageSentenceLength - 15) * 2 -
+          Math.max(0, averageWordLength - 5) * 10
+      )
+    )
   );
 }

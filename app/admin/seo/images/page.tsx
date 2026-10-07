@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
 import {
@@ -10,6 +10,7 @@ import {
   MdOutlineWarning,
   MdOutlineCheckCircle,
   MdOutlineSearch,
+  MdOutlineDelete,
 } from "react-icons/md";
 import { CardGridSkeleton } from "@/app/components/UI/PageSkeletons";
 
@@ -30,6 +31,11 @@ export default function SeoImagesPage() {
   const [filter, setFilter] = useState<string>("missing_alt");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newPagePath, setNewPagePath] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [newAltText, setNewAltText] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editValues, setEditValues] = useState<{
     alt_text: string;
     title_text: string;
@@ -78,8 +84,66 @@ export default function SeoImagesPage() {
       await mutate();
       setToast({ type: "success", message: "Alt text saved" });
       setTimeout(() => setToast(null), 3000);
-    } catch (e: any) {
-      setToast({ type: "error", message: e.message });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to save image SEO",
+      });
+    }
+  };
+
+  const addImage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreating(true);
+    try {
+      const response = await fetch("/api/admin/seo/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page_path: newPagePath,
+          image_url: newImageUrl,
+          alt_text: newAltText,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json();
+        throw new Error(body.error || "Failed to add image");
+      }
+      setNewPagePath("");
+      setNewImageUrl("");
+      setNewAltText("");
+      await mutate();
+      setToast({ type: "success", message: "Image added to SEO tracking" });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to add image",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const deleteImage = async (id: number) => {
+    setDeletingId(id);
+    try {
+      const response = await fetch("/api/admin/seo/images", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) {
+        const body = await response.json();
+        throw new Error(body.error || "Failed to delete image");
+      }
+      await mutate();
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to delete image",
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -141,6 +205,40 @@ export default function SeoImagesPage() {
         </select>
       </div>
 
+      <form
+        onSubmit={addImage}
+        className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-5 md:grid-cols-4"
+      >
+        <input
+          required
+          value={newPagePath}
+          onChange={(event) => setNewPagePath(event.target.value)}
+          placeholder="Page path (e.g. /destinations)"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+        <input
+          required
+          type="url"
+          value={newImageUrl}
+          onChange={(event) => setNewImageUrl(event.target.value)}
+          placeholder="Image URL"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+        <input
+          value={newAltText}
+          onChange={(event) => setNewAltText(event.target.value)}
+          placeholder="Alt text (optional)"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          disabled={creating}
+          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+        >
+          {creating ? "Adding..." : "Track image"}
+        </button>
+      </form>
+
       {isLoading && !data ? (
         <CardGridSkeleton count={6} />
       ) : filtered.length === 0 ? (
@@ -160,7 +258,6 @@ export default function SeoImagesPage() {
               className="bg-white rounded-xl border border-slate-200 overflow-hidden"
             >
               <div className="relative aspect-video bg-slate-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={img.image_url}
                   alt={img.alt_text || ""}
@@ -242,6 +339,14 @@ export default function SeoImagesPage() {
                       className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium hover:bg-slate-50"
                     >
                       Edit Alt Text
+                    </button>
+                    <button
+                      onClick={() => deleteImage(img.id)}
+                      disabled={deletingId === img.id}
+                      className="flex w-full items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-100 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <MdOutlineDelete className="h-3.5 w-3.5" />
+                      {deletingId === img.id ? "Deleting..." : "Remove"}
                     </button>
                   </>
                 )}
