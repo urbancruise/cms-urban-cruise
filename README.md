@@ -55,10 +55,12 @@ available field data receive numeric Core Web Vitals results.
 
 The public SEO API (`/api/public/seo?path=/your-page`) returns page metadata,
 global defaults, active structured data, saved page content and image SEO data,
-robots directives, and public verification/tracking IDs for the public website
-to render. The separate public website must consume this API to apply those
-values to its rendered pages. The CMS sitemap and `robots.txt` routes use the
-SEO records and saved robots directives from the database.
+robots directives, and public verification/tracking IDs. The Urban Cruise
+website consumes this API server-side for its existing routes and renders page
+metadata in the HTML `<head>` and configured schemas as JSON-LD. Configure the
+website's server-only `CMS_API_URL` and `CMS_API_KEY` to connect it to this CMS.
+The CMS sitemap and `robots.txt` routes use the SEO records and saved robots
+directives from the database.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 

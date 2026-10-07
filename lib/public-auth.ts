@@ -16,13 +16,6 @@ export async function requireApiKey(request: NextRequest): Promise<ApiKeyResult>
   const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   const key = headerKey || bearer;
 
-  console.log("[public-auth] incoming key:", {
-    hasHeaderKey: !!headerKey,
-    hasBearer: !!bearer,
-    keyLen: key?.length,
-    keyPrefix: key?.slice(0, 8),
-  });
-
   if (!key) {
     return { ok: false, error: "Missing API key" };
   }
