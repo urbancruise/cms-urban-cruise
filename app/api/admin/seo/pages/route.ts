@@ -9,6 +9,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requireSeoAccess } from "@/lib/auth-guard";
 import { respondError } from "@/lib/api-error";
 import { revalidateWebsite } from "@/lib/revalidate";
+import { calculateSeoScore } from "@/lib/seo-score";
 
 // ============================================================
 // GET — list all SEO pages with filters
@@ -84,6 +85,10 @@ export async function GET(request: NextRequest) {
         typeof r.schema_json === "string"
           ? safeJsonParse(r.schema_json, null)
           : r.schema_json || null,
+      content_json:
+        typeof r.content_json === "string"
+          ? safeJsonParse(r.content_json, null)
+          : r.content_json || null,
     }));
 
     return NextResponse.json({
@@ -119,6 +124,7 @@ export async function POST(request: NextRequest) {
       meta_description,
       focus_keyword,
       meta_keywords,
+      secondary_keywords,
       canonical_url,
       robots_meta,
       is_indexable,
@@ -136,6 +142,9 @@ export async function POST(request: NextRequest) {
       twitter_title,
       twitter_description,
       schema_json,
+      content_json,
+      word_count,
+      readability_score,
     } = body;
 
     if (!page_path || !page_type) {
@@ -163,20 +172,24 @@ export async function POST(request: NextRequest) {
       : schema_json
       ? [schema_json]
       : null;
+    const seoScore = calculateSeoScore({
+      ...body,
+      is_indexable: is_indexable !== false,
+    });
 
     const [result] = await pool.query(
       `INSERT INTO seo_pages
        (city_id, page_path, slug, page_type,
         page_title, favicon_url,
         meta_title, meta_description,
-        focus_keyword, meta_keywords,
+        focus_keyword, meta_keywords, secondary_keywords,
         canonical_url, robots_meta, is_indexable,
         og_title, og_description, og_image, og_url, og_type,
         feature_image, feature_image_public_id,
         twitter_card, twitter_domain, twitter_url, twitter_image,
         twitter_title, twitter_description,
-        schema_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        schema_json, seo_score, word_count, readability_score, content_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         city_id || null,
         page_path,
@@ -188,6 +201,9 @@ export async function POST(request: NextRequest) {
         meta_description || null,
         focus_keyword || null,
         meta_keywords || null,
+        Array.isArray(secondary_keywords)
+          ? JSON.stringify(secondary_keywords)
+          : null,
         canonical_url || null,
         robots_meta || "index, follow",
         is_indexable !== false ? 1 : 0,
@@ -205,6 +221,10 @@ export async function POST(request: NextRequest) {
         twitter_title || null,
         twitter_description || null,
         schemaToStore ? JSON.stringify(schemaToStore) : null,
+        seoScore,
+        Number(word_count) || 0,
+        Number(readability_score) || 0,
+        content_json == null ? null : JSON.stringify(content_json),
       ]
     );
 

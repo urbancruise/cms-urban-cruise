@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineDataObject,
   MdOutlineAdd,
@@ -79,8 +80,7 @@ export default function SeoSchemaPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this schema?")) return;
     try {
-      const res = await fetch(`/api/admin/seo/schema/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
+      await api(`/api/admin/seo/schema/${id}`, { method: "DELETE" });
       await mutate();
       showToast("success", "Schema deleted");
     } catch (e: any) {
@@ -260,13 +260,10 @@ function SchemaModal({
         ? `/api/admin/seo/schema/${schema!.id}`
         : "/api/admin/seo/schema";
       const method = isEdit ? "PUT" : "POST";
-      const res = await fetch(url, {
+      await api(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payload,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save");
       onSaved();
     } catch (e: any) {
       setError(e.message);

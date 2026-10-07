@@ -1,57 +1,112 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import type { ResultSetHeader } from "mysql2";
 import pool from "@/lib/db";
-
-async function requireAuth(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
-  if (!token) throw { status: 401, message: "Not authenticated" };
-  return jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as {
-    userId: number;
-    role: string;
-    roles?: string[];
-  };
-}
-
-async function requireSeoAccess(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  const isAdmin =
-    decoded.role === "admin" ||
-    (Array.isArray(decoded.roles) && decoded.roles.includes("admin"));
-  if (isAdmin) return decoded;
-  const [rows] = (await pool.query(
-    `SELECT r.permissions FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ? AND r.is_active = 1`,
-    [decoded.userId]
-  )) as any;
-  const set = new Set<string>();
-  (rows as any[]).forEach((r) => {
-    let perms: string[] = [];
-    try {
-      perms = Array.isArray(r.permissions)
-        ? r.permissions
-        : typeof r.permissions === "string"
-          ? JSON.parse(r.permissions)
-          : [];
-    } catch {}
-    perms.forEach((p) => set.add(p));
-  });
-  if (![...set].some((p) => p.startsWith("seo.")))
-    throw { status: 403, message: "Access denied." };
-  return decoded;
-}
+import { env } from "@/lib/env";
+import { requireSeoAccess } from "@/lib/auth-guard";
+import { respondError } from "@/lib/api-error";
+import { HttpError } from "@/lib/http-error";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60_000, max: 120 });
+    if (!rl.ok) return rl.response;
     await requireSeoAccess(request);
-    const { searchParams } = new URL(request.url);
-    const broken = searchParams.get("broken") === "true";
+
+    const broken = new URL(request.url).searchParams.get("broken") === "true";
     const where = broken ? "WHERE is_broken = 1" : "";
     const [rows] = (await pool.query(
-      `SELECT * FROM seo_internal_links ${where} ORDER BY updated_at DESC LIMIT 500`
+      `SELECT * FROM seo_internal_links
+       ${where}
+       ORDER BY COALESCE(last_checked_at, created_at) DESC, id DESC
+       LIMIT 500`
     )) as any;
     return NextResponse.json({ links: rows, total: rows.length });
-  } catch (err: any) {
-    if (err.status)
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (err) {
+    return respondError(err, "GET /api/admin/seo/internal-links");
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const rl = rateLimit(request, { windowMs: 60_000, max: 30 });
+    if (!rl.ok) return rl.response;
+    await requireSeoAccess(request);
+
+    const body: unknown = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw new HttpError(400, "A link object is required.");
+    }
+    const record = body as Record<string, unknown>;
+    const source = typeof record.source_path === "string"
+      ? record.source_path.trim()
+      : "";
+    const target = typeof record.target_path === "string"
+      ? record.target_path.trim()
+      : "";
+    const anchorText = typeof record.anchor_text === "string"
+      ? record.anchor_text.trim()
+      : "";
+
+    if (!source || !target || source.length > 500 || target.length > 2048) {
+      throw new HttpError(
+        400,
+        "Valid source_path and target_path values are required."
+      );
+    }
+    if (anchorText.length > 1000) {
+      throw new HttpError(400, "anchor_text must be 1000 characters or fewer.");
+    }
+
+    let origin: URL;
+    try {
+      origin = new URL(env.WEBSITE_ORIGIN);
+    } catch {
+      throw new HttpError(500, "WEBSITE_ORIGIN must be a valid absolute URL.");
+    }
+    const sourceUrl = new URL(source, origin);
+    const targetUrl = new URL(target, origin);
+    if (sourceUrl.origin !== origin.origin || targetUrl.origin !== origin.origin) {
+      throw new HttpError(
+        400,
+        "Internal links must use paths on the configured website."
+      );
+    }
+
+    const sourcePath = `${sourceUrl.pathname}${sourceUrl.search}`;
+    const targetPath = `${targetUrl.pathname}${targetUrl.search}`;
+    const [result] = await pool.query<ResultSetHeader>(
+      `INSERT INTO seo_internal_links (source_path, target_path, anchor_text)
+       VALUES (?, ?, ?)`,
+      [sourcePath, targetPath, anchorText || null]
+    );
+
+    return NextResponse.json({ success: true, id: result.insertId }, { status: 201 });
+  } catch (err) {
+    return respondError(err, "POST /api/admin/seo/internal-links");
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const rl = rateLimit(request, { windowMs: 60_000, max: 30 });
+    if (!rl.ok) return rl.response;
+    await requireSeoAccess(request);
+
+    const id = Number(new URL(request.url).searchParams.get("id"));
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new HttpError(400, "A valid link id is required.");
+    }
+
+    const [result] = await pool.query<ResultSetHeader>(
+      "DELETE FROM seo_internal_links WHERE id = ?",
+      [id]
+    );
+    if (result.affectedRows === 0) {
+      throw new HttpError(404, "Internal link not found.");
+    }
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return respondError(err, "DELETE /api/admin/seo/internal-links");
   }
 }

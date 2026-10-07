@@ -123,11 +123,17 @@ export async function GET(request: NextRequest) {
     score = Math.max(0, Math.min(100, score));
 
     const [techRows] = (await pool.query(
-      `SELECT check_type, status
-       FROM seo_technical
-       WHERE checked_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-       GROUP BY check_type
-       ORDER BY checked_at DESC`
+      `SELECT checks.check_type, checks.status
+       FROM seo_technical checks
+       INNER JOIN (
+         SELECT check_type, MAX(checked_at) AS latest_check
+         FROM seo_technical
+         WHERE checked_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         GROUP BY check_type
+       ) latest
+         ON latest.check_type = checks.check_type
+        AND latest.latest_check = checks.checked_at
+       ORDER BY checks.checked_at DESC`
     )) as any;
 
     const techMap: Record<string, string> = {};
@@ -145,7 +151,9 @@ export async function GET(request: NextRequest) {
       ? "poor"
       : (cwvRows as any[]).find((r) => r.status === "needs_improvement")
         ? "needs_improvement"
-        : "good";
+        : (cwvRows as any[]).find((r) => r.status === "good")
+          ? "good"
+          : "no_data";
 
     return NextResponse.json(
       {

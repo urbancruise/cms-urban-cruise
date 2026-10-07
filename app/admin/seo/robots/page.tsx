@@ -10,14 +10,13 @@ import {
 } from "react-icons/md";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 
 const DEFAULT_ROBOTS = `User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
-Disallow: /login
-
-Sitemap: https://urbancruise.com/sitemap.xml`;
+Disallow: /login`;
 
 const PRESETS = {
   "Allow All": `User-agent: *
@@ -28,9 +27,7 @@ Sitemap: https://urbancruise.com/sitemap.xml`,
 Allow: /
 Disallow: /admin/
 Disallow: /api/
-Disallow: /login
-
-Sitemap: https://urbancruise.com/sitemap.xml`,
+Disallow: /login`,
   "Block Everything (Staging)": `User-agent: *
 Disallow: /`,
 };
@@ -48,20 +45,22 @@ export default function SeoRobotsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (data?.settings?.robots_txt_content) {
-      setContent(data.settings.robots_txt_content);
-    }
+    if (!data?.settings) return;
+    setContent(
+      data.settings.robots_txt_content ||
+        `${DEFAULT_ROBOTS}\n\nSitemap: ${(
+          data.settings.site_url || "https://urbancruise.com"
+        ).replace(/\/+$/, "")}/sitemap.xml`
+    );
   }, [data]);
 
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/seo/settings", {
+      await api("/api/admin/seo/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ robots_txt_content: content }),
+        body: { robots_txt_content: content },
       });
-      if (!res.ok) throw new Error("Failed to save");
       await mutate();
       setToast({ type: "success", message: "Robots.txt saved" });
       setTimeout(() => setToast(null), 3000);
@@ -102,7 +101,13 @@ export default function SeoRobotsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setContent(DEFAULT_ROBOTS)}
+            onClick={() =>
+              setContent(
+                `${DEFAULT_ROBOTS}\n\nSitemap: ${(
+                  data?.settings?.site_url || "https://urbancruise.com"
+                ).replace(/\/+$/, "")}/sitemap.xml`
+              )
+            }
             className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
           >
             <MdOutlineRestartAlt className="w-4 h-4" /> Reset

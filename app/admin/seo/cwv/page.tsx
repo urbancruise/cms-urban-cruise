@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineSpeed,
   MdOutlineRefresh,
@@ -20,7 +21,7 @@ interface CwvEntry {
   cls: number | null;
   inp: number | null;
   ttfb: number | null;
-  status: "good" | "needs_improvement" | "poor";
+  status: "good" | "needs_improvement" | "poor" | "no_data";
   measured_at: string;
 }
 
@@ -33,6 +34,8 @@ const METRIC_THRESHOLDS: Record<string, { good: number; poor: number; unit: stri
 };
 
 export default function SeoCwvPage() {
+  const [measuring, setMeasuring] = useState(false);
+  const [measureError, setMeasureError] = useState("");
   const { data, isLoading, mutate } = useSWR<{ entries: CwvEntry[] }>(
     "/api/admin/seo/cwv",
     fetcher
@@ -41,8 +44,20 @@ export default function SeoCwvPage() {
   const entries = data?.entries || [];
 
   const checkVitals = async () => {
-    await fetch("/api/admin/seo/cwv/measure", { method: "POST" });
-    mutate();
+    setMeasuring(true);
+    setMeasureError("");
+    try {
+      await api("/api/admin/seo/cwv/measure", { method: "POST" });
+      await mutate();
+    } catch (error) {
+      setMeasureError(
+        error instanceof Error
+          ? error.message
+          : "Failed to measure Core Web Vitals"
+      );
+    } finally {
+      setMeasuring(false);
+    }
   };
 
   return (
@@ -64,12 +79,19 @@ export default function SeoCwvPage() {
           </button>
           <button
             onClick={checkVitals}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm"
+            disabled={measuring}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm disabled:opacity-50"
           >
-            Measure Now
+            {measuring ? "Measuring..." : "Measure Now"}
           </button>
         </div>
       </div>
+
+      {measureError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {measureError}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
@@ -99,7 +121,9 @@ export default function SeoCwvPage() {
                       ? "bg-green-50 text-green-700"
                       : entry.status === "needs_improvement"
                         ? "bg-amber-50 text-amber-700"
-                        : "bg-red-50 text-red-700"
+                        : entry.status === "poor"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-slate-50 text-slate-600"
                   }`}
                 >
                   {entry.status === "good" && (
@@ -109,7 +133,9 @@ export default function SeoCwvPage() {
                     <MdOutlineWarning className="w-3.5 h-3.5" />
                   )}
                   {entry.status === "poor" && <MdOutlineError className="w-3.5 h-3.5" />}
-                  {entry.status.replace("_", " ")}
+                  {entry.status === "no_data"
+                    ? "No field data"
+                    : entry.status.replace("_", " ")}
                 </span>
               </div>
 

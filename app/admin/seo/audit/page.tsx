@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineFactCheck,
   MdOutlinePlayArrow,
@@ -19,146 +20,226 @@ interface AuditRow {
   message: string;
 }
 
+interface TechnicalCheck {
+  check_type: string;
+  check_key: string | null;
+  status: "ok" | "warning" | "error";
+  message: string | null;
+}
+
+interface AuditPageRecord {
+  meta_title: string | null;
+  meta_description: string | null;
+  canonical_url: string | null;
+}
+
+interface AuditImageRecord {
+  has_alt: boolean;
+}
+
+interface AuditLinkRecord {
+  is_broken: boolean;
+}
+
+interface AuditSchemaRecord {
+  is_active: boolean;
+}
+
 export default function SeoAuditPage() {
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<AuditRow[] | null>(null);
+  const [auditError, setAuditError] = useState("");
 
-  const { data: pagesData } = useSWR<{ pages: any[] }>(
+  const { mutate: mutatePages } = useSWR<{ pages: AuditPageRecord[] }>(
     "/api/admin/seo/pages?limit=500",
     fetcher
   );
-  const { data: imgData } = useSWR<{ images: any[] }>(
+  const { mutate: mutateImages } = useSWR<{ images: AuditImageRecord[] }>(
     "/api/admin/seo/images?limit=500",
     fetcher
   );
-  const { data: linkData } = useSWR<{ links: any[] }>(
+  const { mutate: mutateLinks } = useSWR<{ links: AuditLinkRecord[] }>(
     "/api/admin/seo/internal-links",
     fetcher
   );
-  const { data: schemaData } = useSWR<{ schemas: any[] }>(
+  const { mutate: mutateSchemas } = useSWR<{
+    schemas: AuditSchemaRecord[];
+  }>(
     "/api/admin/seo/schema",
+    fetcher
+  );
+  const { mutate: mutateTechnical } = useSWR<{ checks: TechnicalCheck[] }>(
+    "/api/admin/seo/technical",
     fetcher
   );
 
   const runAudit = async () => {
     setRunning(true);
-    await new Promise((r) => setTimeout(r, 800));
+    setAuditError("");
+    try {
+      await api("/api/admin/seo/technical/run", { method: "POST" });
 
-    const pages = pagesData?.pages || [];
-    const images = imgData?.images || [];
-    const links = linkData?.links || [];
-    const schemas = schemaData?.schemas || [];
+      const [pageResult, imageResult, linkResult, schemaResult, technicalResult] =
+        await Promise.all([
+          mutatePages(),
+          mutateImages(),
+          mutateLinks(),
+          mutateSchemas(),
+          mutateTechnical(),
+        ]);
+      const pages = pageResult?.pages || [];
+      const images = imageResult?.images || [];
+      const links = linkResult?.links || [];
+      const schemas = schemaResult?.schemas || [];
+      const rows: AuditRow[] = [];
 
-    const rows: AuditRow[] = [];
+      const missingTitle = pages.filter((page) => !page.meta_title).length;
+      rows.push({
+        category: "On-Page",
+        label: "Meta Titles",
+        status:
+          pages.length === 0
+            ? "warn"
+            : missingTitle === 0
+              ? "pass"
+              : missingTitle / pages.length > 0.3
+                ? "fail"
+                : "warn",
+        message: pages.length === 0
+          ? "No SEO pages are configured"
+          : missingTitle === 0
+            ? `All ${pages.length} pages have titles`
+            : `${missingTitle} pages missing titles`,
+      });
 
-    // On-page
-    const missingTitle = pages.filter((p) => !p.meta_title).length;
-    rows.push({
-      category: "On-Page",
-      label: "Meta Titles",
-      status:
-        missingTitle === 0
-          ? "pass"
-          : missingTitle / Math.max(pages.length, 1) > 0.3
-            ? "fail"
-            : "warn",
-      message:
-        missingTitle === 0
-          ? `All ${pages.length} pages have titles`
-          : `${missingTitle} pages missing titles`,
-    });
+      const missingDesc = pages.filter((page) => !page.meta_description).length;
+      rows.push({
+        category: "On-Page",
+        label: "Meta Descriptions",
+        status:
+          pages.length === 0
+            ? "warn"
+            : missingDesc === 0
+              ? "pass"
+              : missingDesc / pages.length > 0.3
+                ? "fail"
+                : "warn",
+        message: pages.length === 0
+          ? "No SEO pages are configured"
+          : missingDesc === 0
+            ? "All pages have descriptions"
+            : `${missingDesc} pages missing descriptions`,
+      });
 
-    const missingDesc = pages.filter((p) => !p.meta_description).length;
-    rows.push({
-      category: "On-Page",
-      label: "Meta Descriptions",
-      status:
-        missingDesc === 0
-          ? "pass"
-          : missingDesc / Math.max(pages.length, 1) > 0.3
-            ? "fail"
-            : "warn",
-      message:
-        missingDesc === 0
-          ? `All pages have descriptions`
-          : `${missingDesc} pages missing descriptions`,
-    });
+      const longTitles = pages.filter(
+        (page) => (page.meta_title || "").length > 60
+      ).length;
+      rows.push({
+        category: "On-Page",
+        label: "Title Length",
+        status: longTitles === 0 && pages.length > 0 ? "pass" : "warn",
+        message:
+          pages.length === 0
+            ? "No SEO pages are configured"
+            : longTitles === 0
+              ? "All titles are 60 characters or fewer"
+              : `${longTitles} titles are longer than 60 characters`,
+      });
 
-    const longTitles = pages.filter((p) => (p.meta_title || "").length > 60).length;
-    rows.push({
-      category: "On-Page",
-      label: "Title Length",
-      status: longTitles === 0 ? "pass" : "warn",
-      message:
-        longTitles === 0 ? "All titles under 60 chars" : `${longTitles} titles too long`,
-    });
+      const missingAlt = images.filter((image) => !image.has_alt).length;
+      rows.push({
+        category: "Images",
+        label: "Alt Text",
+        status:
+          images.length === 0
+            ? "warn"
+            : missingAlt === 0
+              ? "pass"
+              : missingAlt / images.length > 0.3
+                ? "fail"
+                : "warn",
+        message:
+          images.length === 0
+            ? "No images are tracked"
+            : missingAlt === 0
+              ? "All tracked images have alt text"
+              : `${missingAlt} of ${images.length} tracked images have no alt text`,
+      });
 
-    // Images
-    const missingAlt = images.filter((i) => !i.has_alt).length;
-    rows.push({
-      category: "Images",
-      label: "Alt Text",
-      status:
-        missingAlt === 0
-          ? "pass"
-          : missingAlt / Math.max(images.length, 1) > 0.3
-            ? "fail"
-            : "warn",
-      message:
-        missingAlt === 0
-          ? "All images have alt text"
-          : `${missingAlt} images missing alt text`,
-    });
+      const brokenLinks = links.filter((link) => link.is_broken).length;
+      rows.push({
+        category: "Links",
+        label: "Broken Links",
+        status:
+          links.length === 0 ? "warn" : brokenLinks === 0 ? "pass" : "fail",
+        message:
+          links.length === 0
+            ? "No internal links have been checked"
+            : brokenLinks === 0
+              ? "No tracked broken links"
+              : `${brokenLinks} tracked links are broken`,
+      });
 
-    // Links
-    const brokenLinks = links.filter((l) => l.is_broken).length;
-    rows.push({
-      category: "Links",
-      label: "Broken Links",
-      status: brokenLinks === 0 ? "pass" : "fail",
-      message:
-        brokenLinks === 0 ? "No broken links" : `${brokenLinks} broken links found`,
-    });
+      const missingCanonical = pages.filter((page) => !page.canonical_url).length;
+      rows.push({
+        category: "Technical",
+        label: "Canonical URLs",
+        status:
+          pages.length === 0
+            ? "warn"
+            : missingCanonical === 0
+              ? "pass"
+              : "warn",
+        message:
+          pages.length === 0
+            ? "No SEO pages are configured"
+            : missingCanonical === 0
+              ? "All pages have canonical URLs"
+              : `${missingCanonical} pages missing canonical URLs`,
+      });
 
-    // Canonical
-    const missingCanonical = pages.filter((p) => !p.canonical_url).length;
-    rows.push({
-      category: "Technical",
-      label: "Canonical URLs",
-      status: missingCanonical === 0 ? "pass" : "warn",
-      message:
-        missingCanonical === 0
-          ? "All pages have canonical URLs"
-          : `${missingCanonical} pages missing canonical`,
-    });
+      const activeSchemas = schemas.filter((schema) => schema.is_active).length;
+      rows.push({
+        category: "Structured Data",
+        label: "Active Schemas",
+        status: activeSchemas > 0 ? "pass" : "warn",
+        message:
+          activeSchemas > 0
+            ? `${activeSchemas} active schemas`
+            : "No active schemas are defined",
+      });
 
-    // Schema
-    rows.push({
-      category: "Structured Data",
-      label: "Schemas Defined",
-      status: schemas.length > 0 ? "pass" : "warn",
-      message:
-        schemas.length > 0 ? `${schemas.length} active schemas` : "No schemas defined",
-    });
+      const technicalLabels: Record<string, [string, string]> = {
+        https: ["Technical", "HTTPS"],
+        mobile: ["Technical", "Mobile Viewport"],
+        speed: ["Performance", "Core Web Vitals"],
+        sitemap: ["Technical", "Sitemap"],
+        robots: ["Technical", "Robots.txt"],
+      };
+      for (const check of technicalResult?.checks || []) {
+        const label = technicalLabels[check.check_type];
+        if (!label) continue;
+        rows.push({
+          category: label[0],
+          label: label[1],
+          status:
+            check.status === "ok"
+              ? "pass"
+              : check.status === "warning"
+                ? "warn"
+                : "fail",
+          message: check.message || "No details",
+        });
+      }
 
-    // Sitemap
-    rows.push({
-      category: "Technical",
-      label: "Sitemap",
-      status: "pass",
-      message: "Sitemap endpoint is available",
-    });
-
-    // Robots
-    rows.push({
-      category: "Technical",
-      label: "Robots.txt",
-      status: "pass",
-      message: "robots.txt is available",
-    });
-
-    setReport(rows);
-    setRunning(false);
+      setReport(rows);
+    } catch (error) {
+      setAuditError(
+        error instanceof Error ? error.message : "Failed to run SEO audit"
+      );
+    } finally {
+      setRunning(false);
+    }
   };
 
   const summary = report
@@ -198,6 +279,12 @@ export default function SeoAuditPage() {
           </button>
         </div>
       </div>
+
+      {auditError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {auditError}
+        </div>
+      )}
 
       {!report ? (
         <div className="bg-white rounded-xl border border-slate-200 py-20 text-center">

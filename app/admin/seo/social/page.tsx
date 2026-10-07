@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 import {
   MdOutlineShare,
   MdOutlineSave,
@@ -20,7 +21,10 @@ export default function SeoSocialPage() {
   const [twitterHandle, setTwitterHandle] = useState("");
   const [twitterCard, setTwitterCard] = useState("summary_large_image");
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (data?.settings) {
@@ -33,19 +37,22 @@ export default function SeoSocialPage() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/seo/settings", {
+      await api("/api/admin/seo/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           default_og_image: ogImage,
           default_twitter_handle: twitterHandle,
           default_twitter_card: twitterCard,
-        }),
+        },
       });
-      if (!res.ok) throw new Error("Save failed");
       await mutate();
-      setToast("Saved successfully");
-      setTimeout(() => setToast(""), 3000);
+      setToast({ type: "success", message: "Saved successfully" });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to save settings",
+      });
     } finally {
       setSaving(false);
     }
@@ -54,9 +61,15 @@ export default function SeoSocialPage() {
   return (
     <div className="p-8 max-w-4xl">
       {toast && (
-        <div className="fixed top-4 right-4 z-[100] flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border bg-green-50 border-green-200 text-green-800">
-          <MdOutlineCheckCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">{toast}</span>
+        <div
+          className={`fixed top-4 right-4 z-[100] flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-red-50 border-red-200 text-red-800"
+          }`}
+        >
+          {toast.type === "success" && <MdOutlineCheckCircle className="w-5 h-5" />}
+          <span className="text-sm font-medium">{toast.message}</span>
         </div>
       )}
 
