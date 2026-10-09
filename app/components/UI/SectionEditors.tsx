@@ -17,6 +17,7 @@ export const inputCls =
 interface ImageItemShape {
   url: string;
   publicId: string;
+  alt?: string;
 }
 
 // interface GroupSizeVehicle {
@@ -36,6 +37,7 @@ interface GroupSizeVehicle {
   description: string;
   mainImage: string;
   mainImagePublicId?: string;
+  mainImageAlt?: string;
   gallery: ImageItemShape[];
   features: Array<{ label: string; color: string }>;
 }
@@ -43,6 +45,7 @@ interface GroupSizeVehicle {
 interface OccasionCard {
   image: string;
   imagePublicId: string;
+  imageAlt?: string;
   title: string;
   seats: string;
   price: string;
@@ -93,6 +96,7 @@ interface WhyChooseBenefit {
   items: string[];
   image: string;
   imagePublicId: string;
+  imageAlt?: string;
 }
 
 interface DiscoverPlace {
@@ -186,6 +190,10 @@ export function FormEditor({
             hint="Wide banner · JPG, PNG, WEBP · Max 300 KB"
           />
         </Field>
+        <ImageAltTextField
+          value={value.backgroundImageAlt}
+          onChange={(altText) => set("backgroundImageAlt", altText)}
+        />
 
         <Field label="Vehicles Image">
           <ImageUpload
@@ -203,6 +211,10 @@ export function FormEditor({
             hint="Transparent PNG recommended · Max 300 KB"
           />
         </Field>
+        <ImageAltTextField
+          value={value.vehiclesImageAlt}
+          onChange={(altText) => set("vehiclesImageAlt", altText)}
+        />
       </div>
     );
   }
@@ -442,6 +454,7 @@ export function FormEditor({
           description: string;
           image: string;
           imagePublicId: string;
+          imageAlt?: string;
         }>
           label="Steps"
           items={value.steps || []}
@@ -452,6 +465,7 @@ export function FormEditor({
             description: "",
             image: "",
             imagePublicId: "",
+            imageAlt: "",
           }}
           renderItem={(item, update) => (
             <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
@@ -506,6 +520,10 @@ export function FormEditor({
                   hint="JPG, PNG, WEBP · Max 300 KB"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.imageAlt}
+                onChange={(imageAlt) => update({ ...item, imageAlt })}
+              />
             </div>
           )}
         />
@@ -586,6 +604,10 @@ export function FormEditor({
             hint="Decorative vehicle illustration · Max 300 KB"
           />
         </Field>
+        <ImageAltTextField
+          value={value.illustrationAlt}
+          onChange={(altText) => set("illustrationAlt", altText)}
+        />
 
         {/* ----------------------------------------
             CATEGORIES
@@ -594,6 +616,7 @@ export function FormEditor({
           title: string;
           description: string;
           icon: string;
+          iconAlt?: string;
           color: "green" | "orange";
         }>
           label="Categories"
@@ -603,6 +626,7 @@ export function FormEditor({
             title: "",
             description: "",
             icon: "",
+            iconAlt: "",
             color: "green",
           }}
           renderItem={(item, update) => (
@@ -659,6 +683,10 @@ export function FormEditor({
                   hint="Square icon · Max 300 KB"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.iconAlt}
+                onChange={(iconAlt) => update({ ...item, iconAlt })}
+              />
             </div>
           )}
         />
@@ -953,6 +981,10 @@ export function FormEditor({
                   hint="JPG, PNG, WEBP · Max 300 KB"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.mainImageAlt}
+                onChange={(mainImageAlt) => update({ ...item, mainImageAlt })}
+              />
 
               {/* Gallery (multiple stacked images) */}
               <Field label="Gallery Images">
@@ -1105,6 +1137,7 @@ export function FormEditor({
                     price: "",
                     location: "",
                     description: "",
+                    imageAlt: "",
                     features: [],
                     bookLabel: "BOOK NOW",
                     bookLink: "",
@@ -1128,6 +1161,12 @@ export function FormEditor({
                           aspect="4 / 3"
                         />
                       </Field>
+                      <ImageAltTextField
+                        value={card.imageAlt}
+                        onChange={(imageAlt) =>
+                          updateCard({ ...card, imageAlt })
+                        }
+                      />
 
                       <Field label="Card Title">
                         <input
@@ -2290,6 +2329,10 @@ export function FormEditor({
                   aspect="1 / 1"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.imageAlt}
+                onChange={(imageAlt) => update({ ...item, imageAlt })}
+              />
             </div>
           )}
         />
@@ -2347,6 +2390,7 @@ export function FormEditor({
           rating: number;
           avatar: string;
           avatarPublicId: string;
+          avatarAlt?: string;
           featured: boolean;
           youtubeUrl: string;
         }>
@@ -2360,6 +2404,7 @@ export function FormEditor({
             rating: 5,
             avatar: "",
             avatarPublicId: "",
+            avatarAlt: "",
             featured: false,
             youtubeUrl: "",
           }}
@@ -2457,6 +2502,10 @@ export function FormEditor({
                   variant="compact"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.avatarAlt}
+                onChange={(avatarAlt) => update({ ...item, avatarAlt })}
+              />
 
               <Field label="YouTube Video URL">
                 <input
@@ -2872,11 +2921,18 @@ export function FormEditor({
           state: string;
           image: string;
           imagePublicId: string;
+          imageAlt?: string;
         }>
           label="Cities"
           items={value.cities || []}
           onChange={(items) => set("cities", items)}
-          emptyItem={{ name: "", state: "", image: "", imagePublicId: "" }}
+          emptyItem={{
+            name: "",
+            state: "",
+            image: "",
+            imagePublicId: "",
+            imageAlt: "",
+          }}
           renderItem={(item, update) => (
             <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2918,6 +2974,10 @@ export function FormEditor({
                   aspect="4 / 3"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.imageAlt}
+                onChange={(imageAlt) => update({ ...item, imageAlt })}
+              />
             </div>
           )}
         />
@@ -2972,11 +3032,12 @@ export function FormEditor({
           name: string;
           logo: string;
           logoPublicId: string;
+          logoAlt?: string;
         }>
           label="Partner logos"
           items={value.logos || []}
           onChange={(items) => set("logos", items)}
-          emptyItem={{ name: "", logo: "", logoPublicId: "" }}
+          emptyItem={{ name: "", logo: "", logoPublicId: "", logoAlt: "" }}
           renderItem={(item, update) => (
             <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
               <Field label="Partner Name">
@@ -3006,6 +3067,10 @@ export function FormEditor({
                   variant="compact"
                 />
               </Field>
+              <ImageAltTextField
+                value={item.logoAlt}
+                onChange={(logoAlt) => update({ ...item, logoAlt })}
+              />
             </div>
           )}
         />
@@ -3135,6 +3200,10 @@ export function FormEditor({
             variant="compact"
           />
         </Field>
+        <ImageAltTextField
+          value={value.appLogoAlt}
+          onChange={(altText) => set("appLogoAlt", altText)}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Google Play URL">
@@ -3185,6 +3254,10 @@ export function FormEditor({
             variant="compact"
           />
         </Field>
+        <ImageAltTextField
+          value={value.qrCodeAlt}
+          onChange={(altText) => set("qrCodeAlt", altText)}
+        />
 
         <RichList<{
           icon: string;
@@ -3251,6 +3324,10 @@ export function FormEditor({
             aspect="9 / 16"
           />
         </Field>
+        <ImageAltTextField
+          value={value.phoneMockupAlt}
+          onChange={(altText) => set("phoneMockupAlt", altText)}
+        />
       </div>
     );
   }
@@ -3289,6 +3366,26 @@ export function Field({
       </span>
       {children}
     </div>
+  );
+}
+
+function ImageAltTextField({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (altText: string) => void;
+}) {
+  return (
+    <Field label="Image Alt Text">
+      <input
+        type="text"
+        value={value || ""}
+        onChange={(event) => onChange(event.target.value)}
+        className={inputCls}
+        placeholder="Describe the image for accessibility"
+      />
+    </Field>
   );
 }
 
