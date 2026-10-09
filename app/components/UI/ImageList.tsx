@@ -13,6 +13,7 @@ type Scope = "hero" | "about" | "vehicle" | "partner" | "editor" | "general";
 export interface ImageItem {
   url: string;
   publicId: string;
+  alt?: string;
 }
 
 interface ImageListProps {
@@ -160,7 +161,7 @@ export default function ImageList({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.url}
-                  alt={`Image ${i + 1}`}
+                  alt={item.alt || `Image ${i + 1}`}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               </div>
@@ -180,6 +181,26 @@ export default function ImageList({
                   <MdOutlineDelete className="w-3.5 h-3.5" />
                 </button>
               )}
+
+              <label className="block p-2 text-[11px] font-medium text-slate-600">
+                Alt text
+                <input
+                  type="text"
+                  value={item.alt || ""}
+                  onChange={(event) =>
+                    onChange(
+                      items.map((current, index) =>
+                        index === i
+                          ? { ...current, alt: event.target.value }
+                          : current
+                      )
+                    )
+                  }
+                  className="mt-1 w-full px-2 py-1.5 border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Describe the image"
+                  disabled={disabled}
+                />
+              </label>
             </div>
           ))}
         </div>
