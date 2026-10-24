@@ -87,6 +87,7 @@ interface CompareCard {
 interface ComparePair {
   cardA: CompareCard;
   cardB: CompareCard;
+  cardC?: CompareCard;
 }
 
 interface WhyChooseBenefit {
@@ -115,6 +116,188 @@ interface DiscoverPlace {
 // ============================================================
 // FormEditor — shared across Home & Vehicles pages
 // ============================================================
+function CompareCardEditor({
+  card,
+  onChange,
+}: {
+  card?: CompareCard;
+  onChange: (card: CompareCard) => void;
+}) {
+  const current: CompareCard = card || {
+    badge: "",
+    badgeIcon: "star",
+    image: "",
+    imagePublicId: "",
+    name: "",
+    price: "",
+    accentColor: "blue",
+    features: [],
+    footerText: "",
+    bookLabel: "BOOK NOW",
+    bookLink: "",
+  };
+  const updateCard = (changes: Partial<CompareCard>) =>
+    onChange({ ...current, ...changes });
+
+  return (
+    <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-white">
+      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        Card C (Right)
+      </h4>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Badge Text">
+          <input
+            type="text"
+            value={current.badge}
+            onChange={(e) => updateCard({ badge: e.target.value })}
+            className={inputCls}
+            placeholder="BEST FOR COMFORT"
+          />
+        </Field>
+        <Field label="Badge Icon">
+          <select
+            value={current.badgeIcon}
+            onChange={(e) => updateCard({ badgeIcon: e.target.value })}
+            className={inputCls}
+          >
+            <option value="star">⭐ Star</option>
+            <option value="shield">🛡 Shield</option>
+            <option value="thumbs">👍 Thumbs</option>
+            <option value="crown">👑 Crown</option>
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Card Image">
+        <ImageUpload
+          value={current.image || null}
+          publicId={current.imagePublicId || null}
+          onChange={(url, publicId) =>
+            updateCard({
+              image: url || "",
+              imagePublicId: publicId || "",
+            })
+          }
+          scope="vehicle"
+          aspect="16 / 9"
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Vehicle Name">
+          <input
+            type="text"
+            value={current.name}
+            onChange={(e) => updateCard({ name: e.target.value })}
+            className={inputCls}
+            placeholder="Vehicle name"
+          />
+        </Field>
+        <Field label="Price Label">
+          <input
+            type="text"
+            value={current.price}
+            onChange={(e) => updateCard({ price: e.target.value })}
+            className={inputCls}
+            placeholder="₹ per km"
+          />
+        </Field>
+      </div>
+
+      <Field label="Accent Color">
+        <select
+          value={current.accentColor}
+          onChange={(e) => updateCard({ accentColor: e.target.value })}
+          className={inputCls}
+        >
+          <option value="green">Green</option>
+          <option value="orange">Orange</option>
+          <option value="teal">Teal</option>
+          <option value="blue">Blue</option>
+        </select>
+      </Field>
+
+      <Field label="Features (rows)">
+        <RichList<CompareFeature>
+          label=""
+          items={current.features || []}
+          onChange={(features) => updateCard({ features })}
+          emptyItem={{ icon: "", label: "", value: "" }}
+          renderItem={(feature, updateFeature) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50">
+              <Field label="Icon (emoji)">
+                <input
+                  type="text"
+                  value={feature.icon || ""}
+                  onChange={(e) =>
+                    updateFeature({ ...feature, icon: e.target.value })
+                  }
+                  className={inputCls}
+                  placeholder="🪑"
+                />
+              </Field>
+              <Field label="Label">
+                <input
+                  type="text"
+                  value={feature.label || ""}
+                  onChange={(e) =>
+                    updateFeature({ ...feature, label: e.target.value })
+                  }
+                  className={inputCls}
+                  placeholder="Seating Type"
+                />
+              </Field>
+              <Field label="Value">
+                <input
+                  type="text"
+                  value={feature.value || ""}
+                  onChange={(e) =>
+                    updateFeature({ ...feature, value: e.target.value })
+                  }
+                  className={inputCls}
+                  placeholder="Vehicle details"
+                />
+              </Field>
+            </div>
+          )}
+        />
+      </Field>
+
+      <Field label="Footer Text">
+        <input
+          type="text"
+          value={current.footerText}
+          onChange={(e) => updateCard({ footerText: e.target.value })}
+          className={inputCls}
+          placeholder="Short vehicle summary"
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Book Label">
+          <input
+            type="text"
+            value={current.bookLabel}
+            onChange={(e) => updateCard({ bookLabel: e.target.value })}
+            className={inputCls}
+            placeholder="BOOK NOW"
+          />
+        </Field>
+        <Field label="Book Link">
+          <input
+            type="text"
+            value={current.bookLink}
+            onChange={(e) => updateCard({ bookLink: e.target.value })}
+            className={inputCls}
+            placeholder="/booking"
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
 export function FormEditor({
   sectionKey,
   value,
@@ -1528,7 +1711,7 @@ export function FormEditor({
         </Field>
 
         <RichList<ComparePair>
-          label="Comparison Cards (pair per slide)"
+          label="Comparison Cards (3 cards per slide)"
           items={value.comparisons || []}
           onChange={(items) => set("comparisons", items)}
           emptyItem={{
@@ -1553,6 +1736,19 @@ export function FormEditor({
               name: "",
               price: "",
               accentColor: "orange",
+              features: [],
+              footerText: "",
+              bookLabel: "BOOK NOW",
+              bookLink: "",
+            },
+            cardC: {
+              badge: "",
+              badgeIcon: "star",
+              image: "",
+              imagePublicId: "",
+              name: "",
+              price: "",
+              accentColor: "blue",
               features: [],
               footerText: "",
               bookLabel: "BOOK NOW",
@@ -1786,7 +1982,7 @@ export function FormEditor({
               {/* CARD B */}
               <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-white">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Card B (Right)
+                  Card B (Center)
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2003,6 +2199,10 @@ export function FormEditor({
                   </Field>
                 </div>
               </div>
+              <CompareCardEditor
+                card={pair.cardC}
+                onChange={(cardC) => update({ ...pair, cardC })}
+              />
             </div>
           )}
         />
