@@ -64,6 +64,30 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      const sections =
+        typeof vehicle.sections === "string"
+          ? JSON.parse(vehicle.sections)
+          : vehicle.sections;
+      const hiddenSectionByVehicle: Record<string, string> = {
+        "mercedes-sprinter": "occasion",
+        "luxury-vans": "discover",
+        "maharaja-tempo-traveller": "occasion",
+        "volvo-bus": "occasion",
+        "bharat-benz-bus": "occasion",
+        "bus-with-washroom": "occasion",
+        "sleeper-bus": "occasion",
+      };
+      const hiddenSection = hiddenSectionByVehicle[vehicle.vehicle_slug];
+      const publicSections =
+        hiddenSection &&
+        sections !== null &&
+        typeof sections === "object" &&
+        !Array.isArray(sections)
+          ? Object.fromEntries(
+              Object.entries(sections).filter(([key]) => key !== hiddenSection)
+            )
+          : sections;
+
       return withCors(
         NextResponse.json(
           {
@@ -74,10 +98,7 @@ export async function GET(request: NextRequest) {
                 typeof vehicle.meta === "string"
                   ? JSON.parse(vehicle.meta)
                   : vehicle.meta,
-              sections:
-                typeof vehicle.sections === "string"
-                  ? JSON.parse(vehicle.sections)
-                  : vehicle.sections,
+              sections: publicSections,
             },
             updatedAt: vehicle.updated_at,
           },
