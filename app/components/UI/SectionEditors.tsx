@@ -2211,6 +2211,122 @@ export function FormEditor({
   }
 
   // ============================================================
+  // SERVICES IN VARIOUS CITIES
+  // ============================================================
+  if (sectionKey === "servicesincities") {
+    return (
+      <div className="space-y-5">
+        <Field label="Eyebrow">
+          <input
+            type="text"
+            value={value.eyebrow || ""}
+            onChange={(e) => set("eyebrow", e.target.value)}
+            className={inputCls}
+            placeholder="OUR SERVICES"
+          />
+        </Field>
+
+        <Field label="Title">
+          <input
+            type="text"
+            value={value.title || ""}
+            onChange={(e) => set("title", e.target.value)}
+            className={inputCls}
+            placeholder="Our Services In Various Cities"
+          />
+        </Field>
+
+        <Field label="Subtitle">
+          <input
+            type="text"
+            value={value.subtitle || ""}
+            onChange={(e) => set("subtitle", e.target.value)}
+            className={inputCls}
+            placeholder="Explore our services by city"
+          />
+        </Field>
+
+        <Field label="Description">
+          <textarea
+            rows={3}
+            value={value.description || ""}
+            onChange={(e) => set("description", e.target.value)}
+            className={inputCls}
+            placeholder="Add a short introduction to your services in these cities."
+          />
+        </Field>
+
+        <RichList<{
+          name: string;
+          state: string;
+          href: string;
+          image: string;
+          imagePublicId: string;
+        }>
+          label="Cities"
+          items={value.cities || []}
+          onChange={(items) => set("cities", items)}
+          emptyItem={{
+            name: "",
+            state: "",
+            href: "",
+            image: "",
+            imagePublicId: "",
+          }}
+          renderItem={(item, update) => (
+            <div className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="City Name">
+                  <input
+                    type="text"
+                    value={item.name || ""}
+                    onChange={(e) => update({ ...item, name: e.target.value })}
+                    className={inputCls}
+                    placeholder="Delhi"
+                  />
+                </Field>
+                <Field label="State">
+                  <input
+                    type="text"
+                    value={item.state || ""}
+                    onChange={(e) => update({ ...item, state: e.target.value })}
+                    className={inputCls}
+                    placeholder="Delhi NCR"
+                  />
+                </Field>
+              </div>
+              <Field label="City Link (optional)">
+                <input
+                  type="text"
+                  value={item.href || ""}
+                  onChange={(e) => update({ ...item, href: e.target.value })}
+                  className={inputCls}
+                  placeholder="/delhi"
+                />
+              </Field>
+              <Field label="City Image">
+                <ImageUpload
+                  value={item.image || null}
+                  publicId={item.imagePublicId || null}
+                  onChange={(url, publicId) =>
+                    update({
+                      ...item,
+                      image: url || "",
+                      imagePublicId: publicId || "",
+                    })
+                  }
+                  scope="general"
+                  aspect="4 / 3"
+                />
+              </Field>
+            </div>
+          )}
+        />
+      </div>
+    );
+  }
+
+  // ============================================================
   // PRICES & CHARGES
   // ============================================================
   if (sectionKey === "prices") {
