@@ -135,6 +135,7 @@ const VEHICLE_SECTIONS = [
     ],
   },
   { key: "lookingvehicle", label: "Looking For Other Vehicle" },
+  { key: "servicesincities", label: "Our Services In Various Cities" },
   {
     key: "compare",
     label: "Compare With Vehicles",
