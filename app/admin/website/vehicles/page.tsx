@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
+import dynamic from "next/dynamic";
 import { fetcher } from "@/lib/swr-config";
 import {
   MdOutlineSave,
@@ -16,10 +17,16 @@ import {
   MdOutlineLocationOn,
 } from "react-icons/md";
 import { CardGridSkeleton } from "@/app/components/UI/PageSkeletons";
-import ImageUpload from "@/app/components/UI/ImageUpload";
-import { FormEditor, Field } from "@/app/components/UI/SectionEditors";
 import { useAuth } from "@/app/context/AuthContext";
 import { api } from "@/lib/api";
+
+const ImageUpload = dynamic(() => import("@/app/components/UI/ImageUpload"));
+const FormEditor = dynamic(() =>
+  import("@/app/components/UI/SectionEditors").then((module) => module.FormEditor)
+);
+const Field = dynamic(() =>
+  import("@/app/components/UI/SectionEditors").then((module) => module.Field)
+);
 
 // ============================================================
 // Vehicle slugs (with permissions)
@@ -193,6 +200,8 @@ interface City {
   state: string | null;
 }
 
+const EMPTY_CITIES: City[] = [];
+
 interface VehicleRow {
   id: number;
   vehicle_slug: string;
@@ -202,6 +211,8 @@ interface VehicleRow {
   sort_order: number;
   updated_at: string;
 }
+
+const EMPTY_VEHICLES: VehicleRow[] = [];
 
 const inputCls =
   "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500";
@@ -219,11 +230,11 @@ export default function WebsiteVehiclesPage() {
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data: citiesData } = useSWR<{ cities: City[] }>(
+  const { data: citiesData, isLoading: citiesLoading } = useSWR<{ cities: City[] }>(
     "/api/admin/cities?active=true",
     fetcher
   );
-  const allCities = citiesData?.cities || [];
+  const allCities = citiesData?.cities ?? EMPTY_CITIES;
 
   // ✅ Restrict cities to user's accessible cities
   const cities = useMemo(() => {
@@ -234,28 +245,22 @@ export default function WebsiteVehiclesPage() {
     return allCities.filter((c) => allowedIds.has(c.id));
   }, [allCities, user]);
 
-  // ✅ Ensure selectedCityId is valid
-  useEffect(() => {
-    if (cities.length === 0) {
-      if (selectedCityId !== null) setSelectedCityId(null);
-      return;
-    }
-    const currentIsValid = cities.some((c) => c.id === selectedCityId);
-    if (!currentIsValid) {
-      setSelectedCityId(cities[0].id);
-    }
-  }, [cities, selectedCityId]);
+  const activeCityId =
+    selectedCityId && cities.some((city) => city.id === selectedCityId)
+      ? selectedCityId
+      : (cities[0]?.id ?? null);
 
-  const listKey = selectedCityId
-    ? `/api/admin/site-content/vehicles?city_id=${selectedCityId}`
+  const listKey = activeCityId
+    ? `/api/admin/site-content/vehicles?city_id=${activeCityId}`
     : null;
 
-  const { data, isLoading, mutate } = useSWR<{ vehicles: VehicleRow[] }>(
+  const { data, isLoading: vehiclesLoading, mutate } = useSWR<{ vehicles: VehicleRow[] }>(
     listKey,
     fetcher
   );
+  const isLoading = citiesLoading || vehiclesLoading;
 
-  const vehicles = data?.vehicles || [];
+  const vehicles = data?.vehicles ?? EMPTY_VEHICLES;
 
   const vehicleMap = useMemo(() => {
     const map: Record<string, VehicleRow> = {};
@@ -266,14 +271,14 @@ export default function WebsiteVehiclesPage() {
   // Filter by BOTH role + city permissions, then apply search
   const filteredSlugs = useMemo(() => {
     const allowed = VEHICLE_SLUGS.filter((s) =>
-      hasCityPermission(s.perm, selectedCityId)
+      hasCityPermission(s.perm, activeCityId)
     );
     const q = search.trim().toLowerCase();
     if (!q) return allowed;
     return allowed.filter(
       (s) => s.label.toLowerCase().includes(q) || s.slug.toLowerCase().includes(q)
     );
-  }, [search, hasCityPermission, selectedCityId]);
+  }, [search, hasCityPermission, activeCityId]);
 
   // ============================================================
   // SAVE
@@ -310,13 +315,13 @@ export default function WebsiteVehiclesPage() {
   status: "draft" | "published" | "archived",
   sortOrder: number
 ) => {
-  if (!selectedCityId) throw new Error("No city selected");
+  if (!activeCityId) throw new Error("No city selected");
 
   // ✅ CSRF-aware
   await api("/api/admin/site-content/vehicles", {
     method: "PUT",
     body: {
-      cityId: selectedCityId,
+      cityId: activeCityId,
       vehicleSlug,
       meta,
       sections,
@@ -353,12 +358,12 @@ export default function WebsiteVehiclesPage() {
   //   }
   // };
   const confirmDelete = async () => {
-  if (!selectedCityId || !deleteSlug) return;
+  if (!activeCityId || !deleteSlug) return;
   setDeleting(true);
   try {
     // ✅ CSRF-aware
     await api(
-      `/api/admin/site-content/vehicles?city_id=${selectedCityId}&slug=${deleteSlug}`,
+      `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${deleteSlug}`,
       { method: "DELETE" }
     );
     await mutate();
@@ -375,12 +380,13 @@ export default function WebsiteVehiclesPage() {
   // LOAD FULL VEHICLE
   // ============================================================
   const ensureFullVehicle = async (slug: string) => {
+    if (!activeCityId) return null;
     const existing = vehicleMap[slug];
     if (existing && existing.sections) return existing;
 
     try {
       const res = await fetch(
-        `/api/admin/site-content/vehicles?city_id=${selectedCityId}&slug=${slug}`
+        `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${slug}`
       );
       if (res.ok) {
         const { vehicle } = await res.json();
@@ -413,7 +419,7 @@ export default function WebsiteVehiclesPage() {
   const canAccessVehicle = (slug: string | null) => {
     if (!slug) return false;
     const v = VEHICLE_SLUGS.find((s) => s.slug === slug);
-    return v ? hasCityPermission(v.perm, selectedCityId) : false;
+    return v ? hasCityPermission(v.perm, activeCityId) : false;
   };
 
   // ============================================================
@@ -439,6 +445,8 @@ export default function WebsiteVehiclesPage() {
           <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
         </button>
       </div>
+
+      {citiesLoading && <CardGridSkeleton count={6} />}
 
       {/* No cities at all */}
       {!isLoading && cities.length === 0 && (
@@ -468,7 +476,7 @@ export default function WebsiteVehiclesPage() {
                 setPreviewSlug(null);
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCityId === c.id
+                activeCityId === c.id
                   ? "bg-teal-600 text-white shadow-sm"
                   : "bg-white border border-slate-200 text-slate-700 hover:border-teal-400"
               }`}
@@ -537,6 +545,8 @@ export default function WebsiteVehiclesPage() {
                         <img
                           src={v.meta.image}
                           alt={label}
+                          loading="lazy"
+                          decoding="async"
                           className="absolute inset-0 w-full h-full object-cover"
                         />
                       </div>
@@ -607,9 +617,9 @@ export default function WebsiteVehiclesPage() {
       )}
 
       {/* Editor Modal */}
-      {editingSlug && selectedCityId && canAccessVehicle(editingSlug) && (
+      {editingSlug && activeCityId && canAccessVehicle(editingSlug) && (
         <VehicleEditor
-          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          cityName={cities.find((c) => c.id === activeCityId)?.name || ""}
           vehicleSlug={editingSlug}
           vehicleLabel={
             VEHICLE_SLUGS.find((s) => s.slug === editingSlug)?.label || editingSlug
@@ -625,13 +635,13 @@ export default function WebsiteVehiclesPage() {
       )}
 
       {/* Preview Modal */}
-      {previewSlug && selectedCityId && canAccessVehicle(previewSlug) && (
+      {previewSlug && activeCityId && canAccessVehicle(previewSlug) && (
         <VehiclePreviewModal
           vehicleLabel={
             VEHICLE_SLUGS.find((s) => s.slug === previewSlug)?.label || previewSlug
           }
           vehicleSlug={previewSlug}
-          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          cityName={cities.find((c) => c.id === activeCityId)?.name || ""}
           meta={vehicleMap[previewSlug]?.meta || {}}
           sections={vehicleMap[previewSlug]?.sections || {}}
           status={vehicleMap[previewSlug]?.status || "draft"}
@@ -652,7 +662,7 @@ export default function WebsiteVehiclesPage() {
             VEHICLE_SLUGS.find((s) => s.slug === deleteSlug)?.label || deleteSlug
           }
           vehicleSlug={deleteSlug}
-          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          cityName={cities.find((c) => c.id === activeCityId)?.name || ""}
           loading={deleting}
           onCancel={() => setDeleteSlug(null)}
           onConfirm={confirmDelete}

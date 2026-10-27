@@ -61,6 +61,16 @@ export function useChunkedSWR<T>({
 
   const paramsKey = JSON.stringify(params);
   const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+
+  const abortPendingRequest = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+  const invalidatePendingRequests = useCallback(() => {
+    requestIdRef.current++;
+    abortPendingRequest();
+  }, [abortPendingRequest]);
 
   const buildUrl = useCallback(
     (pageIndex: number) => {
@@ -84,20 +94,27 @@ export function useChunkedSWR<T>({
   // First page (respects tab visibility + cache)
   // ============================================================
   useEffect(() => {
-    if (!enabled) return;
-    if (typeof document !== "undefined" && document.hidden) return;
+    const requestId = ++requestIdRef.current;
+    abortPendingRequest();
+
+    if (!enabled || (typeof document !== "undefined" && document.hidden)) {
+      setLoading(false);
+      setInitialLoading(false);
+      return invalidatePendingRequests;
+    }
 
     const cached = cacheGet(cacheKey);
     if (cached) {
       setItems(cached.items as T[]);
       setTotal(cached.total);
       setHasMore(cached.items.length === pageSize && cached.items.length < cached.total);
+      setLoading(false);
       setInitialLoading(false);
-      return;
+      return invalidatePendingRequests;
     }
 
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setItems([]);
     setPage(0);
@@ -110,13 +127,15 @@ export function useChunkedSWR<T>({
         setLoading(true);
         const res = await fetch(buildUrl(0), {
           cache: "default",
-          signal: abortRef.current!.signal,
+          signal: controller.signal,
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
         const data = await res.json();
+        if (controller.signal.aborted || requestId !== requestIdRef.current) return;
+
         const chunk: T[] = data[dataKey] || [];
         const totalCount = Number(data[totalKey]) || chunk.length;
 
@@ -125,38 +144,80 @@ export function useChunkedSWR<T>({
         setHasMore(chunk.length === pageSize && chunk.length < totalCount);
         cacheSet(cacheKey, chunk, totalCount);
       } catch (e: any) {
-        if (e.name !== "AbortError") setError(e.message);
+        if (
+          !controller.signal.aborted &&
+          requestId === requestIdRef.current &&
+          e.name !== "AbortError"
+        ) {
+          setError(e.message);
+        }
       } finally {
-        setInitialLoading(false);
-        setLoading(false);
+        if (!controller.signal.aborted && requestId === requestIdRef.current) {
+          setInitialLoading(false);
+          setLoading(false);
+          if (abortRef.current === controller) abortRef.current = null;
+        }
       }
     })();
 
-    return () => abortRef.current?.abort();
-  }, [buildUrl, enabled, dataKey, pageSize, totalKey, paramsKey, endpoint, cacheKey]);
+    return invalidatePendingRequests;
+  }, [
+    abortPendingRequest,
+    invalidatePendingRequests,
+    buildUrl,
+    enabled,
+    dataKey,
+    pageSize,
+    totalKey,
+    paramsKey,
+    endpoint,
+    cacheKey,
+  ]);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
     setLoading(true);
     const nextPage = page + 1;
+    abortPendingRequest();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
 
     try {
-      const res = await fetch(buildUrl(nextPage), { cache: "default" });
+      const res = await fetch(buildUrl(nextPage), {
+        cache: "default",
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
+
       const chunk: T[] = data[dataKey] || [];
       setItems((prev) => [...prev, ...chunk]);
       setPage(nextPage);
       setHasMore(chunk.length === pageSize);
     } catch (e: any) {
-      setError(e.message);
+      if (
+        !controller.signal.aborted &&
+        requestId === requestIdRef.current &&
+        e.name !== "AbortError"
+      ) {
+        setError(e.message);
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && requestId === requestIdRef.current) {
+        setLoading(false);
+        if (abortRef.current === controller) abortRef.current = null;
+      }
     }
-  }, [loading, hasMore, page, buildUrl, dataKey, pageSize]);
+  }, [abortPendingRequest, loading, hasMore, page, buildUrl, dataKey, pageSize]);
 
   const refresh = useCallback(() => {
     cache.delete(cacheKey);
+    abortPendingRequest();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
     setPage(0);
     setHasMore(true);
     setInitialLoading(true);
@@ -165,9 +226,14 @@ export function useChunkedSWR<T>({
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(buildUrl(0), { cache: "no-store" });
+        const res = await fetch(buildUrl(0), {
+          cache: "no-store",
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        if (controller.signal.aborted || requestId !== requestIdRef.current) return;
+
         const chunk: T[] = data[dataKey] || [];
         const totalCount = Number(data[totalKey]) || chunk.length;
 
@@ -176,13 +242,22 @@ export function useChunkedSWR<T>({
         setHasMore(chunk.length === pageSize && chunk.length < totalCount);
         cacheSet(cacheKey, chunk, totalCount);
       } catch (e: any) {
-        setError(e.message);
+        if (
+          !controller.signal.aborted &&
+          requestId === requestIdRef.current &&
+          e.name !== "AbortError"
+        ) {
+          setError(e.message);
+        }
       } finally {
-        setInitialLoading(false);
-        setLoading(false);
+        if (!controller.signal.aborted && requestId === requestIdRef.current) {
+          setInitialLoading(false);
+          setLoading(false);
+          if (abortRef.current === controller) abortRef.current = null;
+        }
       }
     })();
-  }, [buildUrl, dataKey, pageSize, totalKey, cacheKey]);
+  }, [abortPendingRequest, buildUrl, dataKey, pageSize, totalKey, cacheKey]);
 
   return {
     items,

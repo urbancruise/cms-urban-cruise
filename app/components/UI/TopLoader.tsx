@@ -14,19 +14,20 @@ export default function TopLoader() {
 
     const t1 = setTimeout(() => setProgress(40), 100);
     const t2 = setTimeout(() => setProgress(70), 300);
+    let t4: ReturnType<typeof setTimeout> | undefined;
     const t3 = setTimeout(() => {
       setProgress(100);
-      const t4 = setTimeout(() => {
+      t4 = setTimeout(() => {
         setLoading(false);
         setProgress(0);
       }, 300);
-      return () => clearTimeout(t4);
     }, 500);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
+      if (t4) clearTimeout(t4);
     };
   }, [pathname]);
 

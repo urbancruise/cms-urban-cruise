@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
+import dynamic from "next/dynamic";
 import { fetcher } from "@/lib/swr-config";
 import { api } from "@/lib/api";
 import {
@@ -15,8 +16,14 @@ import {
   MdOutlineLocationOn,
 } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
-import { FormEditor, JsonEditor } from "@/app/components/UI/SectionEditors";
 import { useAuth } from "@/app/context/AuthContext";
+
+const FormEditor = dynamic(() =>
+  import("@/app/components/UI/SectionEditors").then((module) => module.FormEditor)
+);
+const JsonEditor = dynamic(() =>
+  import("@/app/components/UI/SectionEditors").then((module) => module.JsonEditor)
+);
 
 // ============================================================
 // Section definitions (with permissions)
@@ -45,6 +52,8 @@ interface City {
   state: string | null;
 }
 
+const EMPTY_CITIES: City[] = [];
+
 interface Section {
   id: number;
   city_id: number;
@@ -53,6 +62,8 @@ interface Section {
   status: "draft" | "published" | "archived";
   updated_at: string;
 }
+
+const EMPTY_SECTIONS: Section[] = [];
 
 export default function WebsiteHomePage() {
   const { user, hasCityPermission } = useAuth();
@@ -63,11 +74,11 @@ export default function WebsiteHomePage() {
   const [deleteSection, setDeleteSection] = useState<SectionKey | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const { data: citiesData } = useSWR<{ cities: City[] }>(
+  const { data: citiesData, isLoading: citiesLoading } = useSWR<{ cities: City[] }>(
     "/api/admin/cities?active=true",
     fetcher
   );
-  const allCities = citiesData?.cities || [];
+  const allCities = citiesData?.cities ?? EMPTY_CITIES;
 
   const cities = useMemo(() => {
     if (!user) return [];
@@ -76,30 +87,27 @@ export default function WebsiteHomePage() {
     return allCities.filter((c) => allowedIds.has(c.id));
   }, [allCities, user]);
 
-  useEffect(() => {
-    if (cities.length === 0) {
-      if (selectedCityId !== null) setSelectedCityId(null);
-      return;
-    }
-    const currentIsValid = cities.some((c) => c.id === selectedCityId);
-    if (!currentIsValid) setSelectedCityId(cities[0].id);
-  }, [cities, selectedCityId]);
+  const activeCityId =
+    selectedCityId && cities.some((city) => city.id === selectedCityId)
+      ? selectedCityId
+      : (cities[0]?.id ?? null);
 
   const visibleSections = useMemo(
-    () => HOME_SECTIONS.filter((s) => hasCityPermission(s.perm, selectedCityId)),
-    [hasCityPermission, selectedCityId]
+    () => HOME_SECTIONS.filter((s) => hasCityPermission(s.perm, activeCityId)),
+    [hasCityPermission, activeCityId]
   );
 
-  const sectionsKey = selectedCityId
-    ? `/api/admin/site-content/home?city_id=${selectedCityId}`
+  const sectionsKey = activeCityId
+    ? `/api/admin/site-content/home?city_id=${activeCityId}`
     : null;
 
-  const { data, isLoading, mutate } = useSWR<{ sections: Section[] }>(
+  const { data, isLoading: sectionsLoading, mutate } = useSWR<{ sections: Section[] }>(
     sectionsKey,
     fetcher
   );
+  const isLoading = citiesLoading || sectionsLoading;
 
-  const sections = data?.sections || [];
+  const sections = data?.sections ?? EMPTY_SECTIONS;
 
   const sectionMap = useMemo(() => {
     const map: Record<string, Section> = {};
@@ -115,12 +123,12 @@ export default function WebsiteHomePage() {
     content: any,
     status: "draft" | "published" | "archived"
   ) => {
-    if (!selectedCityId) throw new Error("No city selected");
+    if (!activeCityId) throw new Error("No city selected");
 
     await api("/api/admin/site-content/home", {
       method: "PUT",
       body: {
-        cityId: selectedCityId,
+        cityId: activeCityId,
         sectionKey,
         content,
         status,
@@ -134,11 +142,11 @@ export default function WebsiteHomePage() {
   // DELETE — uses CSRF-aware api() wrapper
   // ============================================================
   const confirmDelete = async () => {
-    if (!selectedCityId || !deleteSection) return;
+    if (!activeCityId || !deleteSection) return;
     setDeleting(true);
     try {
       await api(
-        `/api/admin/site-content/home?city_id=${selectedCityId}&section_key=${deleteSection}`,
+        `/api/admin/site-content/home?city_id=${activeCityId}&section_key=${deleteSection}`,
         { method: "DELETE" }
       );
       await mutate();
@@ -154,7 +162,7 @@ export default function WebsiteHomePage() {
   const canAccessSection = (key: string | null) => {
     if (!key) return false;
     const sec = HOME_SECTIONS.find((s) => s.key === key);
-    return sec ? hasCityPermission(sec.perm, selectedCityId) : false;
+    return sec ? hasCityPermission(sec.perm, activeCityId) : false;
   };
 
   return (
@@ -177,6 +185,8 @@ export default function WebsiteHomePage() {
           <MdOutlineRefresh className="w-5 h-5 text-slate-500" />
         </button>
       </div>
+
+      {citiesLoading && <TableSkeleton rows={5} columns={3} />}
 
       {!isLoading && cities.length === 0 && (
         <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">
@@ -203,7 +213,7 @@ export default function WebsiteHomePage() {
                 setSelectedSection(null);
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCityId === c.id
+                activeCityId === c.id
                   ? "bg-teal-600 text-white shadow-sm"
                   : "bg-white border border-slate-200 text-slate-700 hover:border-teal-400"
               }`}
@@ -304,9 +314,9 @@ export default function WebsiteHomePage() {
         </>
       )}
 
-      {selectedSection && selectedCityId && canAccessSection(selectedSection) && (
+      {selectedSection && activeCityId && canAccessSection(selectedSection) && (
         <SectionEditor
-          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          cityName={cities.find((c) => c.id === activeCityId)?.name || ""}
           sectionKey={selectedSection}
           sectionLabel={
             HOME_SECTIONS.find((s) => s.key === selectedSection)?.label ||
@@ -323,14 +333,14 @@ export default function WebsiteHomePage() {
         />
       )}
 
-      {previewSection && selectedCityId && canAccessSection(previewSection) && (
+      {previewSection && activeCityId && canAccessSection(previewSection) && (
         <PreviewModal
           sectionLabel={
             HOME_SECTIONS.find((s) => s.key === previewSection)?.label ||
             previewSection
           }
           sectionKey={previewSection}
-          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          cityName={cities.find((c) => c.id === activeCityId)?.name || ""}
           content={sectionMap[previewSection]?.content || {}}
           status={sectionMap[previewSection]?.status || "draft"}
           updatedAt={sectionMap[previewSection]?.updated_at}
@@ -348,7 +358,7 @@ export default function WebsiteHomePage() {
             HOME_SECTIONS.find((s) => s.key === deleteSection)?.label ||
             deleteSection
           }
-          cityName={cities.find((c) => c.id === selectedCityId)?.name || ""}
+          cityName={cities.find((c) => c.id === activeCityId)?.name || ""}
           loading={deleting}
           onCancel={() => setDeleteSection(null)}
           onConfirm={confirmDelete}
