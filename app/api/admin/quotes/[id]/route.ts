@@ -7,7 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { QuoteEditableFields, QuoteUpdateSchema } from "@/lib/quotes";
 
 const quoteSelect = `SELECT id, full_name, phone_number, email, message,
-  pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
+  city, pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
   drop_address, DATE_FORMAT(drop_date, '%Y-%m-%d') AS drop_date,
   travel_itinerary, passenger_count, luggage_count, vehicle_category,
   vehicle_name, status, created_at, updated_at

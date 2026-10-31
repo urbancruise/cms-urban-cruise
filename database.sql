@@ -935,6 +935,7 @@ CREATE TABLE IF NOT EXISTS quote_requests (
     phone_number VARCHAR(20) NOT NULL,
     email VARCHAR(254) NULL,
     message VARCHAR(1000) NULL,
+    city VARCHAR(100) NULL,
     pickup_address VARCHAR(500) NULL,
     pickup_date DATE NULL,
     drop_address VARCHAR(500) NULL,
