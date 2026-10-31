@@ -17,6 +17,10 @@ interface QuoteRow extends RowDataPacket {
   id: number;
 }
 
+interface CityRow extends RowDataPacket {
+  name: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60_000, max: 120 });
@@ -30,6 +34,7 @@ export async function GET(request: NextRequest) {
     const offset = offsetParam === null ? 0 : Number(offsetParam);
     const status = searchParams.get("status");
     const search = (searchParams.get("search") || "").trim();
+    const city = (searchParams.get("city") || "").trim();
 
     if (
       !Number.isInteger(limit) ||
@@ -55,6 +60,12 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (city.length > 100) {
+      return NextResponse.json(
+        { error: "city must be at most 100 characters" },
+        { status: 400 }
+      );
+    }
 
     const conditions: string[] = [];
     const values: Array<string | number> = [];
@@ -66,6 +77,14 @@ export async function GET(request: NextRequest) {
       conditions.push("(full_name LIKE ? OR phone_number LIKE ? OR email LIKE ?)");
       const term = `%${search}%`;
       values.push(term, term, term);
+    }
+    if (city) {
+      const escapedCity = city.replace(/[!%_]/g, "!$&");
+      const term = `%${escapedCity}%`;
+      conditions.push(
+        "(pickup_address LIKE ? ESCAPE '!' OR drop_address LIKE ? ESCAPE '!')"
+      );
+      values.push(term, term);
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const [rows] = await pool.query<QuoteRow[]>(
@@ -82,10 +101,14 @@ export async function GET(request: NextRequest) {
       `SELECT COUNT(*) AS total FROM quote_requests ${where}`,
       values
     );
+    const [cityRows] = await pool.query<CityRow[]>(
+      "SELECT DISTINCT name FROM cities WHERE is_active = 1 ORDER BY name ASC"
+    );
 
     return NextResponse.json({
       quotes: rows,
       total: Number(countRows[0]?.total || 0),
+      cities: cityRows.map((row) => row.name),
       limit,
       offset,
     });
