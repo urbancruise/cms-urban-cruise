@@ -115,7 +115,7 @@ CMS admins can manage quotes with the authenticated admin API:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/admin/quotes?status=submitted&limit=50&offset=0` | List/search quotes |
+| `GET` | `/api/admin/quotes?status=submitted&city=Delhi&limit=50&offset=0` | List/search/filter quotes by pickup or drop-off city; response includes active city options |
 | `POST` | `/api/admin/quotes` | Create a complete quote |
 | `GET` | `/api/admin/quotes/{id}` | Read one quote |
 | `PUT` | `/api/admin/quotes/{id}` | Update quote fields |
