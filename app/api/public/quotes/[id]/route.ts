@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { QuoteSubmissionSchema } from "@/lib/quotes";
+import { getQuoteCityFromPageUrl, QuoteSubmissionSchema } from "@/lib/quotes";
 import { requireApiKey, withCors } from "@/lib/public-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 const corsMethods = "PUT, OPTIONS";
 const quoteSelect = `SELECT id, full_name, phone_number, email, message,
-  pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
+  city, pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
   drop_address, DATE_FORMAT(drop_date, '%Y-%m-%d') AS drop_date,
   travel_itinerary, passenger_count, luggage_count, vehicle_category,
   vehicle_name, status, created_at, updated_at
@@ -16,6 +16,10 @@ const quoteSelect = `SELECT id, full_name, phone_number, email, message,
 
 interface QuoteRow extends RowDataPacket {
   id: number;
+}
+
+interface CityRow extends RowDataPacket {
+  name: string;
 }
 
 export async function OPTIONS() {
@@ -84,9 +88,30 @@ export async function PUT(
 
     const tokenHash = createHash("sha256").update(quoteToken).digest("hex");
     const quote = parsed.data;
+    const pageUrl = quote.page_url || request.headers.get("referer") || "";
+    let city = quote.city || null;
+    if (pageUrl) {
+      const [cityRows] = await pool.query<CityRow[]>(
+        "SELECT name FROM cities WHERE is_active = 1"
+      );
+      const pageCity = getQuoteCityFromPageUrl(
+        pageUrl,
+        cityRows.map((row) => row.name)
+      );
+      if (!pageCity && !city) {
+        return withCors(
+          NextResponse.json(
+            { error: "Could not determine an active city from the quote page URL" },
+            { status: 400 }
+          ),
+          corsMethods
+        );
+      }
+      city = pageCity || city;
+    }
     const [result] = await pool.query<ResultSetHeader>(
       `UPDATE quote_requests SET
-         full_name = ?, phone_number = ?, email = ?, message = ?,
+         full_name = ?, phone_number = ?, email = ?, message = ?, city = COALESCE(?, city),
          pickup_address = ?, pickup_date = ?, drop_address = ?, drop_date = ?,
          travel_itinerary = ?, passenger_count = ?, luggage_count = ?,
          vehicle_category = ?, vehicle_name = ?, status = 'submitted'
@@ -96,6 +121,7 @@ export async function PUT(
         quote.phone_number,
         quote.email,
         quote.message || null,
+        city,
         quote.pickup_address,
         quote.pickup_date,
         quote.drop_address,

@@ -7,11 +7,12 @@ import { rateLimit } from "@/lib/rate-limit";
 import { QuoteSubmissionSchema } from "@/lib/quotes";
 
 const quoteSelect = `SELECT id, full_name, phone_number, email, message,
-  pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
+  city, pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
   drop_address, DATE_FORMAT(drop_date, '%Y-%m-%d') AS drop_date,
   travel_itinerary, passenger_count, luggage_count, vehicle_category,
   vehicle_name, status, created_at, updated_at
   FROM quote_requests WHERE id = ?`;
+const unassignedCityFilter = "__unassigned__";
 
 interface QuoteRow extends RowDataPacket {
   id: number;
@@ -79,17 +80,17 @@ export async function GET(request: NextRequest) {
       values.push(term, term, term);
     }
     if (city) {
-      const escapedCity = city.replace(/[!%_]/g, "!$&");
-      const term = `%${escapedCity}%`;
-      conditions.push(
-        "(pickup_address LIKE ? ESCAPE '!' OR drop_address LIKE ? ESCAPE '!')"
-      );
-      values.push(term, term);
+      if (city === unassignedCityFilter) {
+        conditions.push("(city IS NULL OR TRIM(city) = '')");
+      } else {
+        conditions.push("city = ?");
+        values.push(city);
+      }
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const [rows] = await pool.query<QuoteRow[]>(
       `SELECT id, full_name, phone_number, email, message,
-         pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
+         city, pickup_address, DATE_FORMAT(pickup_date, '%Y-%m-%d') AS pickup_date,
          drop_address, DATE_FORMAT(drop_date, '%Y-%m-%d') AS drop_date,
          travel_itinerary, passenger_count, luggage_count, vehicle_category,
          vehicle_name, status, created_at, updated_at
@@ -140,15 +141,16 @@ export async function POST(request: NextRequest) {
     const quote = parsed.data;
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO quote_requests (
-         full_name, phone_number, email, message, pickup_address, pickup_date,
+         full_name, phone_number, email, message, city, pickup_address, pickup_date,
          drop_address, drop_date, travel_itinerary, passenger_count,
          luggage_count, vehicle_category, vehicle_name, status
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
       [
         quote.full_name,
         quote.phone_number,
         quote.email,
         quote.message || null,
+        quote.city || null,
         quote.pickup_address,
         quote.pickup_date,
         quote.drop_address,

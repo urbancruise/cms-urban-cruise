@@ -10,7 +10,43 @@ const phoneNumber = z
 const contactFields = {
   full_name: z.string().trim().min(1).max(120),
   phone_number: phoneNumber,
+  city: z.string().trim().min(1).max(100).nullable().optional(),
+  page_url: z.string().trim().min(1).max(2048).optional(),
 };
+
+function citySlug(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function getQuoteCityFromPageUrl(
+  pageUrl: string,
+  activeCities: string[]
+): string | null {
+  let pathname: string;
+  try {
+    pathname = new URL(pageUrl, "http://localhost").pathname;
+  } catch {
+    return null;
+  }
+
+  const firstSegment = pathname.split("/").filter(Boolean)[0];
+  if (!firstSegment) return null;
+
+  let decodedSegment: string;
+  try {
+    decodedSegment = decodeURIComponent(firstSegment);
+  } catch {
+    return null;
+  }
+  const slug = citySlug(decodedSegment);
+  return activeCities.find((name) => citySlug(name) === slug) ?? null;
+}
 
 const tripFields = {
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
@@ -37,15 +73,47 @@ export const QuoteSubmissionSchema = z
 
 export const QuoteUpdateSchema = z
   .object({
-    ...contactFields,
-    ...tripFields,
+    full_name: contactFields.full_name.optional(),
+    phone_number: phoneNumber.optional(),
+    city: contactFields.city,
+    email: z
+      .string()
+      .trim()
+      .email()
+      .max(254)
+      .transform((value) => value.toLowerCase())
+      .nullable()
+      .optional(),
+    message: tripFields.message,
+    pickup_address: z.string().trim().min(1).max(500).nullable().optional(),
+    pickup_date: z.iso.date().nullable().optional(),
+    drop_address: z.string().trim().min(1).max(500).nullable().optional(),
+    drop_date: z.iso.date().nullable().optional(),
+    travel_itinerary: z.string().trim().min(1).max(5000).nullable().optional(),
+    passenger_count: z.number().int().min(1).max(500).nullable().optional(),
+    luggage_count: z.number().int().min(0).max(500).nullable().optional(),
+    vehicle_category: z
+      .enum(["Economy", "Premium", "Royal", "Royal VIP"])
+      .nullable()
+      .optional(),
+    vehicle_name: z.string().trim().min(1).max(150).nullable().optional(),
     status: z.enum(["draft", "submitted"]).optional(),
   })
-  .partial();
+  .refine(
+    (quote) =>
+      quote.pickup_date == null ||
+      quote.drop_date == null ||
+      quote.drop_date >= quote.pickup_date,
+    {
+      message: "Drop date must be on or after the pickup date",
+      path: ["drop_date"],
+    }
+  );
 
 export const QuoteEditableFields = [
   "full_name",
   "phone_number",
+  "city",
   "email",
   "message",
   "pickup_address",

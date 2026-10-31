@@ -76,13 +76,18 @@ code.
    ```json
    {
      "full_name": "A Customer",
-     "phone_number": "+91 9876543210"
+     "phone_number": "+91 9876543210",
+     "page_url": "/gurugram/get-a-quotation-route-infomation"
    }
    ```
 
    Send the key in the `x-api-key` header. The response includes `quote_id` and
    a one-time `quote_token`; keep both temporarily for the next step. This step
-   saves a draft only; it does not perform OTP verification.
+   saves a draft only; it does not perform OTP verification. Send the city for
+   The CMS reads the first URL path segment (here, `gurugram`) and matches it
+   against active CMS cities. Browser requests can use the `Referer` header;
+   server-to-server website requests should include `page_url` as shown. This
+   website location is separate from the trip's pickup and drop-off addresses.
 
 2. On **Submit Enquiry**, send the rest of the form to
    `PUT /api/public/quotes/{quote_id}` with the same `x-api-key` and the
@@ -94,6 +99,7 @@ code.
      "phone_number": "+91 9876543210",
      "email": "customer@example.com",
      "message": "Optional request",
+     "page_url": "/gurugram/get-a-quotation-route-infomation",
      "pickup_address": "Delhi",
      "pickup_date": "2026-11-15",
      "drop_address": "Manali",
@@ -107,6 +113,9 @@ code.
    ```
 
    Vehicle categories are `Economy`, `Premium`, `Royal`, and `Royal VIP`.
+   Include `page_url` in website-to-CMS requests when they are sent server to
+   server. The CMS derives the city from its first path segment and stores the
+   matching active city name.
    `vehicle_name` is not a fixed list, so the website can add fleet options
    such as Tempo Traveller, Urbania, Mini Bus, Luxury Bus, Semi/Sleeper Bus,
    Luxury Car/SUV, SUV, and Car without changing this API.
@@ -115,7 +124,8 @@ CMS admins can manage quotes with the authenticated admin API:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/admin/quotes?status=submitted&city=Delhi&limit=50&offset=0` | List/search/filter quotes by pickup or drop-off city; response includes active city options |
+| `GET` | `/api/admin/quotes?status=submitted&city=Delhi&limit=50&offset=0` | List/search/filter quotes by website city; response includes active city options |
+| `GET` | `/api/admin/quotes?city=__unassigned__` | List quotes whose website city has not been provided |
 | `POST` | `/api/admin/quotes` | Create a complete quote |
 | `GET` | `/api/admin/quotes/{id}` | Read one quote |
 | `PUT` | `/api/admin/quotes/{id}` | Update quote fields |
@@ -124,6 +134,12 @@ CMS admins can manage quotes with the authenticated admin API:
 These admin endpoints require the CMS admin login cookie. A phone number is
 only recorded at the first step; connect an OTP provider separately if actual
 phone ownership verification is required.
+
+For an existing database, run
+[`migrations/20261031_add_quote_city.sql`](./migrations/20261031_add_quote_city.sql)
+once before deploying this version. Existing quote rows have no website-city
+value; only newly submitted quotes (or rows manually backfilled with the
+correct website city) can be filtered by their website location.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 

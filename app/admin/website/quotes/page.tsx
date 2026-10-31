@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR from "swr";
 import {
   MdOutlineClose,
   MdOutlineContactSupport,
+  MdOutlineDelete,
+  MdOutlineEdit,
   MdOutlineSearch,
-  MdOutlineVisibility,
+  MdOutlineSave,
 } from "react-icons/md";
+import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
 
 interface Quote {
@@ -16,6 +19,7 @@ interface Quote {
   phone_number: string;
   email: string | null;
   message: string | null;
+  city: string | null;
   pickup_address: string | null;
   pickup_date: string | null;
   drop_address: string | null;
@@ -36,32 +40,90 @@ interface QuotesResponse {
 }
 
 const STATUSES = ["all", "submitted", "draft"] as const;
+const UNASSIGNED_CITY_FILTER = "__unassigned__";
 
 export default function GetAQuotePage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
   const [city, setCity] = useState("");
-  const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState("");
   const query = new URLSearchParams({ limit: "100" });
   if (search.trim()) query.set("search", search.trim());
   if (status !== "all") query.set("status", status);
   if (city) query.set("city", city);
 
-  const { data, error, isLoading } = useSWR<QuotesResponse>(
+  const { data, error, isLoading, mutate } = useSWR<QuotesResponse>(
     `/api/admin/quotes?${query.toString()}`,
     fetcher
   );
   const quotes = data?.quotes ?? [];
 
-  useEffect(() => {
-    if (!previewQuote) return;
+  const handleEdit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingQuote) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPreviewQuote(null);
+    const formData = new FormData(event.currentTarget);
+    const value = (name: string) => String(formData.get(name) || "").trim();
+    const numberOrNull = (name: string) => {
+      const fieldValue = value(name);
+      return fieldValue ? Number(fieldValue) : null;
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [previewQuote]);
+
+    setSaving(true);
+    setActionError("");
+    try {
+      await api(`/api/admin/quotes/${editingQuote.id}`, {
+        method: "PUT",
+        body: {
+          full_name: value("full_name"),
+          phone_number: value("phone_number"),
+          city: value("city") || null,
+          email: value("email") || null,
+          message: value("message") || null,
+          pickup_address: value("pickup_address") || null,
+          pickup_date: value("pickup_date") || null,
+          drop_address: value("drop_address") || null,
+          drop_date: value("drop_date") || null,
+          travel_itinerary: value("travel_itinerary") || null,
+          passenger_count: numberOrNull("passenger_count"),
+          luggage_count: numberOrNull("luggage_count"),
+          vehicle_category: value("vehicle_category") || null,
+          vehicle_name: value("vehicle_name") || null,
+          status: value("status"),
+        },
+      });
+      setEditingQuote(null);
+      await mutate();
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Could not update this quote."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (quote: Quote) => {
+    if (!window.confirm(`Delete the quote from ${quote.full_name}? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(quote.id);
+    setActionError("");
+    try {
+      await api(`/api/admin/quotes/${quote.id}`, { method: "DELETE" });
+      await mutate();
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Could not delete this quote."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="p-6 md:p-8">
@@ -96,6 +158,7 @@ export default function GetAQuotePage() {
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs"
           >
             <option value="">All cities</option>
+            <option value={UNASSIGNED_CITY_FILTER}>City not provided</option>
             {(data?.cities ?? []).map((cityName) => (
               <option key={cityName} value={cityName}>
                 {cityName}
@@ -126,6 +189,11 @@ export default function GetAQuotePage() {
           Could not load quote requests: {error.message}
         </div>
       )}
+      {actionError && (
+        <div role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-4 py-3 text-sm text-slate-500">
@@ -136,7 +204,7 @@ export default function GetAQuotePage() {
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Customer</th>
-                <th className="px-4 py-3 font-semibold">Trip</th>
+                <th className="px-4 py-3 font-semibold">Website city / Trip</th>
                 <th className="px-4 py-3 font-semibold">Vehicle</th>
                 <th className="px-4 py-3 font-semibold">Passengers</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
@@ -160,6 +228,16 @@ export default function GetAQuotePage() {
                     {quote.email && <div className="text-slate-500">{quote.email}</div>}
                   </td>
                   <td className="px-4 py-4">
+                    {quote.city && (
+                      <div className="mb-1 text-xs font-medium text-teal-700">
+                        Website city: {quote.city}
+                      </div>
+                    )}
+                    {!quote.city && (
+                      <div className="mb-1 text-xs font-medium text-amber-700">
+                        Website city not provided
+                      </div>
+                    )}
                     <div className="text-slate-800">
                       {quote.pickup_address || "—"} → {quote.drop_address || "—"}
                     </div>
@@ -193,15 +271,31 @@ export default function GetAQuotePage() {
                     {quote.created_at}
                   </td>
                   <td className="px-4 py-4">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewQuote(quote)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
-                      aria-label={`Preview quote from ${quote.full_name}`}
-                    >
-                      <MdOutlineVisibility className="h-4 w-4" />
-                      Preview
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActionError("");
+                          setEditingQuote(quote);
+                        }}
+                        disabled={deletingId === quote.id}
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-teal-50 hover:text-teal-700 disabled:opacity-40"
+                        aria-label={`Edit quote from ${quote.full_name}`}
+                        title="Edit"
+                      >
+                        <MdOutlineEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(quote)}
+                        disabled={deletingId === quote.id}
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                        aria-label={`Delete quote from ${quote.full_name}`}
+                        title="Delete"
+                      >
+                        <MdOutlineDelete className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -210,56 +304,95 @@ export default function GetAQuotePage() {
         </div>
       </div>
 
-      {previewQuote && (
+      {editingQuote && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setPreviewQuote(null);
+            if (event.target === event.currentTarget && !saving) setEditingQuote(null);
           }}
         >
           <section
             role="dialog"
             aria-modal="true"
-            aria-labelledby="quote-preview-title"
+            aria-labelledby="quote-edit-title"
             className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl"
           >
             <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
               <div>
-                <h2 id="quote-preview-title" className="text-lg font-semibold text-slate-900">
-                  Quote request preview
+                <h2 id="quote-edit-title" className="text-lg font-semibold text-slate-900">
+                  Edit quote request
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">Quote #{previewQuote.id}</p>
+                <p className="mt-1 text-sm text-slate-500">Quote #{editingQuote.id}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewQuote(null)}
-                aria-label="Close quote preview"
+                onClick={() => setEditingQuote(null)}
+                disabled={saving}
+                aria-label="Close edit quote"
                 className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
               >
                 <MdOutlineClose className="h-5 w-5" />
               </button>
             </div>
-            <div className="grid gap-5 p-6 sm:grid-cols-2">
-              <PreviewField label="Customer name" value={previewQuote.full_name} />
-              <PreviewField label="Phone" value={previewQuote.phone_number} />
-              <PreviewField label="Email" value={previewQuote.email} />
-              <PreviewField label="Status" value={previewQuote.status} />
-              <PreviewField label="Pickup city / address" value={previewQuote.pickup_address} />
-              <PreviewField label="Pickup date" value={previewQuote.pickup_date} />
-              <PreviewField label="Drop-off city / address" value={previewQuote.drop_address} />
-              <PreviewField label="Drop-off date" value={previewQuote.drop_date} />
-              <PreviewField label="Passengers" value={previewQuote.passenger_count} />
-              <PreviewField label="Luggage" value={previewQuote.luggage_count} />
-              <PreviewField label="Vehicle" value={previewQuote.vehicle_name} />
-              <PreviewField label="Vehicle category" value={previewQuote.vehicle_category} />
-              <PreviewField label="Received" value={previewQuote.created_at} />
-              <div className="sm:col-span-2">
-                <PreviewField label="Travel itinerary" value={previewQuote.travel_itinerary} />
+            <form onSubmit={handleEdit}>
+              <div className="grid gap-4 p-6 sm:grid-cols-2">
+                <QuoteInput label="Customer name" name="full_name" defaultValue={editingQuote.full_name} required />
+                <QuoteInput label="Phone" name="phone_number" defaultValue={editingQuote.phone_number} required />
+                <QuoteInput label="Email" name="email" type="email" defaultValue={editingQuote.email} />
+                <QuoteInput label="Website city" name="city" defaultValue={editingQuote.city} />
+                <QuoteInput label="Pickup city / address" name="pickup_address" defaultValue={editingQuote.pickup_address} />
+                <QuoteInput label="Pickup date" name="pickup_date" type="date" defaultValue={editingQuote.pickup_date} />
+                <QuoteInput label="Drop-off city / address" name="drop_address" defaultValue={editingQuote.drop_address} />
+                <QuoteInput label="Drop-off date" name="drop_date" type="date" defaultValue={editingQuote.drop_date} />
+                <QuoteInput label="Passengers" name="passenger_count" type="number" defaultValue={editingQuote.passenger_count} />
+                <QuoteInput label="Luggage" name="luggage_count" type="number" defaultValue={editingQuote.luggage_count} />
+                <QuoteInput label="Vehicle" name="vehicle_name" defaultValue={editingQuote.vehicle_name} />
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Vehicle category</span>
+                  <select
+                    name="vehicle_category"
+                    defaultValue={editingQuote.vehicle_category || ""}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  >
+                    <option value="">Not provided</option>
+                    {["Economy", "Premium", "Royal", "Royal VIP"].map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</span>
+                  <select
+                    name="status"
+                    defaultValue={editingQuote.status}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                  >
+                    <option value="submitted">Submitted</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                </label>
+                <QuoteInput label="Travel itinerary" name="travel_itinerary" defaultValue={editingQuote.travel_itinerary} className="sm:col-span-2" multiline />
+                <QuoteInput label="Message" name="message" defaultValue={editingQuote.message} className="sm:col-span-2" multiline />
               </div>
-              <div className="sm:col-span-2">
-                <PreviewField label="Message" value={previewQuote.message} />
+              <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingQuote(null)}
+                  disabled={saving}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                >
+                  <MdOutlineSave className="h-4 w-4" />
+                  {saving ? "Saving..." : "Save changes"}
+                </button>
               </div>
-            </div>
+            </form>
           </section>
         </div>
       )}
@@ -267,19 +400,45 @@ export default function GetAQuotePage() {
   );
 }
 
-function PreviewField({
+function QuoteInput({
   label,
+  name,
   value,
+  defaultValue,
+  type = "text",
+  className = "",
+  required = false,
+  multiline = false,
 }: {
   label: string;
-  value: string | number | null;
+  name: string;
+  value?: string | number | null;
+  defaultValue?: string | number | null;
+  type?: string;
+  className?: string;
+  required?: boolean;
+  multiline?: boolean;
 }) {
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-900">
-        {value ?? "—"}
-      </p>
-    </div>
+    <label className={`block ${className}`}>
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      {multiline ? (
+        <textarea
+          name={name}
+          defaultValue={defaultValue ?? value ?? ""}
+          rows={3}
+          required={required}
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+        />
+      ) : (
+        <input
+          name={name}
+          type={type}
+          defaultValue={defaultValue ?? value ?? ""}
+          required={required}
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+        />
+      )}
+    </label>
   );
 }
