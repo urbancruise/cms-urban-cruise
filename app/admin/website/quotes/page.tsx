@@ -9,6 +9,7 @@ import {
   MdOutlineEdit,
   MdOutlineSearch,
   MdOutlineSave,
+  MdOutlineVisibility,
 } from "react-icons/md";
 import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
@@ -47,6 +48,7 @@ export default function GetAQuotePage() {
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
   const [city, setCity] = useState("");
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState("");
@@ -274,6 +276,16 @@ export default function GetAQuotePage() {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
+                        onClick={() => setPreviewQuote(quote)}
+                        disabled={deletingId === quote.id}
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40"
+                        aria-label={`Preview quote from ${quote.full_name}`}
+                        title="Preview"
+                      >
+                        <MdOutlineVisibility className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setActionError("");
                           setEditingQuote(quote);
@@ -303,6 +315,61 @@ export default function GetAQuotePage() {
           </table>
         </div>
       </div>
+
+      {previewQuote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPreviewQuote(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quote-preview-title"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl"
+          >
+            <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
+              <div>
+                <h2 id="quote-preview-title" className="text-lg font-semibold text-slate-900">
+                  Quote request
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">Quote #{previewQuote.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewQuote(null)}
+                aria-label="Close quote preview"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              >
+                <MdOutlineClose className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid gap-5 p-6 sm:grid-cols-2">
+              <QuoteDetail label="Customer name" value={previewQuote.full_name} />
+              <QuoteDetail label="Phone" value={previewQuote.phone_number} />
+              <QuoteDetail label="Email" value={previewQuote.email} />
+              <QuoteDetail label="Website city" value={previewQuote.city} />
+              <QuoteDetail label="Status" value={previewQuote.status} />
+              <QuoteDetail label="Pickup city / address" value={previewQuote.pickup_address} />
+              <QuoteDetail label="Pickup date" value={previewQuote.pickup_date} />
+              <QuoteDetail label="Drop-off city / address" value={previewQuote.drop_address} />
+              <QuoteDetail label="Drop-off date" value={previewQuote.drop_date} />
+              <QuoteDetail label="Passengers" value={previewQuote.passenger_count} />
+              <QuoteDetail label="Luggage" value={previewQuote.luggage_count} />
+              <QuoteDetail label="Vehicle" value={previewQuote.vehicle_name} />
+              <QuoteDetail label="Vehicle category" value={previewQuote.vehicle_category} />
+              <QuoteDetail label="Received" value={previewQuote.created_at} />
+              <div className="sm:col-span-2">
+                <QuoteDetail label="Travel itinerary" value={previewQuote.travel_itinerary} />
+              </div>
+              <div className="sm:col-span-2">
+                <QuoteDetail label="Message" value={previewQuote.message} />
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       {editingQuote && (
         <div
@@ -396,6 +463,23 @@ export default function GetAQuotePage() {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+function QuoteDetail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-900">
+        {value ?? "—"}
+      </p>
     </div>
   );
 }
