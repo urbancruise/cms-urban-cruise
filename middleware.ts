@@ -30,6 +30,13 @@ const CSRF_EXEMPT = new Set([
   "/api/auth/csrf",
 ]);
 
+function isPublicQuoteMutation(pathname: string): boolean {
+  return (
+    pathname === "/api/public/quotes" ||
+    /^\/api\/public\/quotes\/\d+$/.test(pathname)
+  );
+}
+
 const PROTECTED_PAGE_ROUTES = ["/admin"];
 const AUTH_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 
@@ -48,7 +55,8 @@ export function middleware(request: NextRequest) {
   if (
     MUTATION_METHODS.has(method) &&
     pathname.startsWith("/api/") &&
-    !CSRF_EXEMPT.has(pathname)
+    !CSRF_EXEMPT.has(pathname) &&
+    !isPublicQuoteMutation(pathname)
   ) {
     const cookieToken = readCsrfFromCookieHeader(cookieHeader);
     const headerToken = request.headers.get(CSRF_HEADER_NAME);

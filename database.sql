@@ -926,5 +926,33 @@ CREATE TABLE IF NOT EXISTS seo_core_web_vitals (
 SHOW TABLES LIKE 'seo_%';
 
 -- ============================================================
+-- 28. GET A QUOTE REQUESTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS quote_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    email VARCHAR(254) NULL,
+    message VARCHAR(1000) NULL,
+    pickup_address VARCHAR(500) NULL,
+    pickup_date DATE NULL,
+    drop_address VARCHAR(500) NULL,
+    drop_date DATE NULL,
+    travel_itinerary TEXT NULL,
+    passenger_count SMALLINT UNSIGNED NULL,
+    luggage_count SMALLINT UNSIGNED NULL,
+    vehicle_category VARCHAR(30) NULL,
+    vehicle_name VARCHAR(150) NULL,
+    status ENUM('draft', 'submitted') NOT NULL DEFAULT 'draft',
+    quote_token_hash CHAR(64) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_quote_requests_status_created (status, created_at),
+    INDEX idx_quote_requests_phone (phone_number),
+    INDEX idx_quote_requests_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- END OF URBAN CRUISE CMS DATABASE
 -- ============================================================

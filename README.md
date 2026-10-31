@@ -62,6 +62,69 @@ website's server-only `CMS_API_URL` and `CMS_API_KEY` to connect it to this CMS.
 The CMS sitemap and `robots.txt` routes use the SEO records and saved robots
 directives from the database.
 
+## Get a Quote API
+
+Run the `quote_requests` section in `database.sql` to create the table before
+using these endpoints. Quote APIs use the CMS API key for website-to-CMS
+requests; keep that key on the website server and never expose it in browser
+code.
+
+1. When the customer clicks **Verify**, save their contact details:
+
+   `POST /api/public/quotes`
+
+   ```json
+   {
+     "full_name": "A Customer",
+     "phone_number": "+91 9876543210"
+   }
+   ```
+
+   Send the key in the `x-api-key` header. The response includes `quote_id` and
+   a one-time `quote_token`; keep both temporarily for the next step. This step
+   saves a draft only; it does not perform OTP verification.
+
+2. On **Submit Enquiry**, send the rest of the form to
+   `PUT /api/public/quotes/{quote_id}` with the same `x-api-key` and the
+   returned `x-quote-token` header:
+
+   ```json
+   {
+     "full_name": "A Customer",
+     "phone_number": "+91 9876543210",
+     "email": "customer@example.com",
+     "message": "Optional request",
+     "pickup_address": "Delhi",
+     "pickup_date": "2026-11-15",
+     "drop_address": "Manali",
+     "drop_date": "2026-11-18",
+     "travel_itinerary": "Delhi - Manali - Shimla - Delhi",
+     "passenger_count": 3,
+     "luggage_count": 2,
+     "vehicle_category": "Premium",
+     "vehicle_name": "Tempo Traveller"
+   }
+   ```
+
+   Vehicle categories are `Economy`, `Premium`, `Royal`, and `Royal VIP`.
+   `vehicle_name` is not a fixed list, so the website can add fleet options
+   such as Tempo Traveller, Urbania, Mini Bus, Luxury Bus, Semi/Sleeper Bus,
+   Luxury Car/SUV, SUV, and Car without changing this API.
+
+CMS admins can manage quotes with the authenticated admin API:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/admin/quotes?status=submitted&limit=50&offset=0` | List/search quotes |
+| `POST` | `/api/admin/quotes` | Create a complete quote |
+| `GET` | `/api/admin/quotes/{id}` | Read one quote |
+| `PUT` | `/api/admin/quotes/{id}` | Update quote fields |
+| `DELETE` | `/api/admin/quotes/{id}` | Delete a quote |
+
+These admin endpoints require the CMS admin login cookie. A phone number is
+only recorded at the first step; connect an OTP provider separately if actual
+phone ownership verification is required.
+
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
