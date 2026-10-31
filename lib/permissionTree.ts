@@ -10,6 +10,7 @@ import {
   MdOutlinePublic,
   MdOutlineHome,
   MdOutlineDirectionsCar,
+  MdOutlineContactSupport,
   MdOutlineSearch,
 } from "react-icons/md";
 
@@ -225,6 +226,12 @@ export const WEBSITE_PERMISSION_TREE: PermissionGroup[] = [
             ],
           },
         ],
+      },
+      {
+        key: "urbancruise.quotes.view",
+        label: "Get a Quote",
+        icon: MdOutlineContactSupport,
+        permKey: "urbancruise.quotes.view",
       },
     ],
   },

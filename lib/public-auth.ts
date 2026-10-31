@@ -46,15 +46,16 @@ export async function requireApiKey(request: NextRequest): Promise<ApiKeyResult>
   }
 }
 
-export function withCors(res: Response): Response {
+export function withCors(
+  res: Response,
+  methods = "GET, OPTIONS",
+  headers = "x-api-key, authorization, content-type"
+): Response {
   res.headers.set(
     "Access-Control-Allow-Origin",
     process.env.WEBSITE_ORIGIN || "*"
   );
-  res.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.headers.set(
-    "Access-Control-Allow-Headers",
-    "x-api-key, authorization, content-type"
-  );
+  res.headers.set("Access-Control-Allow-Methods", methods);
+  res.headers.set("Access-Control-Allow-Headers", headers);
   return res;
 }

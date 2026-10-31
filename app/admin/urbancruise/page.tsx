@@ -1,6 +1,10 @@
 "use client";
 
-import { MdOutlineHome, MdOutlineDirectionsCar } from "react-icons/md";
+import {
+  MdOutlineHome,
+  MdOutlineDirectionsCar,
+  MdOutlineContactSupport,
+} from "react-icons/md";
 import ContentCard from "./_components/ContentCard";
 
 export default function UrbanCruisePage() {
@@ -21,6 +25,13 @@ export default function UrbanCruisePage() {
       color: "purple" as const,
       count: 6,
       countLabel: "categories",
+    },
+    {
+      title: "Get a Quote",
+      description: "View website quote requests",
+      href: "/admin/website/quotes",
+      icon: MdOutlineContactSupport,
+      color: "green" as const,
     },
   ];
 

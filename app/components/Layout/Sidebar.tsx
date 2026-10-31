@@ -18,6 +18,7 @@ import {
   MdOutlineKeyboardArrowDown,
   MdOutlineHome,
   MdOutlineDirectionsCar,
+  MdOutlineContactSupport,
   MdOutlineSearch,
 } from "react-icons/md";
 
@@ -96,6 +97,12 @@ const menuItems: MenuItem[] = [
         label: "Website Vehicles",
         href: "/admin/website/vehicles",
         perm: "urbancruise.vehicles.view",
+      },
+      {
+        icon: MdOutlineContactSupport,
+        label: "Get a Quote",
+        href: "/admin/website/quotes",
+        perm: "urbancruise.quotes.view",
       },
     ],
   },
