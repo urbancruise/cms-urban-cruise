@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import {
   MdOutlineClose,
@@ -11,6 +11,7 @@ import {
   MdOutlineSave,
   MdOutlineVisibility,
 } from "react-icons/md";
+import { toast, ToastContainer } from "react-toastify";
 import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
 
@@ -38,6 +39,20 @@ interface QuotesResponse {
   quotes: Quote[];
   total: number;
   cities: string[];
+  vehicleCategories: string[];
+  vehicles: string[];
+}
+
+interface QuoteEvent {
+  id: number;
+  event_type: "verified" | "submitted";
+  full_name: string;
+  phone_number: string;
+}
+
+interface QuoteEventsResponse {
+  events: QuoteEvent[];
+  latestEventId: number;
 }
 
 const STATUSES = ["all", "submitted", "draft"] as const;
@@ -47,21 +62,63 @@ export default function GetAQuotePage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
   const [city, setCity] = useState("");
+  const [vehicleCategory, setVehicleCategory] = useState("");
+  const [vehicle, setVehicle] = useState("");
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState("");
+  const eventCursor = useRef<number | null>(null);
   const query = new URLSearchParams({ limit: "100" });
   if (search.trim()) query.set("search", search.trim());
   if (status !== "all") query.set("status", status);
   if (city) query.set("city", city);
+  if (vehicleCategory) query.set("vehicle_category", vehicleCategory);
+  if (vehicle) query.set("vehicle_name", vehicle);
 
   const { data, error, isLoading, mutate } = useSWR<QuotesResponse>(
     `/api/admin/quotes?${query.toString()}`,
     fetcher
   );
   const quotes = data?.quotes ?? [];
+  const { data: eventData } = useSWR<QuoteEventsResponse>(
+    "/api/admin/quotes/events",
+    () =>
+      fetcher(
+        eventCursor.current === null
+          ? "/api/admin/quotes/events"
+          : `/api/admin/quotes/events?after_id=${eventCursor.current}`
+      ),
+    { refreshInterval: 5000 }
+  );
+
+  useEffect(() => {
+    if (!eventData) return;
+    if (eventCursor.current === null) {
+      eventCursor.current = eventData.latestEventId;
+      return;
+    }
+    if (eventData.events.length === 0) {
+      eventCursor.current = eventData.latestEventId;
+      return;
+    }
+
+    for (const event of eventData.events) {
+      if (event.event_type === "verified") {
+        toast.info(
+          `New quote verification from ${event.full_name} (${event.phone_number})`
+        );
+      } else {
+        toast.success(
+          `Quote submitted by ${event.full_name} (${event.phone_number})`
+        );
+      }
+    }
+    eventCursor.current =
+      eventData.events[eventData.events.length - 1].id;
+    void mutate();
+  }, [eventData, mutate]);
 
   const handleEdit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -129,6 +186,7 @@ export default function GetAQuotePage() {
 
   return (
     <div className="p-6 md:p-8">
+      <ToastContainer position="top-right" autoClose={5000} newestOnTop />
       <div className="mb-6 flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50">
           <MdOutlineContactSupport className="h-6 w-6 text-teal-600" />
@@ -142,8 +200,8 @@ export default function GetAQuotePage() {
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full flex-col gap-3 sm:max-w-2xl sm:flex-row">
-          <div className="relative w-full sm:max-w-sm">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:min-w-0 lg:flex-nowrap">
+          <div className="relative w-full sm:max-w-sm lg:w-64 lg:shrink">
             <MdOutlineSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
@@ -157,13 +215,39 @@ export default function GetAQuotePage() {
             value={city}
             onChange={(event) => setCity(event.target.value)}
             aria-label="Filter quotes by city"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs lg:w-40 lg:shrink-0"
           >
             <option value="">All cities</option>
             <option value={UNASSIGNED_CITY_FILTER}>City not provided</option>
             {(data?.cities ?? []).map((cityName) => (
               <option key={cityName} value={cityName}>
                 {cityName}
+              </option>
+            ))}
+          </select>
+          <select
+            value={vehicleCategory}
+            onChange={(event) => setVehicleCategory(event.target.value)}
+            aria-label="Filter quotes by vehicle category"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs lg:w-40 lg:shrink-0"
+          >
+            <option value="">All categories</option>
+            {(data?.vehicleCategories ?? []).map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <select
+            value={vehicle}
+            onChange={(event) => setVehicle(event.target.value)}
+            aria-label="Filter quotes by vehicle"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs lg:w-40 lg:shrink-0"
+          >
+            <option value="">All vehicles</option>
+            {(data?.vehicles ?? []).map((vehicleName) => (
+              <option key={vehicleName} value={vehicleName}>
+                {vehicleName}
               </option>
             ))}
           </select>

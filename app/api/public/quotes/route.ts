@@ -79,22 +79,35 @@ export async function POST(request: NextRequest) {
       }
       city = pageCity || city;
     }
-    const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO quote_requests (full_name, phone_number, city, quote_token_hash)
-       VALUES (?, ?, ?, ?)`,
-      [
-        parsed.data.full_name,
-        parsed.data.phone_number,
-        city,
-        tokenHash,
-      ]
-    );
+    const connection = await pool.getConnection();
+    let insertId: number;
+    try {
+      await connection.beginTransaction();
+      const [result] = await connection.query<ResultSetHeader>(
+        `INSERT INTO quote_requests (full_name, phone_number, city, quote_token_hash)
+         VALUES (?, ?, ?, ?)`,
+        [parsed.data.full_name, parsed.data.phone_number, city, tokenHash]
+      );
+      insertId = result.insertId;
+      await connection.query(
+        `INSERT INTO quote_request_events
+           (quote_id, event_type, full_name, phone_number)
+         VALUES (?, 'verified', ?, ?)`,
+        [insertId, parsed.data.full_name, parsed.data.phone_number]
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     return withCors(
       NextResponse.json(
         {
           success: true,
-          quote_id: result.insertId,
+          quote_id: insertId,
           quote_token: quoteToken,
           status: "draft",
           message: "Contact details saved. Submit the trip details to complete the quote.",

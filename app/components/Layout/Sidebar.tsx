@@ -19,6 +19,7 @@ import {
   MdOutlineHome,
   MdOutlineDirectionsCar,
   MdOutlineContactSupport,
+  MdOutlinePhone,
   MdOutlineSearch,
 } from "react-icons/md";
 
@@ -103,6 +104,12 @@ const menuItems: MenuItem[] = [
         label: "Get a Quote",
         href: "/admin/website/quotes",
         perm: "urbancruise.quotes.view",
+      },
+      {
+        icon: MdOutlinePhone,
+        label: "Get a Quick Call",
+        href: "/admin/website/quick-calls",
+        perm: "urbancruise.quickcalls.view",
       },
     ],
   },

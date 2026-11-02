@@ -4,6 +4,7 @@ import {
   MdOutlineHome,
   MdOutlineDirectionsCar,
   MdOutlineContactSupport,
+  MdOutlinePhone,
 } from "react-icons/md";
 import ContentCard from "./_components/ContentCard";
 
@@ -31,6 +32,13 @@ export default function UrbanCruisePage() {
       description: "View website quote requests",
       href: "/admin/website/quotes",
       icon: MdOutlineContactSupport,
+      color: "green" as const,
+    },
+    {
+      title: "Get a Quick Call",
+      description: "View website quick call requests",
+      href: "/admin/website/quick-calls",
+      icon: MdOutlinePhone,
       color: "green" as const,
     },
   ];
