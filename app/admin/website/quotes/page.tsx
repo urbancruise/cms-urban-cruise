@@ -57,31 +57,41 @@ interface QuoteEventsResponse {
 
 const STATUSES = ["all", "submitted", "draft"] as const;
 const UNASSIGNED_CITY_FILTER = "__unassigned__";
+const QUOTES_PER_PAGE = 6;
 
 export default function GetAQuotePage() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
   const [city, setCity] = useState("");
   const [vehicleCategory, setVehicleCategory] = useState("");
   const [vehicle, setVehicle] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState("");
   const eventCursor = useRef<number | null>(null);
-  const query = new URLSearchParams({ limit: "100" });
+  const query = new URLSearchParams({
+    limit: String(QUOTES_PER_PAGE),
+    offset: String((page - 1) * QUOTES_PER_PAGE),
+  });
   if (search.trim()) query.set("search", search.trim());
   if (status !== "all") query.set("status", status);
   if (city) query.set("city", city);
   if (vehicleCategory) query.set("vehicle_category", vehicleCategory);
   if (vehicle) query.set("vehicle_name", vehicle);
+  if (dateFrom) query.set("date_from", dateFrom);
+  if (dateTo) query.set("date_to", dateTo);
 
   const { data, error, isLoading, mutate } = useSWR<QuotesResponse>(
     `/api/admin/quotes?${query.toString()}`,
     fetcher
   );
   const quotes = data?.quotes ?? [];
+  const totalPages = Math.ceil((data?.total ?? 0) / QUOTES_PER_PAGE);
   const { data: eventData } = useSWR<QuoteEventsResponse>(
     "/api/admin/quotes/events",
     () =>
@@ -155,7 +165,11 @@ export default function GetAQuotePage() {
         },
       });
       setEditingQuote(null);
-      await mutate();
+      const refreshedData = await mutate();
+      if (refreshedData) {
+        const lastPage = Math.max(1, Math.ceil(refreshedData.total / QUOTES_PER_PAGE));
+        if (page > lastPage) setPage(lastPage);
+      }
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Could not update this quote."
@@ -174,7 +188,11 @@ export default function GetAQuotePage() {
     setActionError("");
     try {
       await api(`/api/admin/quotes/${quote.id}`, { method: "DELETE" });
-      await mutate();
+      const refreshedData = await mutate();
+      if (refreshedData) {
+        const lastPage = Math.max(1, Math.ceil(refreshedData.total / QUOTES_PER_PAGE));
+        if (page > lastPage) setPage(lastPage);
+      }
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Could not delete this quote."
@@ -200,20 +218,26 @@ export default function GetAQuotePage() {
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:min-w-0 lg:flex-nowrap">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:min-w-0">
           <div className="relative w-full sm:max-w-sm lg:w-64 lg:shrink">
             <MdOutlineSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search name, phone, or email"
               className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
             />
           </div>
           <select
             value={city}
-            onChange={(event) => setCity(event.target.value)}
+            onChange={(event) => {
+              setCity(event.target.value);
+              setPage(1);
+            }}
             aria-label="Filter quotes by city"
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs lg:w-40 lg:shrink-0"
           >
@@ -227,7 +251,10 @@ export default function GetAQuotePage() {
           </select>
           <select
             value={vehicleCategory}
-            onChange={(event) => setVehicleCategory(event.target.value)}
+            onChange={(event) => {
+              setVehicleCategory(event.target.value);
+              setPage(1);
+            }}
             aria-label="Filter quotes by vehicle category"
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs lg:w-40 lg:shrink-0"
           >
@@ -240,7 +267,10 @@ export default function GetAQuotePage() {
           </select>
           <select
             value={vehicle}
-            onChange={(event) => setVehicle(event.target.value)}
+            onChange={(event) => {
+              setVehicle(event.target.value);
+              setPage(1);
+            }}
             aria-label="Filter quotes by vehicle"
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:max-w-xs lg:w-40 lg:shrink-0"
           >
@@ -251,13 +281,44 @@ export default function GetAQuotePage() {
               </option>
             ))}
           </select>
+          <label className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 sm:w-auto">
+            <span className="shrink-0">From</span>
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter quotes from date received"
+              className="min-w-0 bg-transparent text-slate-700 outline-none"
+            />
+          </label>
+          <label className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 sm:w-auto">
+            <span className="shrink-0">To</span>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter quotes to date received"
+              className="min-w-0 bg-transparent text-slate-700 outline-none"
+            />
+          </label>
         </div>
         <div className="flex gap-2">
           {STATUSES.map((value) => (
             <button
               key={value}
               type="button"
-              onClick={() => setStatus(value)}
+              onClick={() => {
+                setStatus(value);
+                setPage(1);
+              }}
               className={`rounded-lg px-3 py-2 text-sm font-medium capitalize ${
                 status === value
                   ? "bg-teal-600 text-white"
@@ -398,6 +459,37 @@ export default function GetAQuotePage() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row">
+            <p className="text-sm text-slate-500">
+              Showing {(page - 1) * QUOTES_PER_PAGE + 1}-
+              {Math.min(page * QUOTES_PER_PAGE, data?.total ?? 0)} of {data?.total ?? 0} quotes
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                disabled={page === 1 || isLoading}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-2 text-sm text-slate-600">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((currentPage) => Math.min(totalPages, currentPage + 1))
+                }
+                disabled={page >= totalPages || isLoading}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {previewQuote && (

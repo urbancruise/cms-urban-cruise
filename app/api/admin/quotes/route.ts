@@ -14,6 +14,12 @@ const quoteSelect = `SELECT id, full_name, phone_number, email, message,
   FROM quote_requests WHERE id = ?`;
 const unassignedCityFilter = "__unassigned__";
 
+function isValidDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 interface QuoteRow extends RowDataPacket {
   id: number;
 }
@@ -42,6 +48,8 @@ export async function GET(request: NextRequest) {
     const city = (searchParams.get("city") || "").trim();
     const vehicleCategory = (searchParams.get("vehicle_category") || "").trim();
     const vehicle = (searchParams.get("vehicle_name") || "").trim();
+    const dateFrom = (searchParams.get("date_from") || "").trim();
+    const dateTo = (searchParams.get("date_to") || "").trim();
 
     if (
       !Number.isInteger(limit) ||
@@ -85,6 +93,18 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if ((dateFrom && !isValidDate(dateFrom)) || (dateTo && !isValidDate(dateTo))) {
+      return NextResponse.json(
+        { error: "date_from and date_to must be valid dates in YYYY-MM-DD format" },
+        { status: 400 }
+      );
+    }
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      return NextResponse.json(
+        { error: "date_from must be on or before date_to" },
+        { status: 400 }
+      );
+    }
 
     const conditions: string[] = [];
     const values: Array<string | number> = [];
@@ -112,6 +132,14 @@ export async function GET(request: NextRequest) {
     if (vehicle) {
       conditions.push("vehicle_name = ?");
       values.push(vehicle);
+    }
+    if (dateFrom) {
+      conditions.push("created_at >= ?");
+      values.push(dateFrom);
+    }
+    if (dateTo) {
+      conditions.push("created_at < DATE_ADD(?, INTERVAL 1 DAY)");
+      values.push(dateTo);
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const [rows] = await pool.query<QuoteRow[]>(

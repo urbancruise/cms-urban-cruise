@@ -11,3 +11,9 @@ export const QuickCallSubmissionSchema = z.object({
   city: z.string().trim().min(1).max(100).nullable().optional(),
   page_url: z.string().trim().min(1).max(2048).optional(),
 });
+
+export const QuickCallUpdateSchema = QuickCallSubmissionSchema.pick({
+  name: true,
+  phone_number: true,
+  city: true,
+});
