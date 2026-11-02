@@ -22,6 +22,10 @@ interface CityRow extends RowDataPacket {
   name: string;
 }
 
+interface QuoteFilterRow extends RowDataPacket {
+  value: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const rl = rateLimit(request, { windowMs: 60_000, max: 120 });
@@ -36,6 +40,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const search = (searchParams.get("search") || "").trim();
     const city = (searchParams.get("city") || "").trim();
+    const vehicleCategory = (searchParams.get("vehicle_category") || "").trim();
+    const vehicle = (searchParams.get("vehicle_name") || "").trim();
 
     if (
       !Number.isInteger(limit) ||
@@ -67,6 +73,18 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (vehicleCategory.length > 30) {
+      return NextResponse.json(
+        { error: "vehicle_category must be at most 30 characters" },
+        { status: 400 }
+      );
+    }
+    if (vehicle.length > 150) {
+      return NextResponse.json(
+        { error: "vehicle_name must be at most 150 characters" },
+        { status: 400 }
+      );
+    }
 
     const conditions: string[] = [];
     const values: Array<string | number> = [];
@@ -87,6 +105,14 @@ export async function GET(request: NextRequest) {
         values.push(city);
       }
     }
+    if (vehicleCategory) {
+      conditions.push("vehicle_category = ?");
+      values.push(vehicleCategory);
+    }
+    if (vehicle) {
+      conditions.push("vehicle_name = ?");
+      values.push(vehicle);
+    }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const [rows] = await pool.query<QuoteRow[]>(
       `SELECT id, full_name, phone_number, email, message,
@@ -105,11 +131,25 @@ export async function GET(request: NextRequest) {
     const [cityRows] = await pool.query<CityRow[]>(
       "SELECT DISTINCT name FROM cities WHERE is_active = 1 ORDER BY name ASC"
     );
+    const [vehicleCategoryRows] = await pool.query<QuoteFilterRow[]>(
+      `SELECT DISTINCT vehicle_category AS value
+       FROM quote_requests
+       WHERE vehicle_category IS NOT NULL AND TRIM(vehicle_category) <> ''
+       ORDER BY vehicle_category ASC`
+    );
+    const [vehicleRows] = await pool.query<QuoteFilterRow[]>(
+      `SELECT DISTINCT vehicle_name AS value
+       FROM quote_requests
+       WHERE vehicle_name IS NOT NULL AND TRIM(vehicle_name) <> ''
+       ORDER BY vehicle_name ASC`
+    );
 
     return NextResponse.json({
       quotes: rows,
       total: Number(countRows[0]?.total || 0),
       cities: cityRows.map((row) => row.name),
+      vehicleCategories: vehicleCategoryRows.map((row) => row.value),
+      vehicles: vehicleRows.map((row) => row.value),
       limit,
       offset,
     });

@@ -30,10 +30,11 @@ const CSRF_EXEMPT = new Set([
   "/api/auth/csrf",
 ]);
 
-function isPublicQuoteMutation(pathname: string): boolean {
+function isPublicWebsiteMutation(pathname: string): boolean {
   return (
     pathname === "/api/public/quotes" ||
-    /^\/api\/public\/quotes\/\d+$/.test(pathname)
+    /^\/api\/public\/quotes\/\d+$/.test(pathname) ||
+    pathname === "/api/public/quick-calls"
   );
 }
 
@@ -56,7 +57,7 @@ export function middleware(request: NextRequest) {
     MUTATION_METHODS.has(method) &&
     pathname.startsWith("/api/") &&
     !CSRF_EXEMPT.has(pathname) &&
-    !isPublicQuoteMutation(pathname)
+    !isPublicWebsiteMutation(pathname)
   ) {
     const cookieToken = readCsrfFromCookieHeader(cookieHeader);
     const headerToken = request.headers.get(CSRF_HEADER_NAME);

@@ -11,6 +11,7 @@ import {
   MdOutlineHome,
   MdOutlineDirectionsCar,
   MdOutlineContactSupport,
+  MdOutlinePhone,
   MdOutlineSearch,
 } from "react-icons/md";
 
@@ -232,6 +233,12 @@ export const WEBSITE_PERMISSION_TREE: PermissionGroup[] = [
         label: "Get a Quote",
         icon: MdOutlineContactSupport,
         permKey: "urbancruise.quotes.view",
+      },
+      {
+        key: "urbancruise.quickcalls.view",
+        label: "Get a Quick Call",
+        icon: MdOutlinePhone,
+        permKey: "urbancruise.quickcalls.view",
       },
     ],
   },

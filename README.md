@@ -135,11 +135,56 @@ These admin endpoints require the CMS admin login cookie. A phone number is
 only recorded at the first step; connect an OTP provider separately if actual
 phone ownership verification is required.
 
+The Get a Quote admin page displays a toast when a customer verifies their
+contact details and another when they submit the completed quote. For an
+existing database, run
+[`migrations/20261102_create_quote_request_events.sql`](./migrations/20261102_create_quote_request_events.sql)
+to enable quote event notifications. Keep the page open to receive new alerts.
+
 For an existing database, run
 [`migrations/20261031_add_quote_city.sql`](./migrations/20261031_add_quote_city.sql)
 once before deploying this version. Existing quote rows have no website-city
 value; only newly submitted quotes (or rows manually backfilled with the
 correct website city) can be filtered by their website location.
+
+## Get a Quick Call API
+
+Run [`migrations/20261102_create_quick_call_requests.sql`](./migrations/20261102_create_quick_call_requests.sql)
+on an existing database before using the quick call form. Submit the website
+form to `POST /api/public/quick-calls` with the CMS API key in the `x-api-key`
+header and a JSON body containing `name` and `phone_number`:
+
+```json
+{
+  "name": "A Customer",
+  "phone_number": "+91 9876543210"
+}
+```
+
+For city-wise filtering, include `page_url` when the request is sent server to
+server. Browser requests can use the `Referer` header. The CMS matches the first
+URL path segment to an active city. An optional `city` can also be sent when
+there is no city in the page URL:
+
+```json
+{
+  "name": "A Customer",
+  "phone_number": "+91 9876543210",
+  "page_url": "/gurugram/get-a-quick-call"
+}
+```
+
+Keep the API key on the website server; do not expose it in browser code. The
+admin submissions list is available under **Urban Cruise Website → Get a Quick
+Call** and requires the `urbancruise.quickcalls.view` permission. On an existing
+database, run [`migrations/20261102_add_quick_call_city.sql`](./migrations/20261102_add_quick_call_city.sql)
+to add city storage. Requests submitted before this change have no city and
+appear under **City not provided**.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/public/quick-calls` | Save a website quick call request |
+| `GET` | `/api/admin/quick-calls?search=...&city=Delhi&limit=50&offset=0` | List/search/filter quick call requests by city |
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 

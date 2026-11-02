@@ -109,41 +109,59 @@ export async function PUT(
       }
       city = pageCity || city;
     }
-    const [result] = await pool.query<ResultSetHeader>(
-      `UPDATE quote_requests SET
-         full_name = ?, phone_number = ?, email = ?, message = ?, city = COALESCE(?, city),
-         pickup_address = ?, pickup_date = ?, drop_address = ?, drop_date = ?,
-         travel_itinerary = ?, passenger_count = ?, luggage_count = ?,
-         vehicle_category = ?, vehicle_name = ?, status = 'submitted'
-       WHERE id = ? AND quote_token_hash = ? AND status = 'draft'`,
-      [
-        quote.full_name,
-        quote.phone_number,
-        quote.email,
-        quote.message || null,
-        city,
-        quote.pickup_address,
-        quote.pickup_date,
-        quote.drop_address,
-        quote.drop_date,
-        quote.travel_itinerary,
-        quote.passenger_count,
-        quote.luggage_count,
-        quote.vehicle_category,
-        quote.vehicle_name,
-        quoteId,
-        tokenHash,
-      ]
-    );
-
-    if (result.affectedRows === 0) {
-      return withCors(
-        NextResponse.json(
-          { error: "Quote not found, already submitted, or token is invalid" },
-          { status: 404 }
-        ),
-        corsMethods
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [result] = await connection.query<ResultSetHeader>(
+        `UPDATE quote_requests SET
+           full_name = ?, phone_number = ?, email = ?, message = ?, city = COALESCE(?, city),
+           pickup_address = ?, pickup_date = ?, drop_address = ?, drop_date = ?,
+           travel_itinerary = ?, passenger_count = ?, luggage_count = ?,
+           vehicle_category = ?, vehicle_name = ?, status = 'submitted'
+         WHERE id = ? AND quote_token_hash = ? AND status = 'draft'`,
+        [
+          quote.full_name,
+          quote.phone_number,
+          quote.email,
+          quote.message || null,
+          city,
+          quote.pickup_address,
+          quote.pickup_date,
+          quote.drop_address,
+          quote.drop_date,
+          quote.travel_itinerary,
+          quote.passenger_count,
+          quote.luggage_count,
+          quote.vehicle_category,
+          quote.vehicle_name,
+          quoteId,
+          tokenHash,
+        ]
       );
+
+      if (result.affectedRows === 0) {
+        await connection.rollback();
+        return withCors(
+          NextResponse.json(
+            { error: "Quote not found, already submitted, or token is invalid" },
+            { status: 404 }
+          ),
+          corsMethods
+        );
+      }
+
+      await connection.query(
+        `INSERT INTO quote_request_events
+           (quote_id, event_type, full_name, phone_number)
+         VALUES (?, 'submitted', ?, ?)`,
+        [quoteId, quote.full_name, quote.phone_number]
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
 
     const [rows] = await pool.query<QuoteRow[]>(quoteSelect, [quoteId]);
