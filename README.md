@@ -124,12 +124,15 @@ CMS admins can manage quotes with the authenticated admin API:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/admin/quotes?status=submitted&city=Delhi&limit=50&offset=0` | List/search/filter quotes by website city; response includes active city options |
+| `GET` | `/api/admin/quotes?status=submitted&city=Delhi&date_from=2026-11-01&date_to=2026-11-30&limit=50&offset=0` | List/search/filter quotes by website city and inclusive received-date range; response includes active city options |
 | `GET` | `/api/admin/quotes?city=__unassigned__` | List quotes whose website city has not been provided |
 | `POST` | `/api/admin/quotes` | Create a complete quote |
 | `GET` | `/api/admin/quotes/{id}` | Read one quote |
 | `PUT` | `/api/admin/quotes/{id}` | Update quote fields |
 | `DELETE` | `/api/admin/quotes/{id}` | Delete a quote |
+
+The Get a Quote admin list displays six requests per page and supports
+previous/next navigation.
 
 These admin endpoints require the CMS admin login cookie. A phone number is
 only recorded at the first step; connect an OTP provider separately if actual
@@ -184,7 +187,12 @@ appear under **City not provided**.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/public/quick-calls` | Save a website quick call request |
-| `GET` | `/api/admin/quick-calls?search=...&city=Delhi&limit=50&offset=0` | List/search/filter quick call requests by city |
+| `GET` | `/api/admin/quick-calls?search=...&city=Delhi&date_from=2026-11-01&date_to=2026-11-30&limit=50&offset=0` | List/search/filter quick call requests by city and inclusive date range |
+| `PUT` | `/api/admin/quick-calls/:id` | Update a request's name, phone number, or city (admin only) |
+| `DELETE` | `/api/admin/quick-calls/:id` | Delete a request (admin only) |
+
+The Get a Quick Call admin list displays nine requests per page and supports
+previous/next navigation.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
