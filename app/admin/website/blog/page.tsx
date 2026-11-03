@@ -5,10 +5,12 @@ import useSWR from "swr";
 import {
   MdOutlineAdd,
   MdOutlineArticle,
+  MdOutlineClose,
   MdOutlineDelete,
   MdOutlineEdit,
   MdOutlineSave,
   MdOutlineSearch,
+  MdOutlineVisibility,
 } from "react-icons/md";
 import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
@@ -22,6 +24,7 @@ const inputCls =
 interface WebsiteBlog {
   id: number;
   title: string;
+  authorName: string;
   paragraph: string;
   image_url: string;
   image_public_id: string;
@@ -80,6 +83,7 @@ export default function WebsiteBlogPage() {
   const [cityFilter, setCityFilter] = useState("");
   const [page, setPage] = useState(1);
   const [editorBlog, setEditorBlog] = useState<WebsiteBlog | null | undefined>();
+  const [previewBlog, setPreviewBlog] = useState<WebsiteBlog | null>(null);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -326,9 +330,6 @@ export default function WebsiteBlogPage() {
                       />
                       <div className="max-w-md">
                         <p className="font-semibold text-slate-900">{blog.title}</p>
-                        <p className="line-clamp-2 text-xs text-slate-500">
-                          {getParagraphPreview(blog.paragraph)}
-                        </p>
                       </div>
                     </div>
                   </td>
@@ -377,6 +378,16 @@ export default function WebsiteBlogPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewBlog(blog)}
+                        disabled={deletingId === blog.id || saving}
+                        className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40"
+                        aria-label={`Preview ${blog.title}`}
+                        title="Preview"
+                      >
+                        <MdOutlineVisibility className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => openEditBlog(blog)}
@@ -434,6 +445,66 @@ export default function WebsiteBlogPage() {
           </div>
         )}
       </div>
+
+      {previewBlog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPreviewBlog(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="blog-preview-title"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl"
+          >
+            <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
+              <div>
+                <h2 id="blog-preview-title" className="text-lg font-semibold text-slate-900">
+                  Blog preview
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">{previewBlog.status}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewBlog(null)}
+                aria-label="Close blog preview"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              >
+                <MdOutlineClose className="h-5 w-5" />
+              </button>
+            </div>
+            <article className="p-6">
+              <img
+                src={previewBlog.image_url}
+                alt={previewBlog.title}
+                className="mb-6 max-h-96 w-full rounded-xl object-cover"
+              />
+              <p className="mb-4 text-sm text-slate-500">
+                <span className="font-medium text-slate-700">{previewBlog.authorName}</span>
+                <span aria-hidden="true"> · </span>
+                {formatDate(previewBlog.created_at)}
+              </p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {previewBlog.categories.map((category) => (
+                  <span
+                    key={category}
+                    className="rounded-full bg-teal-50 px-3 py-1 text-xs text-teal-700"
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
+              <h3 className="mb-4 text-2xl font-bold text-slate-900">{previewBlog.title}</h3>
+              <div
+                className="space-y-4 break-words text-sm leading-7 text-slate-700 [&_a]:text-teal-700 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_img]:my-4 [&_img]:max-w-full [&_li]:ml-6 [&_ol]:list-decimal [&_p]:my-3 [&_pre]:overflow-x-auto [&_ul]:list-disc"
+                dangerouslySetInnerHTML={{ __html: previewBlog.paragraph }}
+              />
+            </article>
+          </section>
+        </div>
+      )}
 
       {editorBlog !== undefined && (
         <BlogEditor

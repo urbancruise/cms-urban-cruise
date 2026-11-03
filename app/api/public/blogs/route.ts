@@ -17,6 +17,7 @@ interface PublicBlogRow extends RowDataPacket {
   image_url: string;
   categories: unknown;
   cities: unknown;
+  author_name: string;
   created_at: string;
 }
 
@@ -42,11 +43,14 @@ export async function GET(request: NextRequest) {
     }
 
     const [rows] = await pool.query<PublicBlogRow[]>(
-      `SELECT id, title, paragraph, image_url, categories, cities, created_at
-       FROM website_blogs
-       WHERE status = 'published'
-         AND (? IS NULL OR JSON_LENGTH(cities) = 0 OR JSON_CONTAINS(cities, JSON_QUOTE(?), '$'))
-       ORDER BY created_at DESC, id DESC`,
+      `SELECT blog.id, blog.title, blog.paragraph, blog.image_url,
+              blog.categories, blog.cities, blog.created_at,
+              COALESCE(NULLIF(TRIM(author.full_name), ''), NULLIF(TRIM(author.username), ''), 'Urban Cruise') AS author_name
+       FROM website_blogs AS blog
+       LEFT JOIN users AS author ON author.id = blog.created_by
+       WHERE blog.status = 'published'
+         AND (? IS NULL OR JSON_LENGTH(blog.cities) = 0 OR JSON_CONTAINS(blog.cities, JSON_QUOTE(?), '$'))
+       ORDER BY blog.created_at DESC, blog.id DESC`,
       [citySlug || null, citySlug || null]
     );
 
@@ -60,6 +64,7 @@ export async function GET(request: NextRequest) {
             image: row.image_url,
             categories: parseBlogCategories(row.categories),
             citySlugs: parseBlogCitySlugs(row.cities),
+            authorName: row.author_name,
             createdAt: row.created_at,
           })),
           categories: WEBSITE_BLOG_CATEGORIES,

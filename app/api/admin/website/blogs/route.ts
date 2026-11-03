@@ -26,6 +26,7 @@ interface WebsiteBlogRow extends RowDataPacket {
   image_public_id: string;
   categories: unknown;
   cities: unknown;
+  author_name: string;
   status: "draft" | "published";
   created_at: string;
   updated_at: string;
@@ -38,6 +39,7 @@ interface ActiveCityRow extends RowDataPacket {
 function mapBlog(row: WebsiteBlogRow) {
   return {
     ...row,
+    authorName: row.author_name,
     paragraph: sanitizeWebsiteBlogHtml(row.paragraph),
     categories: parseBlogCategories(row.categories),
     citySlugs: parseBlogCitySlugs(row.cities),
@@ -88,25 +90,28 @@ export async function GET(request: NextRequest) {
     const filters: string[] = [];
     const values: string[] = [];
     if (search) {
-      filters.push("(title LIKE ? OR paragraph LIKE ?)");
+      filters.push("(blog.title LIKE ? OR blog.paragraph LIKE ?)");
       values.push(`%${search}%`, `%${search}%`);
     }
     if (category) {
-      filters.push("JSON_CONTAINS(categories, JSON_QUOTE(?), '$')");
+      filters.push("JSON_CONTAINS(blog.categories, JSON_QUOTE(?), '$')");
       values.push(category);
     }
     if (city) {
       filters.push(
-        "(JSON_LENGTH(cities) = 0 OR JSON_CONTAINS(cities, JSON_QUOTE(?), '$'))"
+        "(JSON_LENGTH(blog.cities) = 0 OR JSON_CONTAINS(blog.cities, JSON_QUOTE(?), '$'))"
       );
       values.push(city);
     }
     const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
     const [blogs] = await pool.query<WebsiteBlogRow[]>(
-      `SELECT id, title, paragraph, image_url, image_public_id,
-         categories, cities, status, created_at, updated_at
-       FROM website_blogs ${where}
-       ORDER BY created_at DESC, id DESC
+      `SELECT blog.id, blog.title, blog.paragraph, blog.image_url, blog.image_public_id,
+         blog.categories, blog.cities, blog.status, blog.created_at, blog.updated_at,
+         COALESCE(NULLIF(TRIM(author.full_name), ''), NULLIF(TRIM(author.username), ''), 'Urban Cruise') AS author_name
+       FROM website_blogs AS blog
+       LEFT JOIN users AS author ON author.id = blog.created_by
+       ${where}
+       ORDER BY blog.created_at DESC, blog.id DESC
        LIMIT ? OFFSET ?`,
       [...values, limit, offset]
     );
