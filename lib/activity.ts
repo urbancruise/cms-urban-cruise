@@ -4,7 +4,7 @@ import pool from "@/lib/db";
 // Types
 // ============================================
 export type ActionType = "create" | "update" | "delete";
-export type EntityType = "user" | "role" | "city" | "profile";
+export type EntityType = "user" | "role" | "city" | "profile" | "blog";
 
 export interface ActorInfo {
   userId: number;
@@ -35,6 +35,7 @@ const ENTITY_LABEL: Record<EntityType, string> = {
   role: "Role",
   city: "City",
   profile: "Profile",
+  blog: "Blog post",
 };
 
 const ENTITY_LINK: Record<EntityType, string> = {
@@ -42,6 +43,7 @@ const ENTITY_LINK: Record<EntityType, string> = {
   role: "/admin/roles",
   city: "/admin/cities",
   profile: "/admin/profile",
+  blog: "/admin/website/blog",
 };
 
 // ============================================
