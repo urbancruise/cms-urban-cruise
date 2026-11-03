@@ -28,6 +28,7 @@ import {
   MdOutlineKeyboardArrowDown,
   MdOutlineKeyboardArrowRight,
   MdOutlineSearch,
+  MdOutlineArticle,
 } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
 
@@ -314,6 +315,12 @@ const PERMISSION_TREE: PermissionGroup[] = [
         label: "Get a Quick Call",
         icon: MdOutlinePhone,
         permKey: "urbancruise.quickcalls.view",
+      },
+      {
+        key: "urbancruise.blogs.view",
+        label: "Blog",
+        icon: MdOutlineArticle,
+        permKey: "urbancruise.blogs.view",
       },
     ],
   },

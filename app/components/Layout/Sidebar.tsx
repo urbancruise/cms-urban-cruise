@@ -21,6 +21,7 @@ import {
   MdOutlineContactSupport,
   MdOutlinePhone,
   MdOutlineSearch,
+  MdOutlineArticle,
 } from "react-icons/md";
 
 import { useAuth } from "@/app/context/AuthContext";
@@ -110,6 +111,12 @@ const menuItems: MenuItem[] = [
         label: "Get a Quick Call",
         href: "/admin/website/quick-calls",
         perm: "urbancruise.quickcalls.view",
+      },
+      {
+        icon: MdOutlineArticle,
+        label: "Blog",
+        href: "/admin/website/blog",
+        perm: "urbancruise.blogs.view",
       },
     ],
   },

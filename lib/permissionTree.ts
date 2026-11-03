@@ -13,6 +13,7 @@ import {
   MdOutlineContactSupport,
   MdOutlinePhone,
   MdOutlineSearch,
+  MdOutlineArticle,
 } from "react-icons/md";
 
 export interface PermissionGroup {
@@ -239,6 +240,12 @@ export const WEBSITE_PERMISSION_TREE: PermissionGroup[] = [
         label: "Get a Quick Call",
         icon: MdOutlinePhone,
         permKey: "urbancruise.quickcalls.view",
+      },
+      {
+        key: "urbancruise.blogs.view",
+        label: "Blog",
+        icon: MdOutlineArticle,
+        permKey: "urbancruise.blogs.view",
       },
     ],
   },
