@@ -31,6 +31,7 @@ interface ImageItemShape {
 interface GroupSizeVehicle {
   type?: string;
   name: string;
+  detailsUrl?: string;
   tagline: string;
   seats: string;
   price: string;
@@ -52,8 +53,6 @@ interface OccasionCard {
   location: string;
   description: string;
   features: string[];
-  bookLabel: string;
-  bookLink: string;
   readMoreLabel: string;
   readMoreLink: string;
 }
@@ -1056,6 +1055,7 @@ export function FormEditor({
           emptyItem={{
             type: "",
             name: "",
+            detailsUrl: "",
             tagline: "",
             seats: "",
             price: "",
@@ -1097,6 +1097,18 @@ export function FormEditor({
                   />
                 </Field>
               </div>
+
+              <Field label="View Details URL">
+                <input
+                  type="text"
+                  value={item.detailsUrl || ""}
+                  onChange={(e) =>
+                    update({ ...item, detailsUrl: e.target.value })
+                  }
+                  className={inputCls}
+                  placeholder="/delhi/tempo-traveller"
+                />
+              </Field>
 
               {/* Row: tagline + seats + price */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1322,8 +1334,6 @@ export function FormEditor({
                     description: "",
                     imageAlt: "",
                     features: [],
-                    bookLabel: "BOOK NOW",
-                    bookLink: "",
                     readMoreLabel: "READ MORE",
                     readMoreLink: "",
                   }}
@@ -1428,34 +1438,6 @@ export function FormEditor({
                       </Field>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Field label="Book Label">
-                          <input
-                            type="text"
-                            value={card.bookLabel || ""}
-                            onChange={(e) =>
-                              updateCard({
-                                ...card,
-                                bookLabel: e.target.value,
-                              })
-                            }
-                            className={inputCls}
-                            placeholder="BOOK NOW"
-                          />
-                        </Field>
-                        <Field label="Book Link">
-                          <input
-                            type="text"
-                            value={card.bookLink || ""}
-                            onChange={(e) =>
-                              updateCard({
-                                ...card,
-                                bookLink: e.target.value,
-                              })
-                            }
-                            className={inputCls}
-                            placeholder="/booking"
-                          />
-                        </Field>
                         <Field label="Read More Label">
                           <input
                             type="text"
