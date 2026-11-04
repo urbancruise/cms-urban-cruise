@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/swr-config";
 import { api } from "@/lib/api";
@@ -20,6 +20,7 @@ import {
   MdOutlineShare,
   MdOutlineCode,
   MdOutlineLanguage,
+  MdOutlineKeyboardArrowRight,
 } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
 import ImageUpload from "@/app/components/UI/ImageUpload";
@@ -32,10 +33,7 @@ import { slugify } from "@/lib/format";
 const PAGE_TYPE_GROUPS = [
   {
     group: "General",
-    options: [
-      { value: "home", label: "Home" },
-      { value: "custom", label: "Custom Page" },
-    ],
+    options: [{ value: "home", label: "Home" }],
   },
   {
     group: "Vehicles — Car & SUVs",
@@ -83,6 +81,13 @@ const PAGE_TYPE_GROUPS = [
         value: "vehicle:sleeper-bus",
         label: "Sleeper | Semi Sleeper Bus",
       },
+    ],
+  },
+  {
+    group: "Content",
+    options: [
+      { value: "blog", label: "Blog" },
+      { value: "custom", label: "Custom Page" },
     ],
   },
 ];
@@ -208,11 +213,16 @@ function scoreTone(score: number): {
 export default function SeoPagesPage() {
   const [cityFilter, setCityFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  const [vehicleFilterOpen, setVehicleFilterOpen] = useState(false);
+  const [expandedFilterVehicleGroup, setExpandedFilterVehicleGroup] =
+    useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPage, setEditingPage] = useState<SeoPage | null>(null);
+  const typeFilterDropdownRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{
     type: "success" | "error";
     message: string;
@@ -222,6 +232,33 @@ export default function SeoPagesPage() {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
     return () => clearTimeout(t);
   }, [searchTerm]);
+
+  useEffect(() => {
+    if (!typeFilterOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!typeFilterDropdownRef.current?.contains(event.target as Node)) {
+        setTypeFilterOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTypeFilterOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [typeFilterOpen]);
+
+  const selectTypeFilter = (value: string) => {
+    setTypeFilter(value);
+    setTypeFilterOpen(false);
+    setVehicleFilterOpen(false);
+    setExpandedFilterVehicleGroup(null);
+  };
 
   const { data: citiesData } = useSWR<{ cities: City[] }>(
     "/api/admin/cities?active=true",
@@ -296,18 +333,6 @@ export default function SeoPagesPage() {
       amber: "bg-amber-50 text-amber-700",
       emerald: "bg-emerald-50 text-emerald-700",
     }[color]);
-
-  const filterGroups = [
-    {
-      group: "General",
-      options: [
-        { value: "", label: "All Types" },
-        { value: "home", label: "Home Only" },
-        { value: "custom", label: "Custom Only" },
-      ],
-    },
-    ...PAGE_TYPE_GROUPS.filter((g) => g.group.startsWith("Vehicles")),
-  ];
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto">
@@ -405,21 +430,155 @@ export default function SeoPagesPage() {
           ))}
         </select>
 
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 min-w-[200px]"
-        >
-          {filterGroups.map((group) => (
-            <optgroup key={group.group} label={group.group}>
-              {group.options.map((o) => (
-                <option key={o.value || "all"} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        <div className="relative min-w-[200px]" ref={typeFilterDropdownRef}>
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={typeFilterOpen}
+            onClick={() => setTypeFilterOpen((open) => !open)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-left text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
+          >
+            <span>
+              {typeFilter
+                ? typeFilter === "custom"
+                  ? "Custom Page"
+                  : getPageTypeLabel(typeFilter)
+                : "All Types"}
+            </span>
+            <MdOutlineKeyboardArrowRight
+              className={`w-5 h-5 text-slate-500 transition-transform ${
+                typeFilterOpen ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+          {typeFilterOpen && (
+            <div
+              role="menu"
+              className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => selectTypeFilter("")}
+                className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                  !typeFilter
+                    ? "font-medium text-teal-700"
+                    : "text-slate-700"
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => selectTypeFilter("home")}
+                className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                  typeFilter === "home"
+                    ? "font-medium text-teal-700"
+                    : "text-slate-700"
+                }`}
+              >
+                Home
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                aria-expanded={vehicleFilterOpen}
+                onClick={() => setVehicleFilterOpen((open) => !open)}
+                className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+              >
+                <span>Vehicles</span>
+                <MdOutlineKeyboardArrowRight
+                  className={`h-5 w-5 text-slate-500 transition-transform ${
+                    vehicleFilterOpen ? "rotate-90" : ""
+                  }`}
+                />
+              </button>
+              {vehicleFilterOpen && (
+                <div className="border-y border-slate-100 bg-slate-50/70 py-1">
+                  {PAGE_TYPE_GROUPS.filter((group) =>
+                    group.group.startsWith("Vehicles")
+                  ).map((group) => {
+                    const groupLabel = group.group.replace(
+                      "Vehicles — ",
+                      ""
+                    );
+                    const isExpanded =
+                      expandedFilterVehicleGroup === group.group;
+
+                    return (
+                      <div key={group.group}>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          aria-expanded={isExpanded}
+                          onClick={() =>
+                            setExpandedFilterVehicleGroup(
+                              isExpanded ? null : group.group
+                            )
+                          }
+                          className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-white"
+                        >
+                          <span>{groupLabel}</span>
+                          <MdOutlineKeyboardArrowRight
+                            className={`h-5 w-5 text-slate-500 transition-transform ${
+                              isExpanded ? "rotate-90" : ""
+                            }`}
+                          />
+                        </button>
+                        {isExpanded && (
+                          <div className="bg-white py-1">
+                            {group.options.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                role="menuitem"
+                                onClick={() =>
+                                  selectTypeFilter(option.value)
+                                }
+                                className={`w-full px-7 py-2 text-left text-sm hover:bg-teal-50 ${
+                                  typeFilter === option.value
+                                    ? "font-medium text-teal-700"
+                                    : "text-slate-600"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => selectTypeFilter("blog")}
+                className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                  typeFilter === "blog"
+                    ? "font-medium text-teal-700"
+                    : "text-slate-700"
+                }`}
+              >
+                Blog
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => selectTypeFilter("custom")}
+                className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                  typeFilter === "custom"
+                    ? "font-medium text-teal-700"
+                    : "text-slate-700"
+                }`}
+              >
+                Custom Page
+              </button>
+            </div>
+          )}
+        </div>
 
         {hasActiveFilters && (
           <button
@@ -743,6 +902,12 @@ function SeoPageModal({
 }) {
   const isEdit = Boolean(page);
   const [activeTab, setActiveTab] = useState<TabId>("details");
+  const [pageTypeOpen, setPageTypeOpen] = useState(false);
+  const [vehiclesOpen, setVehiclesOpen] = useState(false);
+  const [expandedVehicleGroup, setExpandedVehicleGroup] = useState<string | null>(
+    null
+  );
+  const pageTypeDropdownRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
     city_id: page?.city_id ? String(page.city_id) : "",
@@ -784,6 +949,33 @@ function SeoPageModal({
 
   const set = (key: string, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
+
+  useEffect(() => {
+    if (!pageTypeOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!pageTypeDropdownRef.current?.contains(event.target as Node)) {
+        setPageTypeOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPageTypeOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [pageTypeOpen]);
+
+  const selectPageType = (value: string) => {
+    set("page_type", value);
+    setPageTypeOpen(false);
+    setVehiclesOpen(false);
+    setExpandedVehicleGroup(null);
+  };
 
   // Auto-fill page_path + slug when city + type changes (create only)
   useEffect(() => {
@@ -886,6 +1078,7 @@ function SeoPageModal({
   const pageTitleLen = formData.page_title.length;
   const selectedTypeLabel = getPageTypeLabel(formData.page_type);
   const isVehicle = isVehiclePageType(formData.page_type);
+  const isBlog = formData.page_type === "blog";
 
   const keywordCount = formData.meta_keywords
     .split(",")
@@ -984,27 +1177,146 @@ function SeoPageModal({
                   <label className="block text-xs font-medium text-slate-700 mb-1.5">
                     Page Type *
                   </label>
-                  <select
-                    value={formData.page_type}
-                    onChange={(e) => set("page_type", e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
-                    required
-                  >
-                    {PAGE_TYPE_GROUPS.map((group) => (
-                      <optgroup key={group.group} label={group.group}>
-                        {group.options.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+                  <div className="relative" ref={pageTypeDropdownRef}>
+                    <button
+                      type="button"
+                      aria-haspopup="menu"
+                      aria-expanded={pageTypeOpen}
+                      onClick={() => setPageTypeOpen((open) => !open)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 border border-slate-200 rounded-lg bg-white text-left text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
+                    >
+                      <span>{selectedTypeLabel}</span>
+                      <MdOutlineKeyboardArrowRight
+                        className={`w-5 h-5 text-slate-400 transition-transform ${
+                          pageTypeOpen ? "rotate-90" : ""
+                        }`}
+                      />
+                    </button>
+                    {pageTypeOpen && (
+                      <div
+                        role="menu"
+                        className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => selectPageType("home")}
+                          className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                            formData.page_type === "home"
+                              ? "font-medium text-teal-700"
+                              : "text-slate-700"
+                          }`}
+                        >
+                          Home
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          aria-expanded={vehiclesOpen}
+                          onClick={() => setVehiclesOpen((open) => !open)}
+                          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <span>Vehicles</span>
+                          <MdOutlineKeyboardArrowRight
+                            className={`h-5 w-5 text-slate-500 transition-transform ${
+                              vehiclesOpen ? "rotate-90" : ""
+                            }`}
+                          />
+                        </button>
+                        {vehiclesOpen && (
+                          <div className="border-y border-slate-100 bg-slate-50/70 py-1">
+                            {PAGE_TYPE_GROUPS.filter((group) =>
+                              group.group.startsWith("Vehicles")
+                            ).map((group) => {
+                              const groupLabel = group.group.replace(
+                                "Vehicles — ",
+                                ""
+                              );
+                              const isExpanded =
+                                expandedVehicleGroup === group.group;
+
+                              return (
+                                <div key={group.group}>
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    aria-expanded={isExpanded}
+                                    onClick={() =>
+                                      setExpandedVehicleGroup(
+                                        isExpanded ? null : group.group
+                                      )
+                                    }
+                                    className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-white"
+                                  >
+                                    <span>{groupLabel}</span>
+                                    <MdOutlineKeyboardArrowRight
+                                      className={`h-5 w-5 text-slate-500 transition-transform ${
+                                        isExpanded ? "rotate-90" : ""
+                                      }`}
+                                    />
+                                  </button>
+                                  {isExpanded && (
+                                    <div className="bg-white py-1">
+                                      {group.options.map((option) => (
+                                        <button
+                                          key={option.value}
+                                          type="button"
+                                          role="menuitem"
+                                          onClick={() =>
+                                            selectPageType(option.value)
+                                          }
+                                          className={`w-full px-7 py-2 text-left text-sm hover:bg-teal-50 ${
+                                            formData.page_type === option.value
+                                              ? "font-medium text-teal-700"
+                                              : "text-slate-600"
+                                          }`}
+                                        >
+                                          {option.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => selectPageType("blog")}
+                          className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                            formData.page_type === "blog"
+                              ? "font-medium text-teal-700"
+                              : "text-slate-700"
+                          }`}
+                        >
+                          Blog
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => selectPageType("custom")}
+                          className={`w-full px-3 py-2.5 text-left text-sm hover:bg-slate-50 ${
+                            formData.page_type === "custom"
+                              ? "font-medium text-teal-700"
+                              : "text-slate-700"
+                          }`}
+                        >
+                          Custom Page
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
                     {isVehicle && (
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
                     )}
-                    {isVehicle ? `Vehicle sub-page: ${selectedTypeLabel}` : "General page"}
+                    {isVehicle
+                      ? `Vehicle sub-page: ${selectedTypeLabel}`
+                      : isBlog
+                        ? "Blog SEO is managed using the page path below."
+                        : "General page"}
                   </p>
                 </div>
               </div>
@@ -1018,7 +1330,9 @@ function SeoPageModal({
                     type="text"
                     value={formData.page_path}
                     onChange={(e) => set("page_path", e.target.value)}
-                    placeholder="/delhi/vehicles/ertiga"
+                    placeholder={
+                      isBlog ? "/blog/article-slug" : "/delhi/vehicles/ertiga"
+                    }
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
                     required
                   />
