@@ -162,6 +162,18 @@ interface City {
   name: string;
 }
 
+interface WebsiteBlogOption {
+  id: number;
+  title: string;
+  slug: string;
+  status: "draft" | "published";
+  citySlugs: string[];
+}
+
+interface WebsiteBlogsResponse {
+  blogs: WebsiteBlogOption[];
+}
+
 // ============================================================
 // Schema helpers
 // ============================================================
@@ -946,9 +958,38 @@ function SeoPageModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [faviconError, setFaviconError] = useState(false);
+  const [selectedBlogId, setSelectedBlogId] = useState("");
 
   const set = (key: string, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
+  const isBlog = formData.page_type === "blog";
+  const selectedCity = cities.find(
+    (city) => String(city.id) === formData.city_id
+  );
+  const blogCitySlug = selectedCity ? slugify(selectedCity.name) : "";
+  const blogPostsKey =
+    isBlog && blogCitySlug
+      ? `/api/admin/website/blogs?limit=100&status=published&city=${encodeURIComponent(blogCitySlug)}`
+      : null;
+  const {
+    data: blogPostsData,
+    error: blogPostsError,
+    isLoading: blogPostsLoading,
+  } = useSWR<WebsiteBlogsResponse>(blogPostsKey, fetcher, {
+    keepPreviousData: false,
+  });
+  const availableBlogPosts = (blogPostsData?.blogs || []).filter(
+    (post) =>
+      post.status === "published" &&
+      (post.citySlugs.length === 0 || post.citySlugs.includes(blogCitySlug))
+  );
+  const selectedBlog =
+    availableBlogPosts.find((post) => String(post.id) === selectedBlogId) ||
+    availableBlogPosts.find(
+      (post) =>
+        post.slug === page?.slug &&
+        page.page_path === `/${blogCitySlug}/${post.slug}`
+    );
 
   useEffect(() => {
     if (!pageTypeOpen) return;
@@ -971,7 +1012,14 @@ function SeoPageModal({
   }, [pageTypeOpen]);
 
   const selectPageType = (value: string) => {
-    set("page_type", value);
+    setFormData((prev) => ({
+      ...prev,
+      page_type: value,
+      ...(value === "blog"
+        ? { page_path: "", slug: "", page_title: "" }
+        : {}),
+    }));
+    if (value === "blog") setSelectedBlogId("");
     setPageTypeOpen(false);
     setVehiclesOpen(false);
     setExpandedVehicleGroup(null);
@@ -1062,6 +1110,17 @@ function SeoPageModal({
         : "/api/admin/seo/pages";
       const method = isEdit ? "PUT" : "POST";
 
+      if (isBlog) {
+        if (!selectedBlog) {
+          setError("Select a published blog post.");
+          return;
+        }
+        await api(`/api/admin/website/blogs/${selectedBlog.id}`, {
+          method: "PATCH",
+          body: { slug: formData.slug },
+        });
+      }
+
       // ✅ CSRF-aware
       await api(url, { method, body: payload });
 
@@ -1078,7 +1137,6 @@ function SeoPageModal({
   const pageTitleLen = formData.page_title.length;
   const selectedTypeLabel = getPageTypeLabel(formData.page_type);
   const isVehicle = isVehiclePageType(formData.page_type);
-  const isBlog = formData.page_type === "blog";
 
   const keywordCount = formData.meta_keywords
     .split(",")
@@ -1161,7 +1219,16 @@ function SeoPageModal({
                   </label>
                   <select
                     value={formData.city_id}
-                    onChange={(e) => set("city_id", e.target.value)}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        city_id: e.target.value,
+                        ...(prev.page_type === "blog"
+                          ? { page_path: "", slug: "", page_title: "" }
+                          : {}),
+                      }));
+                      setSelectedBlogId("");
+                    }}
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
                   >
                     <option value="">Global</option>
@@ -1315,11 +1382,76 @@ function SeoPageModal({
                     {isVehicle
                       ? `Vehicle sub-page: ${selectedTypeLabel}`
                       : isBlog
-                        ? "Blog SEO is managed using the page path below."
+                        ? "Select a published post to use its city-specific URL."
                         : "General page"}
                   </p>
                 </div>
               </div>
+
+              {isBlog && (
+                <div>
+                  <label
+                    htmlFor="seo-blog-post"
+                    className="mb-1.5 block text-xs font-medium text-slate-700"
+                  >
+                    Published Blog Post *
+                  </label>
+                  {!blogCitySlug ? (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                      Select a city to see its published blog posts.
+                    </p>
+                  ) : blogPostsError ? (
+                    <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
+                      Could not load blog posts: {blogPostsError.message}
+                    </p>
+                  ) : (
+                    <>
+                      <select
+                        id="seo-blog-post"
+                        value={selectedBlog?.id || ""}
+                        disabled={blogPostsLoading}
+                        onChange={(event) => {
+                          const blog = availableBlogPosts.find(
+                            (post) => String(post.id) === event.target.value
+                          );
+                          if (!blog) return;
+                          setSelectedBlogId(String(blog.id));
+                          setFormData((prev) => ({
+                            ...prev,
+                            page_path: `/${blogCitySlug}/${blog.slug}`,
+                            slug: blog.slug,
+                            page_title: blog.title,
+                          }));
+                        }}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/40 disabled:bg-slate-50"
+                        required
+                      >
+                        <option value="">
+                          {blogPostsLoading
+                            ? "Loading published posts..."
+                            : "Select a published blog post"}
+                        </option>
+                        {availableBlogPosts.map((blog) => (
+                          <option key={blog.id} value={blog.id}>
+                            {blog.title} (/{blog.slug})
+                          </option>
+                        ))}
+                      </select>
+                      {!blogPostsLoading &&
+                        availableBlogPosts.length === 0 && (
+                          <p className="mt-1.5 text-xs text-slate-500">
+                            No published blog posts are available for this city.
+                          </p>
+                        )}
+                    </>
+                  )}
+                  {selectedBlog && (
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      Selected URL: /{blogCitySlug}/{formData.slug}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1330,6 +1462,7 @@ function SeoPageModal({
                     type="text"
                     value={formData.page_path}
                     onChange={(e) => set("page_path", e.target.value)}
+                    readOnly={isBlog}
                     placeholder={
                       isBlog ? "/blog/article-slug" : "/delhi/vehicles/ertiga"
                     }
@@ -1344,12 +1477,27 @@ function SeoPageModal({
                   <input
                     type="text"
                     value={formData.slug}
-                    onChange={(e) => set("slug", e.target.value)}
+                    onChange={(e) => {
+                      const slug = e.target.value
+                        .toLowerCase()
+                        .trim()
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/^-|-$/g, "");
+                      setFormData((prev) => ({
+                        ...prev,
+                        slug,
+                        ...(isBlog && blogCitySlug
+                          ? { page_path: `/${blogCitySlug}/${slug}` }
+                          : {}),
+                      }));
+                    }}
                     placeholder="ertiga"
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
                   />
                   <p className="text-[11px] text-slate-400 mt-1.5">
-                    Short identifier — used in URLs and sitemap
+                    {isBlog
+                      ? "Editing this slug also updates the selected blog URL."
+                      : "Short identifier — used in URLs and sitemap"}
                   </p>
                 </div>
               </div>

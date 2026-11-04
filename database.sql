@@ -978,6 +978,7 @@ CREATE TABLE IF NOT EXISTS quick_call_requests (
 CREATE TABLE IF NOT EXISTS website_blogs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
     paragraph MEDIUMTEXT NOT NULL,
     image_url TEXT NOT NULL,
     image_public_id VARCHAR(255) NOT NULL DEFAULT '',
@@ -988,6 +989,7 @@ CREATE TABLE IF NOT EXISTS website_blogs (
     updated_by INT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX uq_website_blogs_slug (slug),
     INDEX idx_website_blogs_status_created (status, created_at),
     FULLTEXT INDEX idx_website_blogs_search (title, paragraph)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
