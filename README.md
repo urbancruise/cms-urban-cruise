@@ -55,12 +55,13 @@ available field data receive numeric Core Web Vitals results.
 
 ## Website blog CMS
 
-The Website Blog editor stores posts with a title, paragraph, uploaded image,
+The Website Blog editor stores posts with a title, editable URL slug, paragraph, uploaded image,
 one or more vehicle categories, one or more cities, and draft/published status.
 The paragraph field supports rich-text formatting and inline image uploads.
 For an existing CMS database, run
 `migrations/20261103_create_website_blogs.sql` followed by
-`migrations/20261103_add_website_blog_cities.sql`. New databases get the
+`migrations/20261103_add_website_blog_cities.sql` and
+`migrations/20261104_add_website_blog_slug.sql`. New databases get the
 complete table from `database.sql`. Published posts appear on assigned city
 blog pages; the global `/blog` page continues to show all published posts.
 The Urban Cruise website uses its server-side `CMS_API_URL` and `CMS_API_KEY`

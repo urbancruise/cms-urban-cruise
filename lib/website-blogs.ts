@@ -21,6 +21,12 @@ export const WEBSITE_BLOG_CATEGORIES = [
 
 export const WebsiteBlogInputSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(255),
+  slug: z
+    .string()
+    .trim()
+    .min(1, "Slug is required")
+    .max(255)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Enter a valid lowercase slug"),
   paragraph: z.string().trim().min(1, "Paragraph is required").max(60000),
   imageUrl: z.string().trim().url("A blog image is required").max(2048),
   imagePublicId: z.string().trim().max(255).default(""),
@@ -39,7 +45,35 @@ export const WebsiteBlogInputSchema = z.object({
   status: z.enum(["draft", "published"]),
 });
 
+export const WebsiteBlogSlugSchema = z
+  .string()
+  .trim()
+  .min(1, "Slug is required")
+  .max(255)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Enter a valid lowercase slug");
+
 export type WebsiteBlogInput = z.infer<typeof WebsiteBlogInputSchema>;
+
+export function slugifyWebsiteBlogTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function isDuplicateWebsiteBlogSlugError(
+  error: unknown
+): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ER_DUP_ENTRY"
+  );
+}
 
 export function getWebsiteBlogCitySlug(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, "-");

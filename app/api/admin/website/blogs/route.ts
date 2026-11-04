@@ -14,6 +14,7 @@ import {
   getWebsiteBlogCitySlug,
   parseBlogCitySlugs,
   parseBlogCategories,
+  isDuplicateWebsiteBlogSlugError,
   WEBSITE_BLOG_CATEGORIES,
   WebsiteBlogInputSchema,
 } from "@/lib/website-blogs";
@@ -21,6 +22,7 @@ import {
 interface WebsiteBlogRow extends RowDataPacket {
   id: number;
   title: string;
+  slug: string;
   paragraph: string;
   image_url: string;
   image_public_id: string;
@@ -30,6 +32,10 @@ interface WebsiteBlogRow extends RowDataPacket {
   status: "draft" | "published";
   created_at: string;
   updated_at: string;
+}
+
+interface BlogSlugRow extends RowDataPacket {
+  id: number;
 }
 
 interface ActiveCityRow extends RowDataPacket {
@@ -58,6 +64,7 @@ export async function GET(request: NextRequest) {
     const search = (searchParams.get("search") || "").trim();
     const category = searchParams.get("category") || "";
     const city = searchParams.get("city") || "";
+    const status = searchParams.get("status") || "";
 
     if (
       !Number.isInteger(limit) ||
@@ -86,6 +93,9 @@ export async function GET(request: NextRequest) {
     if (city && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(city)) {
       return NextResponse.json({ error: "Invalid city filter" }, { status: 400 });
     }
+    if (status && status !== "draft" && status !== "published") {
+      return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
+    }
 
     const filters: string[] = [];
     const values: string[] = [];
@@ -103,10 +113,14 @@ export async function GET(request: NextRequest) {
       );
       values.push(city);
     }
+    if (status) {
+      filters.push("blog.status = ?");
+      values.push(status);
+    }
     const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
     const [blogs] = await pool.query<WebsiteBlogRow[]>(
       `SELECT blog.id, blog.title, blog.paragraph, blog.image_url, blog.image_public_id,
-         blog.categories, blog.cities, blog.status, blog.created_at, blog.updated_at,
+         blog.slug, blog.categories, blog.cities, blog.status, blog.created_at, blog.updated_at,
          COALESCE(NULLIF(TRIM(author.full_name), ''), NULLIF(TRIM(author.username), ''), 'Urban Cruise') AS author_name
        FROM website_blogs AS blog
        LEFT JOIN users AS author ON author.id = blog.created_by
@@ -116,7 +130,7 @@ export async function GET(request: NextRequest) {
       [...values, limit, offset]
     );
     const [countRows] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) AS total FROM website_blogs ${where}`,
+      `SELECT COUNT(*) AS total FROM website_blogs AS blog ${where}`,
       values
     );
     const [cityRows] = await pool.query<ActiveCityRow[]>(
@@ -164,6 +178,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const [existingSlugs] = await pool.query<BlogSlugRow[]>(
+      "SELECT id FROM website_blogs WHERE slug = ? LIMIT 1",
+      [parsed.data.slug]
+    );
+    if (existingSlugs.length > 0) {
+      return NextResponse.json(
+        { error: "This blog URL slug is already in use." },
+        { status: 409 }
+      );
+    }
     const [cityRows] = await pool.query<ActiveCityRow[]>(
       "SELECT name FROM cities WHERE is_active = 1"
     );
@@ -181,10 +205,11 @@ export async function POST(request: NextRequest) {
 
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO website_blogs
-         (title, paragraph, image_url, image_public_id, categories, cities, status, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (title, slug, paragraph, image_url, image_public_id, categories, cities, status, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         parsed.data.title,
+        parsed.data.slug,
         paragraph,
         parsed.data.imageUrl,
         parsed.data.imagePublicId,
@@ -206,6 +231,7 @@ export async function POST(request: NextRequest) {
       entityId: result.insertId,
       entityName: parsed.data.title,
       changes: {
+        slug: parsed.data.slug,
         status: parsed.data.status,
         categories: parsed.data.categories,
         citySlugs: parsed.data.citySlugs,
@@ -215,6 +241,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, id: result.insertId }, { status: 201 });
   } catch (error) {
+    if (isDuplicateWebsiteBlogSlugError(error)) {
+      return NextResponse.json(
+        { error: "This blog URL slug is already in use." },
+        { status: 409 }
+      );
+    }
     return respondError(error, "admin/website/blogs create");
   }
 }

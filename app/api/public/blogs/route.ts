@@ -13,6 +13,7 @@ import {
 interface PublicBlogRow extends RowDataPacket {
   id: number;
   title: string;
+  slug: string;
   paragraph: string;
   image_url: string;
   categories: unknown;
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [rows] = await pool.query<PublicBlogRow[]>(
-      `SELECT blog.id, blog.title, blog.paragraph, blog.image_url,
+      `SELECT blog.id, blog.title, blog.slug, blog.paragraph, blog.image_url,
               blog.categories, blog.cities, blog.created_at,
               COALESCE(NULLIF(TRIM(author.full_name), ''), NULLIF(TRIM(author.username), ''), 'Urban Cruise') AS author_name
        FROM website_blogs AS blog
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
           blogs: rows.map((row) => ({
             id: row.id,
             title: row.title,
+            slug: row.slug,
             paragraph: sanitizeWebsiteBlogHtml(row.paragraph),
             image: row.image_url,
             categories: parseBlogCategories(row.categories),

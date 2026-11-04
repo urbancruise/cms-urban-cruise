@@ -16,7 +16,10 @@ import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
 import ImageUpload from "@/app/components/UI/ImageUpload";
 import BlogRichTextEditor from "./BlogRichTextEditor";
-import { WEBSITE_BLOG_CATEGORIES } from "@/lib/website-blogs";
+import {
+  slugifyWebsiteBlogTitle,
+  WEBSITE_BLOG_CATEGORIES,
+} from "@/lib/website-blogs";
 
 const inputCls =
   "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
@@ -24,6 +27,7 @@ const inputCls =
 interface WebsiteBlog {
   id: number;
   title: string;
+  slug: string;
   authorName: string;
   paragraph: string;
   image_url: string;
@@ -48,6 +52,7 @@ interface BlogsResponse {
 
 interface BlogFormValues {
   title: string;
+  slug: string;
   paragraph: string;
   imageUrl: string;
   imagePublicId: string;
@@ -113,6 +118,7 @@ export default function WebsiteBlogPage() {
     const formData = new FormData(event.currentTarget);
     const values: BlogFormValues = {
       title: String(formData.get("title") || "").trim(),
+      slug: String(formData.get("slug") || "").trim(),
       paragraph: String(formData.get("paragraph") || "").trim(),
       imageUrl: String(formData.get("imageUrl") || ""),
       imagePublicId: String(formData.get("imagePublicId") || ""),
@@ -330,6 +336,7 @@ export default function WebsiteBlogPage() {
                       />
                       <div className="max-w-md">
                         <p className="font-semibold text-slate-900">{blog.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">/{blog.slug}</p>
                       </div>
                     </div>
                   </td>
@@ -555,6 +562,9 @@ function BlogEditor({
 }) {
   const [imageUrl, setImageUrl] = useState(initialBlog?.image_url || "");
   const [paragraph, setParagraph] = useState(initialBlog?.paragraph || "");
+  const [title, setTitle] = useState(initialBlog?.title || "");
+  const [slug, setSlug] = useState(initialBlog?.slug || "");
+  const [slugEdited, setSlugEdited] = useState(Boolean(initialBlog?.slug));
   const [imagePublicId, setImagePublicId] = useState(
     initialBlog?.image_public_id || ""
   );
@@ -597,10 +607,36 @@ function BlogEditor({
               name="title"
               required
               maxLength={255}
-              defaultValue={initialBlog?.title || ""}
+              value={title}
+              onChange={(event) => {
+                const nextTitle = event.target.value;
+                setTitle(nextTitle);
+                if (!slugEdited) setSlug(slugifyWebsiteBlogTitle(nextTitle));
+              }}
               className={inputCls}
               placeholder="Blog title"
             />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">URL Slug</span>
+            <div className="flex items-center rounded-lg border border-slate-200 focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
+              <span className="pl-3 text-sm text-slate-400">/</span>
+              <input
+                name="slug"
+                required
+                maxLength={255}
+                value={slug}
+                onChange={(event) => {
+                  setSlug(slugifyWebsiteBlogTitle(event.target.value));
+                  setSlugEdited(true);
+                }}
+                className="w-full rounded-lg px-2 py-2 text-sm outline-none"
+                placeholder="darshan-bus-on-rent"
+              />
+            </div>
+            <span className="block text-xs text-slate-500">
+              Automatically suggested from the title; you can customize it.
+            </span>
           </label>
           <div className="block space-y-1.5">
             <span className="text-sm font-medium text-slate-700">Paragraph</span>
