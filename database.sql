@@ -994,6 +994,16 @@ CREATE TABLE IF NOT EXISTS website_blogs (
     FULLTEXT INDEX idx_website_blogs_search (title, paragraph)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS website_blog_heroes (
+    city_id INT NOT NULL PRIMARY KEY,
+    content JSON NOT NULL,
+    status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+    updated_by INT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_website_blog_heroes_city
+        FOREIGN KEY (city_id) REFERENCES cities(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- END OF URBAN CRUISE CMS DATABASE
 -- ============================================================
