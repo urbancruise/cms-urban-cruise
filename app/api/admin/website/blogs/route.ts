@@ -39,6 +39,7 @@ interface BlogSlugRow extends RowDataPacket {
 }
 
 interface ActiveCityRow extends RowDataPacket {
+  id: number;
   name: string;
 }
 
@@ -134,12 +135,13 @@ export async function GET(request: NextRequest) {
       values
     );
     const [cityRows] = await pool.query<ActiveCityRow[]>(
-      "SELECT name FROM cities WHERE is_active = 1 ORDER BY name ASC"
+      "SELECT id, name FROM cities WHERE is_active = 1 ORDER BY name ASC"
     );
 
     return NextResponse.json({
       blogs: blogs.map(mapBlog),
       cities: cityRows.map((city) => ({
+        id: city.id,
         name: city.name,
         slug: getWebsiteBlogCitySlug(city.name),
       })),

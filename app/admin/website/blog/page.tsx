@@ -14,6 +14,7 @@ import {
 } from "react-icons/md";
 import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
+import { FormEditor } from "@/app/components/UI/SectionEditors";
 import ImageUpload from "@/app/components/UI/ImageUpload";
 import BlogRichTextEditor from "./BlogRichTextEditor";
 import {
@@ -40,6 +41,7 @@ interface WebsiteBlog {
 }
 
 interface BlogCity {
+  id: number;
   name: string;
   slug: string;
 }
@@ -48,6 +50,30 @@ interface BlogsResponse {
   blogs: WebsiteBlog[];
   cities: BlogCity[];
   total: number;
+}
+
+interface BlogHeroContent {
+  eyebrow?: string;
+  title?: string;
+  titleHighlight?: string;
+  description?: string;
+  backgroundImage?: string;
+  backgroundImagePublicId?: string;
+  backgroundImageAlt?: string;
+  vehiclesImage?: string;
+  vehiclesImagePublicId?: string;
+  vehiclesImageAlt?: string;
+}
+
+interface BlogHero {
+  city_id: number;
+  content: BlogHeroContent;
+  status: "draft" | "published";
+  updated_at: string;
+}
+
+interface BlogHeroResponse {
+  heroes: BlogHero[];
 }
 
 interface BlogFormValues {
@@ -93,6 +119,12 @@ export default function WebsiteBlogPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState("");
+  const [heroEditorOpen, setHeroEditorOpen] = useState(false);
+  const [heroCityId, setHeroCityId] = useState<number | null>(null);
+  const [heroContent, setHeroContent] = useState<BlogHeroContent>({});
+  const [heroStatus, setHeroStatus] = useState<"draft" | "published">("draft");
+  const [savingHero, setSavingHero] = useState(false);
+  const [heroError, setHeroError] = useState("");
 
   const query = new URLSearchParams({
     limit: String(BLOGS_PER_PAGE),
@@ -110,6 +142,14 @@ export default function WebsiteBlogPage() {
   const cities = data?.cities ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / BLOGS_PER_PAGE);
+  const {
+    data: heroData,
+    error: heroLoadError,
+    isLoading: isHeroLoading,
+    mutate: mutateHero,
+  } = useSWR<BlogHeroResponse>("/api/admin/website/blog-hero", fetcher);
+  const blogHero =
+    heroData?.heroes.find((hero) => hero.city_id === heroCityId) ?? null;
 
   const saveBlog = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -176,6 +216,53 @@ export default function WebsiteBlogPage() {
     setEditorBlog(null);
   };
 
+  const openHeroEditor = () => {
+    setHeroError("");
+    const cityId = cities[0]?.id ?? null;
+    const hero = heroData?.heroes.find((item) => item.city_id === cityId);
+    setHeroCityId(cityId);
+    setHeroContent(hero?.content ?? {});
+    setHeroStatus(hero?.status ?? "draft");
+    setHeroEditorOpen(true);
+  };
+
+  const selectHeroCity = (cityId: number) => {
+    const hero = heroData?.heroes.find((item) => item.city_id === cityId);
+    setHeroCityId(cityId);
+    setHeroContent(hero?.content ?? {});
+    setHeroStatus(hero?.status ?? "draft");
+    setHeroError("");
+  };
+
+  const saveHero = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!heroCityId) {
+      setHeroError("Choose a city for this blog hero.");
+      return;
+    }
+    if (!heroContent.title?.trim()) {
+      setHeroError("Hero title is required.");
+      return;
+    }
+
+    setSavingHero(true);
+    setHeroError("");
+    try {
+      await api("/api/admin/website/blog-hero", {
+        method: "PUT",
+        body: { cityId: heroCityId, content: heroContent, status: heroStatus },
+      });
+      await mutateHero();
+      setHeroEditorOpen(false);
+    } catch (saveError) {
+      setHeroError(
+        saveError instanceof Error ? saveError.message : "Could not save blog hero."
+      );
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
   const openEditBlog = (blog: WebsiteBlog) => {
     setActionError("");
     setSelectedCategories(blog.categories);
@@ -219,14 +306,31 @@ export default function WebsiteBlogPage() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={openNewBlog}
-          className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-        >
-          <MdOutlineAdd className="h-5 w-5" />
-          Add Blog
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={openHeroEditor}
+            disabled={isLoading || isHeroLoading || Boolean(heroLoadError) || cities.length === 0}
+            className="flex items-center gap-2 rounded-lg border border-teal-600 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-50"
+          >
+            <MdOutlineEdit className="h-4 w-4" />
+            {isLoading || isHeroLoading
+              ? "Loading..."
+              : heroLoadError
+                ? "Hero Unavailable"
+                : cities.length === 0
+                  ? "No Active Cities"
+                  : "Manage Hero"}
+          </button>
+          <button
+            type="button"
+            onClick={openNewBlog}
+            className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+          >
+            <MdOutlineAdd className="h-5 w-5" />
+            Add Blog
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -297,9 +401,11 @@ export default function WebsiteBlogPage() {
         </p>
       </div>
 
-      {(error || actionError) && (
+      {(error || actionError || heroLoadError) && (
         <div role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">
-          {actionError || `Could not load blog posts: ${error.message}`}
+          {actionError ||
+            (error && `Could not load blog posts: ${error.message}`) ||
+            (heroLoadError && `Could not load blog hero: ${heroLoadError.message}`)}
         </div>
       )}
 
@@ -510,6 +616,104 @@ export default function WebsiteBlogPage() {
               />
             </article>
           </section>
+        </div>
+      )}
+
+      {heroEditorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="blog-hero-title"
+            onSubmit={saveHero}
+            className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+              <div>
+                <h2 id="blog-hero-title" className="text-xl font-bold text-slate-900">
+                  {blogHero ? "Edit Blog Hero" : "Add Blog Hero"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Configure the hero section shown on the website blog page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHeroEditorOpen(false)}
+                disabled={savingHero}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close hero editor"
+              >
+                <MdOutlineClose className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 space-y-5 overflow-y-auto p-5">
+              {heroError && (
+                <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                  {heroError}
+                </div>
+              )}
+              <FormEditor
+                sectionKey="hero"
+                value={heroContent}
+                onChange={setHeroContent}
+              />
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-700">City</span>
+                <select
+                  value={heroCityId ?? ""}
+                  onChange={(event) => selectHeroCity(Number(event.target.value))}
+                  className={inputCls}
+                  required
+                >
+                  <option value="" disabled>
+                    Choose a city
+                  </option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+                {blogHero && (
+                  <span className="text-xs text-slate-500">
+                    A hero is already configured for this city.
+                  </span>
+                )}
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-700">Status</span>
+                <select
+                  value={heroStatus}
+                  onChange={(event) =>
+                    setHeroStatus(event.target.value as "draft" | "published")
+                  }
+                  className={inputCls}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-200 p-5">
+              <button
+                type="button"
+                onClick={() => setHeroEditorOpen(false)}
+                disabled={savingHero}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingHero || !heroCityId || cities.length === 0}
+                className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+              >
+                <MdOutlineSave className="h-4 w-4" />
+                {savingHero ? "Saving..." : "Save Hero"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

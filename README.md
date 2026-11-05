@@ -61,11 +61,15 @@ The paragraph field supports rich-text formatting and inline image uploads.
 For an existing CMS database, run
 `migrations/20261103_create_website_blogs.sql` followed by
 `migrations/20261103_add_website_blog_cities.sql` and
-`migrations/20261104_add_website_blog_slug.sql`. New databases get the
-complete table from `database.sql`. Published posts appear on assigned city
-blog pages; the global `/blog` page continues to show all published posts.
-The Urban Cruise website uses its server-side `CMS_API_URL` and `CMS_API_KEY`
-to load them.
+`migrations/20261104_add_website_blog_slug.sql`. Run
+`migrations/20261104_create_website_blog_hero.sql` and
+`migrations/20261104_create_website_blog_heroes.sql` to enable city-specific
+editable blog heroes on an existing database. The latter copies any existing
+blog hero to each active city that does not already have one. New databases get
+the blog and city-specific hero tables from `database.sql`. Published posts
+appear on assigned city blog pages; the global `/blog` page continues to show
+all published posts. The Urban Cruise website uses its server-side
+`CMS_API_URL` and `CMS_API_KEY` to load them.
 
 The public SEO API (`/api/public/seo?path=/your-page`) returns page metadata,
 global defaults, active structured data, saved page content and image SEO data,

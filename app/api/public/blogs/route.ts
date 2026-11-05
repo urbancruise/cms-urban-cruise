@@ -22,6 +22,10 @@ interface PublicBlogRow extends RowDataPacket {
   created_at: string;
 }
 
+interface PublicBlogHeroRow extends RowDataPacket {
+  content: unknown;
+}
+
 export async function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
@@ -54,10 +58,25 @@ export async function GET(request: NextRequest) {
        ORDER BY blog.created_at DESC, blog.id DESC`,
       [citySlug || null, citySlug || null]
     );
+    const [heroRows] = await pool.query<PublicBlogHeroRow[]>(
+      `SELECT content
+       FROM website_blog_heroes AS hero
+       JOIN cities AS city ON city.id = hero.city_id
+       WHERE city.is_active = 1
+         AND LOWER(REPLACE(TRIM(city.name), ' ', '-')) = ?
+         AND hero.status = 'published'
+       LIMIT 1`,
+      [citySlug || ""]
+    );
+    const heroContent = heroRows[0]?.content;
 
     return withCors(
       NextResponse.json(
         {
+          hero:
+            typeof heroContent === "string"
+              ? JSON.parse(heroContent)
+              : heroContent || null,
           blogs: rows.map((row) => ({
             id: row.id,
             title: row.title,

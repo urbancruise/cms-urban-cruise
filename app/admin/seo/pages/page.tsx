@@ -93,6 +93,7 @@ const PAGE_TYPE_GROUPS = [
 ];
 
 const ALL_PAGE_TYPE_OPTIONS = PAGE_TYPE_GROUPS.flatMap((g) => g.options);
+const BLOG_INDEX_OPTION = "blog-index";
 
 function getPageTypeLabel(value: string): string {
   const found = ALL_PAGE_TYPE_OPTIONS.find((o) => o.value === value);
@@ -967,6 +968,11 @@ function SeoPageModal({
     (city) => String(city.id) === formData.city_id
   );
   const blogCitySlug = selectedCity ? slugify(selectedCity.name) : "";
+  const isBlogIndex =
+    isBlog &&
+    Boolean(blogCitySlug) &&
+    (selectedBlogId === BLOG_INDEX_OPTION ||
+      (!selectedBlogId && formData.page_path === `/${blogCitySlug}/blog`));
   const blogPostsKey =
     isBlog && blogCitySlug
       ? `/api/admin/website/blogs?limit=100&status=published&city=${encodeURIComponent(blogCitySlug)}`
@@ -983,13 +989,16 @@ function SeoPageModal({
       post.status === "published" &&
       (post.citySlugs.length === 0 || post.citySlugs.includes(blogCitySlug))
   );
-  const selectedBlog =
-    availableBlogPosts.find((post) => String(post.id) === selectedBlogId) ||
-    availableBlogPosts.find(
-      (post) =>
-        post.slug === page?.slug &&
-        page.page_path === `/${blogCitySlug}/${post.slug}`
-    );
+  const selectedBlog = isBlogIndex
+    ? undefined
+    : availableBlogPosts.find(
+        (post) => String(post.id) === selectedBlogId
+      ) ||
+      availableBlogPosts.find(
+        (post) =>
+          post.slug === page?.slug &&
+          page.page_path === `/${blogCitySlug}/${post.slug}`
+      );
 
   useEffect(() => {
     if (!pageTypeOpen) return;
@@ -1111,14 +1120,16 @@ function SeoPageModal({
       const method = isEdit ? "PUT" : "POST";
 
       if (isBlog) {
-        if (!selectedBlog) {
-          setError("Select a published blog post.");
+        if (!selectedBlog && !isBlogIndex) {
+          setError("Select a published blog post or the blog main page.");
           return;
         }
-        await api(`/api/admin/website/blogs/${selectedBlog.id}`, {
-          method: "PATCH",
-          body: { slug: formData.slug },
-        });
+        if (selectedBlog) {
+          await api(`/api/admin/website/blogs/${selectedBlog.id}`, {
+            method: "PATCH",
+            body: { slug: formData.slug },
+          });
+        }
       }
 
       // ✅ CSRF-aware
@@ -1382,7 +1393,7 @@ function SeoPageModal({
                     {isVehicle
                       ? `Vehicle sub-page: ${selectedTypeLabel}`
                       : isBlog
-                        ? "Select a published post to use its city-specific URL."
+                        ? "Select a published post or the city blog main page to set its URL."
                         : "General page"}
                   </p>
                 </div>
@@ -1408,9 +1419,26 @@ function SeoPageModal({
                     <>
                       <select
                         id="seo-blog-post"
-                        value={selectedBlog?.id || ""}
+                        value={
+                          isBlogIndex
+                            ? BLOG_INDEX_OPTION
+                            : selectedBlog?.id || ""
+                        }
                         disabled={blogPostsLoading}
                         onChange={(event) => {
+                          if (event.target.value === BLOG_INDEX_OPTION) {
+                            setSelectedBlogId(BLOG_INDEX_OPTION);
+                            setFormData((prev) => ({
+                              ...prev,
+                              page_path: `/${blogCitySlug}/blog`,
+                              slug: "blog",
+                              page_title: selectedCity
+                                ? `${selectedCity.name} Blog`
+                                : "Blog",
+                            }));
+                            return;
+                          }
+
                           const blog = availableBlogPosts.find(
                             (post) => String(post.id) === event.target.value
                           );
@@ -1429,7 +1457,10 @@ function SeoPageModal({
                         <option value="">
                           {blogPostsLoading
                             ? "Loading published posts..."
-                            : "Select a published blog post"}
+                            : "Select the blog main page or a published post"}
+                        </option>
+                        <option value={BLOG_INDEX_OPTION}>
+                          {selectedCity?.name} Blog Main Page (/{blogCitySlug}/blog)
                         </option>
                         {availableBlogPosts.map((blog) => (
                           <option key={blog.id} value={blog.id}>
@@ -1445,7 +1476,7 @@ function SeoPageModal({
                         )}
                     </>
                   )}
-                  {selectedBlog && (
+                  {(selectedBlog || isBlogIndex) && (
                     <p className="mt-1.5 text-xs text-slate-500">
                       Selected URL: /{blogCitySlug}/{formData.slug}
                     </p>
@@ -1491,11 +1522,14 @@ function SeoPageModal({
                           : {}),
                       }));
                     }}
+                    readOnly={isBlogIndex}
                     placeholder="ertiga"
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500"
                   />
                   <p className="text-[11px] text-slate-400 mt-1.5">
-                    {isBlog
+                    {isBlogIndex
+                      ? "The blog main page uses the fixed slug 'blog'."
+                      : isBlog
                       ? "Editing this slug also updates the selected blog URL."
                       : "Short identifier — used in URLs and sitemap"}
                   </p>
