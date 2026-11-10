@@ -53,6 +53,15 @@ development). Restart the app after changing the environment. Each measurement
 run issues at most two PageSpeed requests concurrently. Only pages with
 available field data receive numeric Core Web Vitals results.
 
+## Jim Corbett services editor
+
+The CMS sidebar's **Our Services** page manages the service cards displayed on
+the Jim Corbett website page. Select a city (including **Global**), edit the
+**Our Services** section, edit its heading and vehicle cards, then publish the
+entry to show the saved content on the corresponding Jim Corbett page. Other
+Jim Corbett page sections are managed separately from the same section dropdown.
+Draft or archived content does not replace the website's fallback content.
+
 ## Website blog CMS
 
 The Website Blog editor stores posts with a title, editable URL slug, paragraph, uploaded image,

@@ -101,6 +101,12 @@ const menuItems: MenuItem[] = [
         perm: "urbancruise.vehicles.view",
       },
       {
+        icon: MdOutlineArticle,
+        label: "Our Services",
+        href: "/admin/website/services",
+        perm: "urbancruise.vehicles.view",
+      },
+      {
         icon: MdOutlineContactSupport,
         label: "Get a Quote",
         href: "/admin/website/quotes",
