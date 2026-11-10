@@ -172,12 +172,17 @@ export async function PUT(request: NextRequest) {
     const citySlug = ((cityRows as any[])[0]?.name || "").toLowerCase();
 
     // ✅ Fire revalidation
+    const paths = [`/${citySlug}/${vehicleSlug}`];
+    if (citySlug === "global" && vehicleSlug === "jim-corbett") {
+      paths.push("/jim-corbett");
+    }
+
     await revalidateWebsite({
       tags: [
         `vehicle:${citySlug}:${vehicleSlug}`,
         `vehicles:${citySlug}`,
       ],
-      paths: [`/${citySlug}/${vehicleSlug}`],
+      paths,
     });
 
     await logActivity({
@@ -225,6 +230,21 @@ export async function DELETE(request: NextRequest) {
       `DELETE FROM site_vehicle_content WHERE city_id = ? AND vehicle_slug = ?`,
       [cityId, slug]
     );
+
+    const [cityRows] = (await pool.query(
+      "SELECT name FROM cities WHERE id = ?",
+      [cityId]
+    )) as any;
+    const citySlug = ((cityRows as any[])[0]?.name || "").toLowerCase();
+    const paths = [`/${citySlug}/${slug}`];
+    if (citySlug === "global" && slug === "jim-corbett") {
+      paths.push("/jim-corbett");
+    }
+
+    await revalidateWebsite({
+      tags: [`vehicle:${citySlug}:${slug}`, `vehicles:${citySlug}`],
+      paths,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
