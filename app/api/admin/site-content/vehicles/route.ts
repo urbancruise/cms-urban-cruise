@@ -176,6 +176,13 @@ export async function PUT(request: NextRequest) {
     if (citySlug === "global" && vehicleSlug === "jim-corbett") {
       paths.push("/jim-corbett");
     }
+    if (vehicleSlug === "do-dham") {
+      paths.push(
+        citySlug === "global"
+          ? "/do-dham-yatra-package"
+          : `/${citySlug}/do-dham-yatra-package`,
+      );
+    }
 
     await revalidateWebsite({
       tags: [
@@ -239,6 +246,13 @@ export async function DELETE(request: NextRequest) {
     const paths = [`/${citySlug}/${slug}`];
     if (citySlug === "global" && slug === "jim-corbett") {
       paths.push("/jim-corbett");
+    }
+    if (slug === "do-dham") {
+      paths.push(
+        citySlug === "global"
+          ? "/do-dham-yatra-package"
+          : `/${citySlug}/do-dham-yatra-package`,
+      );
     }
 
     await revalidateWebsite({

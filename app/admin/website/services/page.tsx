@@ -56,6 +56,17 @@ interface ServiceDetailResponse {
   vehicle: ServiceRow;
 }
 
+interface ServiceCardEntry {
+  definition: ServiceDefinition;
+  row: ServiceRow | undefined;
+  detailData: ServiceDetailResponse | undefined;
+  detailLoading: boolean;
+  detailError: Error | undefined;
+  storedService: ServiceRow | undefined;
+  content: OurServicesContent;
+  image: string;
+}
+
 interface WildlifeAnimal {
   name: string;
   icon: string;
@@ -118,10 +129,40 @@ interface TouristAttraction {
   description: string;
 }
 
+interface DoDhamHotel {
+  id?: number | string;
+  name: string;
+  location: string;
+  hotelCount: string;
+  image: string;
+  imagePublicId: string;
+  imageAlt: string;
+  description: string;
+}
+
+interface VehiclePackageRow {
+  vehicle: string;
+  layout: string;
+  charDham: string;
+  doDham: string;
+  amenities: string;
+}
+
+interface TourPackageDescription {
+  title?: string;
+  detail: string;
+}
+
+interface DoDhamTourCard {
+  id?: number | string;
+  name: string;
+  place: string;
+  description: TourPackageDescription[];
+  images: string[];
+}
+
 const EMPTY_CITIES: City[] = [];
 const EMPTY_SERVICES: ServiceRow[] = [];
-const SERVICE_SLUG = "jim-corbett";
-const SERVICE_TITLE = "Jim Corbett";
 
 const JIM_CORBETT_SECTIONS = [
   { key: "ourservices", label: "Our Services" },
@@ -137,6 +178,27 @@ const JIM_CORBETT_SECTIONS = [
   { key: "safariplatforms", label: "Safari Platforms" },
   { key: "resortguide", label: "Resort Guide" },
   { key: "touristattractions", label: "Tourist Attractions" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
+const DO_DHAM_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "hotels", label: "Hotels" },
+  { key: "vehiclepackage", label: "Vehicle Package" },
+  { key: "dodhampackages", label: "Do Dham Yatra Packages Card" },
+  {
+    key: "majorstartingpoints",
+    label: "Major Starting Point of the Do Dham Yatra Card",
+  },
+  { key: "othertourpackages", label: "Other Tour Packages Card" },
   { key: "whychoose", label: "Why Choose Urban Cruise" },
   { key: "testimonials", label: "Testimonial" },
   { key: "faq", label: "FAQs" },
@@ -177,6 +239,37 @@ const DEFAULT_CONTENT: OurServicesContent = {
   ],
 };
 
+const DO_DHAM_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Do Dham Yatra",
+  title: "Do Dham Yatra",
+  description:
+    "Manage the Do Dham Yatra page content shown on the Urban Cruise website.",
+  cards: [],
+};
+
+interface ServiceDefinition {
+  slug: string;
+  title: string;
+  sections: readonly { key: string; label: string }[];
+  defaultContent: OurServicesContent;
+}
+
+const JIM_CORBETT_SERVICE: ServiceDefinition = {
+  slug: "jim-corbett",
+  title: "Jim Corbett",
+  sections: JIM_CORBETT_SECTIONS,
+  defaultContent: DEFAULT_CONTENT,
+};
+
+const DO_DHAM_SERVICE: ServiceDefinition = {
+  slug: "do-dham",
+  title: "Do Dham Yatra",
+  sections: DO_DHAM_SECTIONS,
+  defaultContent: DO_DHAM_DEFAULT_CONTENT,
+};
+
+const SERVICE_OPTIONS = [JIM_CORBETT_SERVICE, DO_DHAM_SERVICE];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -185,8 +278,11 @@ function readText(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function normalizeContent(value: unknown): OurServicesContent {
-  if (!isRecord(value)) return DEFAULT_CONTENT;
+function normalizeContent(
+  value: unknown,
+  fallback: OurServicesContent,
+): OurServicesContent {
+  if (!isRecord(value)) return fallback;
 
   const cards = Array.isArray(value.cards)
     ? value.cards.flatMap((card): ServiceCard[] => {
@@ -202,12 +298,12 @@ function normalizeContent(value: unknown): OurServicesContent {
           },
         ];
       })
-    : DEFAULT_CONTENT.cards;
+    : fallback.cards;
 
   return {
-    eyebrow: readText(value.eyebrow, DEFAULT_CONTENT.eyebrow),
-    title: readText(value.title, DEFAULT_CONTENT.title),
-    description: readText(value.description, DEFAULT_CONTENT.description),
+    eyebrow: readText(value.eyebrow, fallback.eyebrow),
+    title: readText(value.title, fallback.title),
+    description: readText(value.description, fallback.description),
     cards,
   };
 }
@@ -215,6 +311,7 @@ function normalizeContent(value: unknown): OurServicesContent {
 export default function WebsiteServicesPage() {
   const { user, hasCityPermission } = useAuth();
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [selectedServiceSlug, setSelectedServiceSlug] = useState("jim-corbett");
   const [editing, setEditing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -246,6 +343,9 @@ export default function WebsiteServicesPage() {
     selectedCityId && cities.some((city) => city.id === selectedCityId)
       ? selectedCityId
       : (cities[0]?.id ?? null);
+  const service =
+    SERVICE_OPTIONS.find((option) => option.slug === selectedServiceSlug) ??
+    JIM_CORBETT_SERVICE;
   const hasAccess = hasCityPermission("urbancruise.vehicles.view", activeCityId);
 
   const listKey =
@@ -258,38 +358,104 @@ export default function WebsiteServicesPage() {
     error: servicesError,
     mutate,
   } = useSWR<{ vehicles: ServiceRow[] }>(listKey, fetcher);
-  const row = (data?.vehicles ?? EMPTY_SERVICES).find(
-    (service) => service.vehicle_slug === SERVICE_SLUG,
+  const vehicles = data?.vehicles ?? EMPTY_SERVICES;
+  const jimCorbettRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === JIM_CORBETT_SERVICE.slug,
   );
-  const detailKey =
-    activeCityId && row
-      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${SERVICE_SLUG}`
+  const doDhamRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === DO_DHAM_SERVICE.slug,
+  );
+  const jimCorbettDetailKey =
+    activeCityId && jimCorbettRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${JIM_CORBETT_SERVICE.slug}`
       : null;
   const {
-    data: detailData,
-    isLoading: detailLoading,
-    error: detailError,
-    mutate: mutateDetail,
-  } = useSWR<ServiceDetailResponse>(detailKey, fetcher);
-  const storedService = row ? detailData?.vehicle ?? row : undefined;
-  const content = normalizeContent(storedService?.sections?.ourservices);
-  const image = content.cards[0]?.image || DEFAULT_CONTENT.cards[0].image;
+    data: jimCorbettDetailData,
+    isLoading: jimCorbettDetailLoading,
+    error: jimCorbettDetailError,
+    mutate: mutateJimCorbettDetail,
+  } = useSWR<ServiceDetailResponse>(jimCorbettDetailKey, fetcher);
+  const doDhamDetailKey =
+    activeCityId && doDhamRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${DO_DHAM_SERVICE.slug}`
+      : null;
+  const {
+    data: doDhamDetailData,
+    isLoading: doDhamDetailLoading,
+    error: doDhamDetailError,
+    mutate: mutateDoDhamDetail,
+  } = useSWR<ServiceDetailResponse>(doDhamDetailKey, fetcher);
 
-  const openEditor = () => {
-    if (row && (detailLoading || detailError || !detailData)) {
-      if (detailError) {
+  const jimCorbettContent = normalizeContent(
+    jimCorbettDetailData?.vehicle.sections?.ourservices,
+    JIM_CORBETT_SERVICE.defaultContent,
+  );
+  const doDhamContent = normalizeContent(
+    doDhamDetailData?.vehicle.sections?.ourservices,
+    DO_DHAM_SERVICE.defaultContent,
+  );
+  const serviceEntries: ServiceCardEntry[] = [
+    {
+      definition: JIM_CORBETT_SERVICE,
+      row: jimCorbettRow,
+      detailData: jimCorbettDetailData,
+      detailLoading: jimCorbettDetailLoading,
+      detailError: jimCorbettDetailError,
+      storedService: jimCorbettRow
+        ? jimCorbettDetailData?.vehicle ?? jimCorbettRow
+        : undefined,
+      content: jimCorbettContent,
+      image:
+        jimCorbettContent.cards[0]?.image ||
+        JIM_CORBETT_SERVICE.defaultContent.cards[0]?.image ||
+        "",
+    },
+    {
+      definition: DO_DHAM_SERVICE,
+      row: doDhamRow,
+      detailData: doDhamDetailData,
+      detailLoading: doDhamDetailLoading,
+      detailError: doDhamDetailError,
+      storedService: doDhamRow
+        ? doDhamDetailData?.vehicle ?? doDhamRow
+        : undefined,
+      content: doDhamContent,
+      image:
+        doDhamContent.cards[0]?.image ||
+        (isRecord(doDhamDetailData?.vehicle.sections?.hero)
+          ? readText(doDhamDetailData?.vehicle.sections?.hero.backgroundImage)
+          : ""),
+    },
+  ];
+  const selectedEntry =
+    serviceEntries.find(
+      (entry) => entry.definition.slug === selectedServiceSlug,
+    ) ?? serviceEntries[0];
+  const row = selectedEntry.row;
+  const detailError =
+    serviceEntries.find((entry) => entry.detailError)?.detailError;
+  const storedService = selectedEntry.storedService;
+  const content = selectedEntry.content;
+
+  const openEditor = (entry: ServiceCardEntry) => {
+    if (
+      entry.row &&
+      (entry.detailLoading || entry.detailError || !entry.detailData)
+    ) {
+      if (entry.detailError) {
         setError(
-          detailError instanceof Error
-            ? detailError.message
+          entry.detailError instanceof Error
+            ? entry.detailError.message
             : "Failed to load service content",
         );
       }
       return;
     }
+    setSelectedServiceSlug(entry.definition.slug);
     setError("");
-    setDraftSections(storedService?.sections ?? {});
+    setDraftSections(entry.storedService?.sections ?? {});
     setActiveSection("hero");
-    setDraftStatus(row?.status ?? "draft");
+    setDraftStatus(entry.row?.status ?? "draft");
     setEditing(true);
   };
 
@@ -302,10 +468,10 @@ export default function WebsiteServicesPage() {
         method: "PUT",
         body: {
           cityId: activeCityId,
-          vehicleSlug: SERVICE_SLUG,
+          vehicleSlug: service.slug,
           meta: {
             ...(storedService?.meta ?? {}),
-            title: SERVICE_TITLE,
+            title: service.title,
           },
           sections: {
             ...(storedService?.sections ?? {}),
@@ -316,7 +482,11 @@ export default function WebsiteServicesPage() {
         },
       });
       await mutate();
-      await mutateDetail();
+      if (row) {
+        await (service.slug === "do-dham"
+          ? mutateDoDhamDetail()
+          : mutateJimCorbettDetail());
+      }
       setEditing(false);
     } catch (saveError) {
       setError(
@@ -327,14 +497,19 @@ export default function WebsiteServicesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!activeCityId || !row) return;
-    if (!window.confirm(`Delete the Jim Corbett content for this city?`)) return;
+  const handleDelete = async (entry: ServiceCardEntry) => {
+    if (!activeCityId || !entry.row) return;
+    if (
+      !window.confirm(
+        `Delete the ${entry.definition.title} content for this city?`,
+      )
+    )
+      return;
     setDeleting(true);
     setError("");
     try {
       await api(
-        `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${SERVICE_SLUG}`,
+        `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${entry.definition.slug}`,
         { method: "DELETE" },
       );
       await mutate();
@@ -349,7 +524,10 @@ export default function WebsiteServicesPage() {
     }
   };
 
-  const isLoading = citiesLoading || servicesLoading || detailLoading;
+  const isLoading =
+    citiesLoading ||
+    servicesLoading ||
+    serviceEntries.some((entry) => entry.detailLoading);
 
   return (
     <div className="p-8">
@@ -360,7 +538,7 @@ export default function WebsiteServicesPage() {
             Our Services
           </h1>
           <p className="mt-1 text-slate-500">
-            Manage service content shown on the public Jim Corbett page
+            Manage service content shown on the public website
           </p>
         </div>
         <button
@@ -396,7 +574,7 @@ export default function WebsiteServicesPage() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {[0, 1, 2].map((item) => (
+          {[0, 1].map((item) => (
             <div
               key={item}
               className="h-80 animate-pulse rounded-xl border border-slate-200 bg-white"
@@ -428,81 +606,98 @@ export default function WebsiteServicesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <article className="overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex h-48 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
-              {image ? (
-                <img
-                  src={image}
-                  alt={content.title || SERVICE_TITLE}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <MdOutlineArticle className="h-12 w-12 text-slate-300" />
-              )}
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-slate-900">{SERVICE_TITLE}</h2>
-                <p className="mt-1 text-xs text-slate-400">{SERVICE_SLUG}</p>
+          {serviceEntries.map((entry) => (
+            <article
+              key={entry.definition.slug}
+              className="overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <div className="mb-3 flex h-48 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+                {entry.image ? (
+                  <img
+                    src={entry.image}
+                    alt={entry.content.title || entry.definition.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <MdOutlineArticle className="h-12 w-12 text-slate-300" />
+                )}
               </div>
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                  row?.status === "published"
-                    ? "bg-teal-50 text-teal-700"
-                    : row?.status === "archived"
-                      ? "bg-slate-100 text-slate-500"
-                      : "bg-amber-50 text-amber-700"
-                }`}
-              >
-                {row?.status ?? "draft"}
-              </span>
-            </div>
-            <p className="mt-2 line-clamp-2 min-h-10 text-sm text-slate-500">
-              {content.description}
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              {row?.updated_at
-                ? `Updated ${new Date(row.updated_at).toLocaleDateString()}`
-                : "Not configured"}
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPreviewing(true)}
-                disabled={detailLoading}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-              >
-                <MdOutlineVisibility />
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={openEditor}
-                disabled={detailLoading || Boolean(detailError)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-teal-200 px-3 py-2 text-sm text-teal-700 hover:bg-teal-50"
-              >
-                <MdOutlineEdit />
-                Edit
-              </button>
-              {row && (
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    {entry.definition.title}
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {entry.definition.slug}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    entry.row?.status === "published"
+                      ? "bg-teal-50 text-teal-700"
+                      : entry.row?.status === "archived"
+                        ? "bg-slate-100 text-slate-500"
+                        : "bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {entry.row?.status ?? "draft"}
+                </span>
+              </div>
+              <p className="mt-2 line-clamp-2 min-h-10 text-sm text-slate-500">
+                {entry.content.description}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                {entry.row?.updated_at
+                  ? `Updated ${new Date(entry.row.updated_at).toLocaleDateString()}`
+                  : "Not configured"}
+              </p>
+              <div className="mt-4 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  aria-label="Delete Jim Corbett service content"
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  onClick={() => {
+                    setSelectedServiceSlug(entry.definition.slug);
+                    setPreviewing(true);
+                  }}
+                  disabled={entry.detailLoading}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  <MdOutlineDelete />
+                  <MdOutlineVisibility />
+                  Preview
                 </button>
-              )}
-            </div>
-          </article>
+                <button
+                  type="button"
+                  onClick={() => openEditor(entry)}
+                  disabled={
+                    entry.detailLoading || Boolean(entry.detailError)
+                  }
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-teal-200 px-3 py-2 text-sm text-teal-700 hover:bg-teal-50"
+                >
+                  <MdOutlineEdit />
+                  Edit
+                </button>
+                {entry.row && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(entry)}
+                    disabled={deleting}
+                    aria-label={`Delete ${entry.definition.title} service content`}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <MdOutlineDelete />
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
         </div>
       )}
 
       {editing && (
         <ServiceEditor
           sections={draftSections}
+          serviceSlug={service.slug}
+          serviceTitle={service.title}
+          sectionOptions={service.sections}
           activeSection={activeSection}
           status={draftStatus}
           error={error}
@@ -524,6 +719,9 @@ export default function WebsiteServicesPage() {
 
 function ServiceEditor({
   sections,
+  serviceSlug,
+  serviceTitle,
+  sectionOptions,
   activeSection,
   status,
   error,
@@ -535,6 +733,9 @@ function ServiceEditor({
   onSave,
 }: {
   sections: Record<string, unknown>;
+  serviceSlug: string;
+  serviceTitle: string;
+  sectionOptions: readonly { key: string; label: string }[];
   activeSection: string;
   status: "draft" | "published" | "archived";
   error: string;
@@ -545,7 +746,7 @@ function ServiceEditor({
   onClose: () => void;
   onSave: () => void;
 }) {
-  const currentSection = JIM_CORBETT_SECTIONS.find(
+  const currentSection = sectionOptions.find(
     (section) => section.key === activeSection,
   );
   const [hasInvalidSection, setHasInvalidSection] = useState(false);
@@ -556,10 +757,10 @@ function ServiceEditor({
         <header className="flex items-center justify-between gap-4 border-b border-slate-200 p-5">
           <div>
             <h2 className="text-xl font-bold text-slate-900">
-              {SERVICE_TITLE}
+              {serviceTitle}
             </h2>
             <p className="mt-1 text-xs text-slate-400">
-              Edit website sections for the Jim Corbett page
+              Edit website sections for the {serviceTitle} page
             </p>
           </div>
           <select
@@ -579,13 +780,13 @@ function ServiceEditor({
 
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center">
           <label
-            htmlFor="jim-corbett-section-select"
+            htmlFor="service-section-select"
             className="text-xs font-semibold uppercase tracking-wider text-slate-500 sm:w-24"
           >
             Section
           </label>
           <select
-            id="jim-corbett-section-select"
+            id="service-section-select"
             value={activeSection}
             onChange={(event) => {
               setHasInvalidSection(false);
@@ -593,7 +794,7 @@ function ServiceEditor({
             }}
             className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
-            {JIM_CORBETT_SECTIONS.map((section) => (
+            {sectionOptions.map((section) => (
               <option key={section.key} value={section.key}>
                 {section.label}
               </option>
@@ -613,7 +814,8 @@ function ServiceEditor({
               {currentSection?.label ?? activeSection}
             </span>
           </div>
-          <JimCorbettSectionEditor
+          <ServiceSectionEditor
+            serviceSlug={serviceSlug}
             key={activeSection}
             sectionKey={activeSection}
             value={sections[activeSection] ?? {}}
@@ -810,17 +1012,64 @@ function SafariTimeEditor({
   );
 }
 
-function JimCorbettSectionEditor({
+function ServiceSectionEditor({
+  serviceSlug,
   sectionKey,
   value,
   onValidityChange,
   onChange,
 }: {
+  serviceSlug: string;
   sectionKey: string;
   value: unknown;
   onValidityChange: (valid: boolean) => void;
   onChange: (value: unknown) => void;
 }) {
+  if (serviceSlug === "do-dham") {
+    const section = isRecord(value) ? value : {};
+
+    if (sectionKey === "hotels") {
+      return <DoDhamHotelsEditor section={section} onChange={onChange} />;
+    }
+
+    if (sectionKey === "vehiclepackage") {
+      return <VehiclePackageEditor section={section} onChange={onChange} />;
+    }
+
+    if (
+      sectionKey === "dodhampackages" ||
+      sectionKey === "majorstartingpoints" ||
+      sectionKey === "othertourpackages"
+    ) {
+      return (
+        <DoDhamCardSectionEditor
+          sectionKey={sectionKey}
+          section={section}
+          onChange={onChange}
+        />
+      );
+    }
+
+    if (FORM_EDITOR_SECTIONS.has(sectionKey)) {
+      return (
+        <FormEditor
+          sectionKey={sectionKey}
+          value={section}
+          onChange={onChange}
+        />
+      );
+    }
+
+    return (
+      <JsonSectionEditor
+        sectionKey={sectionKey}
+        value={value}
+        onValidityChange={onValidityChange}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (sectionKey === "ourservices") {
     const section = isRecord(value) ? value : {};
     return (
@@ -1496,22 +1745,37 @@ function JimCorbettSectionEditor({
 }
 
 function JsonSectionEditor({
+  sectionKey,
   value,
   onValidityChange,
   onChange,
 }: {
+  sectionKey?: string;
   value: unknown;
   onValidityChange: (valid: boolean) => void;
   onChange: (value: unknown) => void;
 }) {
   const [json, setJson] = useState(() => JSON.stringify(value ?? {}, null, 2));
   const [parseError, setParseError] = useState("");
+  const sectionHints: Record<string, string> = {
+    hotels:
+      "Use hotels: [{ name, location, hotelCount, image, imageAlt, description }], plus optional eyebrow, title, subtitle, and description.",
+    vehiclepackage:
+      "Use vehicles: [{ vehicle, layout, charDham, doDham, amenities }], plus optional eyebrow, title, subtitle, description, and columns labels.",
+    dodhampackages:
+      "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
+    majorstartingpoints:
+      "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
+    othertourpackages:
+      "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
+  };
+  const sectionHint = sectionKey ? sectionHints[sectionKey] : undefined;
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate-600">
-        Edit this section&apos;s content as JSON. Keep the existing field names
-        to match the Jim Corbett page.
+        {sectionHint ??
+          "Edit this section's content as JSON. Keep the field names expected by the public page."}
       </p>
       <Field label="Section Content (JSON)">
         <textarea
@@ -1543,6 +1807,374 @@ function JsonSectionEditor({
           {parseError}
         </p>
       )}
+    </div>
+  );
+}
+
+function DoDhamHotelsEditor({
+  section,
+  onChange,
+}: {
+  section: Record<string, unknown>;
+  onChange: (value: unknown) => void;
+}) {
+  const update = (key: string, value: unknown) =>
+    onChange({ ...section, [key]: value });
+
+  return (
+    <div className="space-y-5">
+      <SectionHeadingFields
+        value={section}
+        onChange={onChange}
+        eyebrowPlaceholder="RECOMMENDED STAYS"
+        titlePlaceholder="Hotels for Your Do Dham Yatra"
+        subtitlePlaceholder="Comfortable Stays Along Your Journey"
+      />
+      <Field label="Description">
+        <textarea
+          value={readText(section.description)}
+          onChange={(event) => update("description", event.target.value)}
+          className={inputCls}
+          rows={3}
+        />
+      </Field>
+      <RichList<DoDhamHotel>
+        label="Hotels"
+        items={readArray<DoDhamHotel>(section.hotels)}
+        onChange={(hotels) => update("hotels", hotels)}
+        emptyItem={{
+          name: "",
+          location: "",
+          hotelCount: "",
+          image: "",
+          imagePublicId: "",
+          imageAlt: "",
+          description: "",
+        }}
+        renderItem={(hotel, updateHotel) => (
+          <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextInput
+                label="Hotel Card Title"
+                value={readText(hotel.name)}
+                onChange={(name) => updateHotel({ ...hotel, name })}
+                placeholder="Hotels in Badrinath"
+              />
+              <TextInput
+                label="Location"
+                value={readText(hotel.location)}
+                onChange={(location) => updateHotel({ ...hotel, location })}
+                placeholder="Badrinath"
+              />
+              <TextInput
+                label="Hotel Count"
+                value={readText(hotel.hotelCount)}
+                onChange={(hotelCount) =>
+                  updateHotel({ ...hotel, hotelCount })
+                }
+                placeholder="18+ Hotels"
+              />
+              <TextInput
+                label="Image Alt Text"
+                value={readText(hotel.imageAlt)}
+                onChange={(imageAlt) => updateHotel({ ...hotel, imageAlt })}
+              />
+            </div>
+            <ImageUpload
+              label="Hotel Image"
+              value={readText(hotel.image) || null}
+              publicId={readText(hotel.imagePublicId) || null}
+              onChange={(image, imagePublicId) =>
+                updateHotel({
+                  ...hotel,
+                  image: image || "",
+                  imagePublicId: imagePublicId || "",
+                })
+              }
+              scope="general"
+              aspect="16 / 10"
+            />
+            <Field label="Description">
+              <textarea
+                value={readText(hotel.description)}
+                onChange={(event) =>
+                  updateHotel({ ...hotel, description: event.target.value })
+                }
+                className={inputCls}
+                rows={3}
+              />
+            </Field>
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
+function VehiclePackageEditor({
+  section,
+  onChange,
+}: {
+  section: Record<string, unknown>;
+  onChange: (value: unknown) => void;
+}) {
+  const columns = isRecord(section.columns) ? section.columns : {};
+  const update = (key: string, value: unknown) =>
+    onChange({ ...section, [key]: value });
+  const updateColumn = (key: string, value: string) =>
+    update("columns", { ...columns, [key]: value });
+
+  return (
+    <div className="space-y-5">
+      <SectionHeadingFields
+        value={section}
+        onChange={onChange}
+        eyebrowPlaceholder="VEHICLES & PACKAGES"
+        titlePlaceholder="Vehicle-wise Package Summary"
+        subtitlePlaceholder="Char Dham Yatra & Do Dham Yatra packages"
+      />
+      <Field label="Description">
+        <textarea
+          value={readText(section.description)}
+          onChange={(event) => update("description", event.target.value)}
+          className={inputCls}
+          rows={3}
+        />
+      </Field>
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold text-slate-700">Table Labels</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextInput
+            label="Vehicle"
+            value={readText(columns.vehicle)}
+            onChange={(value) => updateColumn("vehicle", value)}
+            placeholder="Vehicle"
+          />
+          <TextInput
+            label="Seating Configuration"
+            value={readText(columns.layout)}
+            onChange={(value) => updateColumn("layout", value)}
+            placeholder="Seating Config"
+          />
+          <TextInput
+            label="Char Dham Price"
+            value={readText(columns.charDham)}
+            onChange={(value) => updateColumn("charDham", value)}
+            placeholder="Char Dham (12 Days)"
+          />
+          <TextInput
+            label="Do Dham Price"
+            value={readText(columns.doDham)}
+            onChange={(value) => updateColumn("doDham", value)}
+            placeholder="Do Dham (7 Days)"
+          />
+          <TextInput
+            label="Amenities"
+            value={readText(columns.amenities)}
+            onChange={(value) => updateColumn("amenities", value)}
+            placeholder="Amenities"
+          />
+          <TextInput
+            label="Book Column"
+            value={readText(columns.book)}
+            onChange={(value) => updateColumn("book", value)}
+            placeholder="Book"
+          />
+          <TextInput
+            label="Book Button"
+            value={readText(columns.bookButton)}
+            onChange={(value) => updateColumn("bookButton", value)}
+            placeholder="Book Now"
+          />
+          <TextInput
+            label="Mobile Char Dham Label"
+            value={readText(columns.mobileCharDham)}
+            onChange={(value) => updateColumn("mobileCharDham", value)}
+            placeholder="Char Dham"
+          />
+          <TextInput
+            label="Mobile Do Dham Label"
+            value={readText(columns.mobileDoDham)}
+            onChange={(value) => updateColumn("mobileDoDham", value)}
+            placeholder="Do Dham"
+          />
+        </div>
+      </div>
+      <RichList<VehiclePackageRow>
+        label="Vehicle Package Rows"
+        items={readArray<VehiclePackageRow>(section.vehicles)}
+        onChange={(vehicles) => update("vehicles", vehicles)}
+        emptyItem={{
+          vehicle: "",
+          layout: "",
+          charDham: "",
+          doDham: "",
+          amenities: "",
+        }}
+        renderItem={(vehicle, updateVehicle) => (
+          <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+            <TextInput
+              label="Vehicle"
+              value={readText(vehicle.vehicle)}
+              onChange={(value) =>
+                updateVehicle({ ...vehicle, vehicle: value })
+              }
+              placeholder="Tempo Traveller 17 Seater"
+            />
+            <TextInput
+              label="Seating Configuration"
+              value={readText(vehicle.layout)}
+              onChange={(value) =>
+                updateVehicle({ ...vehicle, layout: value })
+              }
+              placeholder="2x1"
+            />
+            <TextInput
+              label="Char Dham Price"
+              value={readText(vehicle.charDham)}
+              onChange={(value) =>
+                updateVehicle({ ...vehicle, charDham: value })
+              }
+              placeholder="1,20,000"
+            />
+            <TextInput
+              label="Do Dham Price"
+              value={readText(vehicle.doDham)}
+              onChange={(value) =>
+                updateVehicle({ ...vehicle, doDham: value })
+              }
+              placeholder="70,000"
+            />
+            <Field label="Amenities">
+              <textarea
+                value={readText(vehicle.amenities)}
+                onChange={(event) =>
+                  updateVehicle({ ...vehicle, amenities: event.target.value })
+                }
+                className={inputCls}
+                rows={2}
+              />
+            </Field>
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
+function DoDhamCardSectionEditor({
+  sectionKey,
+  section,
+  onChange,
+}: {
+  sectionKey: string;
+  section: Record<string, unknown>;
+  onChange: (value: unknown) => void;
+}) {
+  const update = (key: string, value: unknown) =>
+    onChange({ ...section, [key]: value });
+  const heading =
+    sectionKey === "dodhampackages"
+      ? {
+          eyebrow: "RECOMMENDED STAY",
+          title: "Do Dham Yatra Packages",
+          subtitle: "Choose The Right Do Dham Yatra Package For You",
+        }
+      : sectionKey === "majorstartingpoints"
+        ? {
+            eyebrow: "STARTING POINTS",
+            title: "Major Starting Point of the Do Dham Yatra",
+            subtitle: "Start Your Sacred Journey from Delhi, Haridwar & Major Cities",
+          }
+        : {
+            eyebrow: "OTHER TOUR PACKAGES",
+            title: "Other Tour Packages",
+            subtitle: "Explore Our Additional Sacred Journeys",
+          };
+
+  return (
+    <div className="space-y-5">
+      <SectionHeadingFields
+        value={section}
+        onChange={onChange}
+        eyebrowPlaceholder={heading.eyebrow}
+        titlePlaceholder={heading.title}
+        subtitlePlaceholder={heading.subtitle}
+      />
+      <Field label="Description">
+        <textarea
+          value={readText(section.description)}
+          onChange={(event) => update("description", event.target.value)}
+          className={inputCls}
+          rows={3}
+        />
+      </Field>
+      <RichList<DoDhamTourCard>
+        label="Package Cards"
+        items={readArray<DoDhamTourCard>(section.cards)}
+        onChange={(cards) => update("cards", cards)}
+        emptyItem={{ name: "", place: "", description: [], images: [] }}
+        renderItem={(card, updateCard) => (
+          <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextInput
+                label="Card Title"
+                value={readText(card.name)}
+                onChange={(name) => updateCard({ ...card, name })}
+                placeholder="Do Dham Yatra from Delhi"
+              />
+              <TextInput
+                label="Place Badge"
+                value={readText(card.place)}
+                onChange={(place) => updateCard({ ...card, place })}
+                placeholder="Delhi"
+              />
+            </div>
+            <RichList<TourPackageDescription>
+              label="Card Descriptions"
+              items={readArray<TourPackageDescription>(card.description)}
+              onChange={(description) =>
+                updateCard({ ...card, description })
+              }
+              emptyItem={{ title: "", detail: "" }}
+              renderItem={(item, updateItem) => (
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+                  <TextInput
+                    label="Description Heading (optional)"
+                    value={readText(item.title)}
+                    onChange={(title) => updateItem({ ...item, title })}
+                    placeholder="Complete 7-8 Day Journey"
+                  />
+                  <Field label="Description">
+                    <textarea
+                      value={readText(item.detail)}
+                      onChange={(event) =>
+                        updateItem({ ...item, detail: event.target.value })
+                      }
+                      className={inputCls}
+                      rows={3}
+                    />
+                  </Field>
+                </div>
+              )}
+            />
+            <RichList<string>
+              label="Card Image URLs"
+              items={readArray<string>(card.images)}
+              onChange={(images) => updateCard({ ...card, images })}
+              emptyItem=""
+              renderItem={(image, updateImage) => (
+                <TextInput
+                  label="Image URL"
+                  value={readText(image)}
+                  onChange={updateImage}
+                  placeholder="https://..."
+                />
+              )}
+            />
+          </div>
+        )}
+      />
     </div>
   );
 }
