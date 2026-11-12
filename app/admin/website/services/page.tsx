@@ -206,6 +206,23 @@ const DO_DHAM_SECTIONS = [
   { key: "partners", label: "Our Trusted Partner" },
 ] as const;
 
+const CHAR_DHAM_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "hotels", label: "Hotels" },
+  { key: "chardhampackages", label: "Char Dham Page Sections" },
+  { key: "aboutservice", label: "About Service" },
+  { key: "safarizones", label: "Safari Zones" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
 const DEFAULT_CONTENT: OurServicesContent = {
   eyebrow: "Jim Corbett Vehicle Rental",
   title: "Our Services",
@@ -247,6 +264,14 @@ const DO_DHAM_DEFAULT_CONTENT: OurServicesContent = {
   cards: [],
 };
 
+const CHAR_DHAM_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Char Dham Yatra",
+  title: "Char Dham Yatra",
+  description:
+    "Manage the Char Dham Yatra page content shown on the Urban Cruise website.",
+  cards: [],
+};
+
 interface ServiceDefinition {
   slug: string;
   title: string;
@@ -268,7 +293,18 @@ const DO_DHAM_SERVICE: ServiceDefinition = {
   defaultContent: DO_DHAM_DEFAULT_CONTENT,
 };
 
-const SERVICE_OPTIONS = [JIM_CORBETT_SERVICE, DO_DHAM_SERVICE];
+const CHAR_DHAM_SERVICE: ServiceDefinition = {
+  slug: "char-dham",
+  title: "Char Dham Yatra",
+  sections: CHAR_DHAM_SECTIONS,
+  defaultContent: CHAR_DHAM_DEFAULT_CONTENT,
+};
+
+const SERVICE_OPTIONS = [
+  JIM_CORBETT_SERVICE,
+  DO_DHAM_SERVICE,
+  CHAR_DHAM_SERVICE,
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -365,6 +401,9 @@ export default function WebsiteServicesPage() {
   const doDhamRow = vehicles.find(
     (vehicle) => vehicle.vehicle_slug === DO_DHAM_SERVICE.slug,
   );
+  const charDhamRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === CHAR_DHAM_SERVICE.slug,
+  );
   const jimCorbettDetailKey =
     activeCityId && jimCorbettRow
       ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${JIM_CORBETT_SERVICE.slug}`
@@ -385,6 +424,16 @@ export default function WebsiteServicesPage() {
     error: doDhamDetailError,
     mutate: mutateDoDhamDetail,
   } = useSWR<ServiceDetailResponse>(doDhamDetailKey, fetcher);
+  const charDhamDetailKey =
+    activeCityId && charDhamRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${CHAR_DHAM_SERVICE.slug}`
+      : null;
+  const {
+    data: charDhamDetailData,
+    isLoading: charDhamDetailLoading,
+    error: charDhamDetailError,
+    mutate: mutateCharDhamDetail,
+  } = useSWR<ServiceDetailResponse>(charDhamDetailKey, fetcher);
 
   const jimCorbettContent = normalizeContent(
     jimCorbettDetailData?.vehicle.sections?.ourservices,
@@ -393,6 +442,10 @@ export default function WebsiteServicesPage() {
   const doDhamContent = normalizeContent(
     doDhamDetailData?.vehicle.sections?.ourservices,
     DO_DHAM_SERVICE.defaultContent,
+  );
+  const charDhamContent = normalizeContent(
+    charDhamDetailData?.vehicle.sections?.ourservices,
+    CHAR_DHAM_SERVICE.defaultContent,
   );
   const serviceEntries: ServiceCardEntry[] = [
     {
@@ -424,6 +477,22 @@ export default function WebsiteServicesPage() {
         doDhamContent.cards[0]?.image ||
         (isRecord(doDhamDetailData?.vehicle.sections?.hero)
           ? readText(doDhamDetailData?.vehicle.sections?.hero.backgroundImage)
+          : ""),
+    },
+    {
+      definition: CHAR_DHAM_SERVICE,
+      row: charDhamRow,
+      detailData: charDhamDetailData,
+      detailLoading: charDhamDetailLoading,
+      detailError: charDhamDetailError,
+      storedService: charDhamRow
+        ? charDhamDetailData?.vehicle ?? charDhamRow
+        : undefined,
+      content: charDhamContent,
+      image:
+        charDhamContent.cards[0]?.image ||
+        (isRecord(charDhamDetailData?.vehicle.sections?.hero)
+          ? readText(charDhamDetailData?.vehicle.sections?.hero.backgroundImage)
           : ""),
     },
   ];
@@ -483,9 +552,13 @@ export default function WebsiteServicesPage() {
       });
       await mutate();
       if (row) {
-        await (service.slug === "do-dham"
-          ? mutateDoDhamDetail()
-          : mutateJimCorbettDetail());
+        if (service.slug === "do-dham") {
+          await mutateDoDhamDetail();
+        } else if (service.slug === "char-dham") {
+          await mutateCharDhamDetail();
+        } else {
+          await mutateJimCorbettDetail();
+        }
       }
       setEditing(false);
     } catch (saveError) {
@@ -1070,6 +1143,25 @@ function ServiceSectionEditor({
     );
   }
 
+  if (serviceSlug === "char-dham") {
+    const section = isRecord(value) ? value : {};
+
+    if (sectionKey === "hotels") {
+      return <DoDhamHotelsEditor section={section} onChange={onChange} />;
+    }
+
+    if (sectionKey === "chardhampackages") {
+      return (
+        <DoDhamCardSectionEditor
+          sectionKey={sectionKey}
+          section={section}
+          onChange={onChange}
+        />
+      );
+    }
+
+  }
+
   if (sectionKey === "ourservices") {
     const section = isRecord(value) ? value : {};
     return (
@@ -1292,10 +1384,42 @@ function ServiceSectionEditor({
         <SectionHeadingFields
           value={section}
           onChange={onChange}
-          eyebrowPlaceholder="EXPLORE JUNGLE SAFARI ZONES"
-          titlePlaceholder="Jim Corbett National Park, Uttarakhand"
-          subtitlePlaceholder="Discover the Best Safari Zones in Jim Corbett"
+          eyebrowPlaceholder={
+            serviceSlug === "char-dham"
+              ? "EXPLORE THE CHAR DHAM"
+              : "EXPLORE JUNGLE SAFARI ZONES"
+          }
+          titlePlaceholder={
+            serviceSlug === "char-dham"
+              ? "The Four Sacred Dhams of Uttarakhand"
+              : "Jim Corbett National Park, Uttarakhand"
+          }
+          subtitlePlaceholder={
+            serviceSlug === "char-dham"
+              ? "Yamunotri, Gangotri, Kedarnath & Badrinath"
+              : "Discover the Best Safari Zones in Jim Corbett"
+          }
         />
+        {serviceSlug === "char-dham" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextInput
+              label="Card Label"
+              value={readText(section.cardLabel)}
+              onChange={(cardLabel) =>
+                onChange({ ...section, cardLabel })
+              }
+              placeholder="Char Dham"
+            />
+            <TextInput
+              label="Action Label"
+              value={readText(section.actionLabel)}
+              onChange={(actionLabel) =>
+                onChange({ ...section, actionLabel })
+              }
+              placeholder="Explore Yatra"
+            />
+          </div>
+        )}
         <Field label="Description">
           <textarea
             value={readText(section.description)}
@@ -1333,7 +1457,11 @@ function ServiceSectionEditor({
                   label="Link"
                   value={zone.href}
                   onChange={(href) => updateZone({ ...zone, href })}
-                  placeholder="/safari/dhikala"
+                  placeholder={
+                    serviceSlug === "char-dham"
+                      ? "/char-dham-yatra-package"
+                      : "/safari/dhikala"
+                  }
                 />
               </div>
               <ImageUpload
@@ -2080,17 +2208,24 @@ function DoDhamCardSectionEditor({
           title: "Do Dham Yatra Packages",
           subtitle: "Choose The Right Do Dham Yatra Package For You",
         }
-      : sectionKey === "majorstartingpoints"
+      : sectionKey === "chardhampackages"
         ? {
-            eyebrow: "STARTING POINTS",
-            title: "Major Starting Point of the Do Dham Yatra",
-            subtitle: "Start Your Sacred Journey from Delhi, Haridwar & Major Cities",
+            eyebrow: "CHAR DHAM PACKAGES",
+            title: "Char Dham Yatra Packages",
+            subtitle: "Choose the Right Char Dham Yatra Package for You",
           }
-        : {
-            eyebrow: "OTHER TOUR PACKAGES",
-            title: "Other Tour Packages",
-            subtitle: "Explore Our Additional Sacred Journeys",
-          };
+        : sectionKey === "majorstartingpoints"
+          ? {
+              eyebrow: "STARTING POINTS",
+              title: "Major Starting Point of the Do Dham Yatra",
+              subtitle:
+                "Start Your Sacred Journey from Delhi, Haridwar & Major Cities",
+            }
+          : {
+              eyebrow: "OTHER TOUR PACKAGES",
+              title: "Other Tour Packages",
+              subtitle: "Explore Our Additional Sacred Journeys",
+            };
 
   return (
     <div className="space-y-5">
