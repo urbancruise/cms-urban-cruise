@@ -183,6 +183,13 @@ export async function PUT(request: NextRequest) {
           : `/${citySlug}/do-dham-yatra-package`,
       );
     }
+    if (vehicleSlug === "char-dham") {
+      paths.push(
+        citySlug === "global"
+          ? "/char-dham-yatra-package"
+          : `/${citySlug}/char-dham-yatra-package`,
+      );
+    }
 
     await revalidateWebsite({
       tags: [
@@ -252,6 +259,13 @@ export async function DELETE(request: NextRequest) {
         citySlug === "global"
           ? "/do-dham-yatra-package"
           : `/${citySlug}/do-dham-yatra-package`,
+      );
+    }
+    if (slug === "char-dham") {
+      paths.push(
+        citySlug === "global"
+          ? "/char-dham-yatra-package"
+          : `/${citySlug}/char-dham-yatra-package`,
       );
     }
 
