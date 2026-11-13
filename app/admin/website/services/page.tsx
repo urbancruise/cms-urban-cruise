@@ -246,6 +246,36 @@ const PILGRIMAGE_SECTIONS = [
   { key: "partners", label: "Our Trusted Partner" },
 ] as const;
 
+const WEDDING_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "weddingpackages", label: "Wedding Service Page Sections" },
+  { key: "aboutservice", label: "About Service" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
+const CORPORATE_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "corporatepackages", label: "Corporate Service Page Sections" },
+  { key: "aboutservice", label: "About Service" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
 const DEFAULT_CONTENT: OurServicesContent = {
   eyebrow: "Jim Corbett Vehicle Rental",
   title: "Our Services",
@@ -277,6 +307,22 @@ const DEFAULT_CONTENT: OurServicesContent = {
       imageAlt: "Luxury bus for group travel to Jim Corbett",
     },
   ],
+};
+
+const WEDDING_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Wedding Vehicle Rental",
+  title: "Wedding Travel",
+  description:
+    "Manage the Wedding Travel page content shown on the Urban Cruise website.",
+  cards: [],
+};
+
+const CORPORATE_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Corporate Vehicle Rental",
+  title: "Corporate Travel",
+  description:
+    "Manage the Corporate Travel page content shown on the Urban Cruise website.",
+  cards: [],
 };
 
 const DO_DHAM_DEFAULT_CONTENT: OurServicesContent = {
@@ -338,11 +384,27 @@ const PILGRIMAGE_SERVICE: ServiceDefinition = {
   defaultContent: PILGRIMAGE_DEFAULT_CONTENT,
 };
 
+const WEDDING_SERVICE: ServiceDefinition = {
+  slug: "wedding",
+  title: "Wedding Travel",
+  sections: WEDDING_SECTIONS,
+  defaultContent: WEDDING_DEFAULT_CONTENT,
+};
+
+const CORPORATE_SERVICE: ServiceDefinition = {
+  slug: "corporate",
+  title: "Corporate Travel",
+  sections: CORPORATE_SECTIONS,
+  defaultContent: CORPORATE_DEFAULT_CONTENT,
+};
+
 const SERVICE_OPTIONS = [
   JIM_CORBETT_SERVICE,
   DO_DHAM_SERVICE,
   CHAR_DHAM_SERVICE,
   PILGRIMAGE_SERVICE,
+  WEDDING_SERVICE,
+  CORPORATE_SERVICE,
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -486,6 +548,32 @@ export default function WebsiteServicesPage() {
     error: pilgrimageDetailError,
     mutate: mutatePilgrimageDetail,
   } = useSWR<ServiceDetailResponse>(pilgrimageDetailKey, fetcher);
+  const weddingRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === WEDDING_SERVICE.slug,
+  );
+  const weddingDetailKey =
+    activeCityId && weddingRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${WEDDING_SERVICE.slug}`
+      : null;
+  const {
+    data: weddingDetailData,
+    isLoading: weddingDetailLoading,
+    error: weddingDetailError,
+    mutate: mutateWeddingDetail,
+  } = useSWR<ServiceDetailResponse>(weddingDetailKey, fetcher);
+  const corporateRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === CORPORATE_SERVICE.slug,
+  );
+  const corporateDetailKey =
+    activeCityId && corporateRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${CORPORATE_SERVICE.slug}`
+      : null;
+  const {
+    data: corporateDetailData,
+    isLoading: corporateDetailLoading,
+    error: corporateDetailError,
+    mutate: mutateCorporateDetail,
+  } = useSWR<ServiceDetailResponse>(corporateDetailKey, fetcher);
 
   const jimCorbettContent = normalizeContent(
     jimCorbettDetailData?.vehicle.sections?.ourservices,
@@ -502,6 +590,14 @@ export default function WebsiteServicesPage() {
   const pilgrimageContent = normalizeContent(
     pilgrimageDetailData?.vehicle.sections?.ourservices,
     PILGRIMAGE_SERVICE.defaultContent,
+  );
+  const weddingContent = normalizeContent(
+    weddingDetailData?.vehicle.sections?.ourservices,
+    WEDDING_SERVICE.defaultContent,
+  );
+  const corporateContent = normalizeContent(
+    corporateDetailData?.vehicle.sections?.ourservices,
+    CORPORATE_SERVICE.defaultContent,
   );
   const serviceEntries: ServiceCardEntry[] = [
     {
@@ -569,6 +665,40 @@ export default function WebsiteServicesPage() {
             )
           : ""),
     },
+    {
+      definition: WEDDING_SERVICE,
+      row: weddingRow,
+      detailData: weddingDetailData,
+      detailLoading: weddingDetailLoading,
+      detailError: weddingDetailError,
+      storedService: weddingRow
+        ? weddingDetailData?.vehicle ?? weddingRow
+        : undefined,
+      content: weddingContent,
+      image:
+        weddingContent.cards[0]?.image ||
+        (isRecord(weddingDetailData?.vehicle.sections?.hero)
+          ? readText(weddingDetailData?.vehicle.sections?.hero.backgroundImage)
+          : ""),
+    },
+    {
+      definition: CORPORATE_SERVICE,
+      row: corporateRow,
+      detailData: corporateDetailData,
+      detailLoading: corporateDetailLoading,
+      detailError: corporateDetailError,
+      storedService: corporateRow
+        ? corporateDetailData?.vehicle ?? corporateRow
+        : undefined,
+      content: corporateContent,
+      image:
+        corporateContent.cards[0]?.image ||
+        (isRecord(corporateDetailData?.vehicle.sections?.hero)
+          ? readText(
+              corporateDetailData?.vehicle.sections?.hero.backgroundImage,
+            )
+          : ""),
+    },
   ];
   const selectedEntry =
     serviceEntries.find(
@@ -632,6 +762,10 @@ export default function WebsiteServicesPage() {
           await mutateCharDhamDetail();
         } else if (service.slug === "pilgrimage") {
           await mutatePilgrimageDetail();
+        } else if (service.slug === "wedding") {
+          await mutateWeddingDetail();
+        } else if (service.slug === "corporate") {
+          await mutateCorporateDetail();
         } else {
           await mutateJimCorbettDetail();
         }
@@ -1257,6 +1391,26 @@ function ServiceSectionEditor({
     );
   }
 
+  if (serviceSlug === "wedding" && sectionKey === "weddingpackages") {
+    return (
+      <DoDhamCardSectionEditor
+        sectionKey={sectionKey}
+        section={isRecord(value) ? value : {}}
+        onChange={onChange}
+      />
+    );
+  }
+
+  if (serviceSlug === "corporate" && sectionKey === "corporatepackages") {
+    return (
+      <DoDhamCardSectionEditor
+        sectionKey={sectionKey}
+        section={isRecord(value) ? value : {}}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (sectionKey === "ourservices") {
     const section = isRecord(value) ? value : {};
     return (
@@ -1372,7 +1526,13 @@ function ServiceSectionEditor({
               value={readText(section.eyebrow)}
               onChange={(event) => update("eyebrow", event.target.value)}
               className={inputCls}
-              placeholder="About Jim Corbett"
+              placeholder={
+                serviceSlug === "wedding"
+                  ? "About Wedding Travel"
+                  : serviceSlug === "corporate"
+                    ? "About Corporate Travel"
+                    : "About Jim Corbett"
+              }
             />
           </Field>
           <Field label="Title">
@@ -1380,7 +1540,13 @@ function ServiceSectionEditor({
               value={readText(section.title)}
               onChange={(event) => update("title", event.target.value)}
               className={inputCls}
-              placeholder="Jim Corbett National Park"
+              placeholder={
+                serviceSlug === "wedding"
+                  ? "Wedding Travel Service"
+                  : serviceSlug === "corporate"
+                    ? "Corporate Travel Service"
+                    : "Jim Corbett National Park"
+              }
             />
           </Field>
         </div>
@@ -2400,6 +2566,18 @@ function DoDhamCardSectionEditor({
             title: "Char Dham Yatra Packages",
             subtitle: "Choose the Right Char Dham Yatra Package for You",
           }
+        : sectionKey === "weddingpackages"
+          ? {
+              eyebrow: "WEDDING PACKAGES",
+              title: "Wedding Travel Packages",
+              subtitle: "Choose the Right Wedding Travel Plan for You",
+            }
+        : sectionKey === "corporatepackages"
+          ? {
+              eyebrow: "CORPORATE PACKAGES",
+              title: "Corporate Travel Packages",
+              subtitle: "Choose the Right Corporate Travel Plan for You",
+            }
         : sectionKey === "majorstartingpoints"
           ? {
               eyebrow: "STARTING POINTS",
