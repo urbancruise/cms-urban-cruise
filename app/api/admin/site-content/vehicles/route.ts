@@ -190,6 +190,15 @@ export async function PUT(request: NextRequest) {
           : `/${citySlug}/char-dham-yatra-package`,
       );
     }
+    if (vehicleSlug === "pilgrimage") {
+      paths.push(
+        citySlug === "global"
+          ? "/pilgrimage-vehicle-rental"
+          : citySlug === "mumbai"
+            ? `/${citySlug}/pilgrimage-tours-in-mumbai-pilgrimage-bus-rental-in-mumbai`
+            : `/${citySlug}/pilgrimage-vehicle-rental`,
+      );
+    }
 
     await revalidateWebsite({
       tags: [
@@ -266,6 +275,15 @@ export async function DELETE(request: NextRequest) {
         citySlug === "global"
           ? "/char-dham-yatra-package"
           : `/${citySlug}/char-dham-yatra-package`,
+      );
+    }
+    if (slug === "pilgrimage") {
+      paths.push(
+        citySlug === "global"
+          ? "/pilgrimage-vehicle-rental"
+          : citySlug === "mumbai"
+            ? `/${citySlug}/pilgrimage-tours-in-mumbai-pilgrimage-bus-rental-in-mumbai`
+            : `/${citySlug}/pilgrimage-vehicle-rental`,
       );
     }
 

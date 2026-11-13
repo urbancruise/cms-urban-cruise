@@ -161,6 +161,14 @@ interface DoDhamTourCard {
   images: string[];
 }
 
+interface PilgrimagePlace {
+  name: string;
+  description: string;
+  image: string;
+  imagePublicId?: string;
+  imageAlt: string;
+}
+
 const EMPTY_CITIES: City[] = [];
 const EMPTY_SERVICES: ServiceRow[] = [];
 
@@ -223,6 +231,21 @@ const CHAR_DHAM_SECTIONS = [
   { key: "partners", label: "Our Trusted Partner" },
 ] as const;
 
+const PILGRIMAGE_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "pilgrimagepackages", label: "Pilgrimage Page Sections" },
+  { key: "places", label: "Places Card" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
 const DEFAULT_CONTENT: OurServicesContent = {
   eyebrow: "Jim Corbett Vehicle Rental",
   title: "Our Services",
@@ -272,6 +295,14 @@ const CHAR_DHAM_DEFAULT_CONTENT: OurServicesContent = {
   cards: [],
 };
 
+const PILGRIMAGE_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Pilgrimage Vehicle Rental",
+  title: "Pilgrimage Travel",
+  description:
+    "Manage the Pilgrimage Travel page content shown on the Urban Cruise website.",
+  cards: [],
+};
+
 interface ServiceDefinition {
   slug: string;
   title: string;
@@ -300,10 +331,18 @@ const CHAR_DHAM_SERVICE: ServiceDefinition = {
   defaultContent: CHAR_DHAM_DEFAULT_CONTENT,
 };
 
+const PILGRIMAGE_SERVICE: ServiceDefinition = {
+  slug: "pilgrimage",
+  title: "Pilgrimage Travel",
+  sections: PILGRIMAGE_SECTIONS,
+  defaultContent: PILGRIMAGE_DEFAULT_CONTENT,
+};
+
 const SERVICE_OPTIONS = [
   JIM_CORBETT_SERVICE,
   DO_DHAM_SERVICE,
   CHAR_DHAM_SERVICE,
+  PILGRIMAGE_SERVICE,
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -434,6 +473,19 @@ export default function WebsiteServicesPage() {
     error: charDhamDetailError,
     mutate: mutateCharDhamDetail,
   } = useSWR<ServiceDetailResponse>(charDhamDetailKey, fetcher);
+  const pilgrimageRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === PILGRIMAGE_SERVICE.slug,
+  );
+  const pilgrimageDetailKey =
+    activeCityId && pilgrimageRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${PILGRIMAGE_SERVICE.slug}`
+      : null;
+  const {
+    data: pilgrimageDetailData,
+    isLoading: pilgrimageDetailLoading,
+    error: pilgrimageDetailError,
+    mutate: mutatePilgrimageDetail,
+  } = useSWR<ServiceDetailResponse>(pilgrimageDetailKey, fetcher);
 
   const jimCorbettContent = normalizeContent(
     jimCorbettDetailData?.vehicle.sections?.ourservices,
@@ -446,6 +498,10 @@ export default function WebsiteServicesPage() {
   const charDhamContent = normalizeContent(
     charDhamDetailData?.vehicle.sections?.ourservices,
     CHAR_DHAM_SERVICE.defaultContent,
+  );
+  const pilgrimageContent = normalizeContent(
+    pilgrimageDetailData?.vehicle.sections?.ourservices,
+    PILGRIMAGE_SERVICE.defaultContent,
   );
   const serviceEntries: ServiceCardEntry[] = [
     {
@@ -493,6 +549,24 @@ export default function WebsiteServicesPage() {
         charDhamContent.cards[0]?.image ||
         (isRecord(charDhamDetailData?.vehicle.sections?.hero)
           ? readText(charDhamDetailData?.vehicle.sections?.hero.backgroundImage)
+          : ""),
+    },
+    {
+      definition: PILGRIMAGE_SERVICE,
+      row: pilgrimageRow,
+      detailData: pilgrimageDetailData,
+      detailLoading: pilgrimageDetailLoading,
+      detailError: pilgrimageDetailError,
+      storedService: pilgrimageRow
+        ? pilgrimageDetailData?.vehicle ?? pilgrimageRow
+        : undefined,
+      content: pilgrimageContent,
+      image:
+        pilgrimageContent.cards[0]?.image ||
+        (isRecord(pilgrimageDetailData?.vehicle.sections?.hero)
+          ? readText(
+              pilgrimageDetailData?.vehicle.sections?.hero.backgroundImage,
+            )
           : ""),
     },
   ];
@@ -556,6 +630,8 @@ export default function WebsiteServicesPage() {
           await mutateDoDhamDetail();
         } else if (service.slug === "char-dham") {
           await mutateCharDhamDetail();
+        } else if (service.slug === "pilgrimage") {
+          await mutatePilgrimageDetail();
         } else {
           await mutateJimCorbettDetail();
         }
@@ -1160,6 +1236,25 @@ function ServiceSectionEditor({
       );
     }
 
+  }
+
+  if (serviceSlug === "pilgrimage" && sectionKey === "pilgrimagepackages") {
+    return (
+      <DoDhamCardSectionEditor
+        sectionKey={sectionKey}
+        section={isRecord(value) ? value : {}}
+        onChange={onChange}
+      />
+    );
+  }
+
+  if (serviceSlug === "pilgrimage" && sectionKey === "places") {
+    return (
+      <PilgrimagePlacesEditor
+        section={isRecord(value) ? value : {}}
+        onChange={onChange}
+      />
+    );
   }
 
   if (sectionKey === "ourservices") {
@@ -1892,6 +1987,8 @@ function JsonSectionEditor({
       "Use vehicles: [{ vehicle, layout, charDham, doDham, amenities }], plus optional eyebrow, title, subtitle, description, and columns labels.",
     dodhampackages:
       "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
+    pilgrimagepackages:
+      "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
     majorstartingpoints:
       "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
     othertourpackages:
@@ -2190,6 +2287,89 @@ function VehiclePackageEditor({
   );
 }
 
+function PilgrimagePlacesEditor({
+  section,
+  onChange,
+}: {
+  section: Record<string, unknown>;
+  onChange: (value: unknown) => void;
+}) {
+  const update = (key: string, value: unknown) =>
+    onChange({ ...section, [key]: value });
+
+  return (
+    <div className="space-y-5">
+      <SectionHeadingFields
+        value={section}
+        onChange={onChange}
+        eyebrowPlaceholder="Sacred Places"
+        titlePlaceholder="Popular Pilgrimage Places"
+        subtitlePlaceholder="Explore Sacred Destinations Across India"
+      />
+      <Field label="Description">
+        <textarea
+          value={readText(section.description)}
+          onChange={(event) => update("description", event.target.value)}
+          className={inputCls}
+          rows={3}
+        />
+      </Field>
+      <RichList<PilgrimagePlace>
+        label="Places"
+        items={readArray<PilgrimagePlace>(section.items)}
+        onChange={(items) => update("items", items)}
+        emptyItem={{
+          name: "",
+          description: "",
+          image: "",
+          imagePublicId: "",
+          imageAlt: "",
+        }}
+        renderItem={(place, updatePlace) => (
+          <div className="space-y-4">
+            <TextInput
+              label="Place Name"
+              value={readText(place.name)}
+              onChange={(name) => updatePlace({ ...place, name })}
+              placeholder="Varanasi"
+            />
+            <Field label="Description">
+              <textarea
+                value={readText(place.description)}
+                onChange={(event) =>
+                  updatePlace({ ...place, description: event.target.value })
+                }
+                className={inputCls}
+                rows={3}
+              />
+            </Field>
+            <ImageUpload
+              label="Place Image"
+              value={readText(place.image) || null}
+              publicId={readText(place.imagePublicId) || null}
+              onChange={(image, imagePublicId) =>
+                updatePlace({
+                  ...place,
+                  image: image || "",
+                  imagePublicId: imagePublicId || "",
+                })
+              }
+              scope="general"
+              aspect="4 / 3"
+            />
+            <TextInput
+              label="Image Alt Text"
+              value={readText(place.imageAlt)}
+              onChange={(imageAlt) => updatePlace({ ...place, imageAlt })}
+              placeholder="Scenic image for a pilgrimage in Varanasi"
+            />
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
 function DoDhamCardSectionEditor({
   sectionKey,
   section,
@@ -2202,7 +2382,13 @@ function DoDhamCardSectionEditor({
   const update = (key: string, value: unknown) =>
     onChange({ ...section, [key]: value });
   const heading =
-    sectionKey === "dodhampackages"
+    sectionKey === "pilgrimagepackages"
+      ? {
+          eyebrow: "PILGRIMAGE PACKAGES",
+          title: "Pilgrimage Tour Packages",
+          subtitle: "Choose the Right Pilgrimage Package for You",
+        }
+      : sectionKey === "dodhampackages"
       ? {
           eyebrow: "RECOMMENDED STAY",
           title: "Do Dham Yatra Packages",
