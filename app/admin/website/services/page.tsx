@@ -193,6 +193,21 @@ const JIM_CORBETT_SECTIONS = [
   { key: "partners", label: "Our Trusted Partner" },
 ] as const;
 
+const VACATIONS_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "vacationpackages", label: "Vacation Page Sections" },
+  { key: "safarizones", label: "Safari Zones" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
 const DO_DHAM_SECTIONS = [
   { key: "hero", label: "Hero" },
   { key: "about", label: "About" },
@@ -309,6 +324,14 @@ const DEFAULT_CONTENT: OurServicesContent = {
   ],
 };
 
+const VACATIONS_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Vacation Vehicle Rental",
+  title: "Vacation Travel",
+  description:
+    "Manage the Vacation Travel page content shown on the Urban Cruise website.",
+  cards: [],
+};
+
 const WEDDING_DEFAULT_CONTENT: OurServicesContent = {
   eyebrow: "Wedding Vehicle Rental",
   title: "Wedding Travel",
@@ -363,6 +386,13 @@ const JIM_CORBETT_SERVICE: ServiceDefinition = {
   defaultContent: DEFAULT_CONTENT,
 };
 
+const VACATIONS_SERVICE: ServiceDefinition = {
+  slug: "vacations",
+  title: "Vacations",
+  sections: VACATIONS_SECTIONS,
+  defaultContent: VACATIONS_DEFAULT_CONTENT,
+};
+
 const DO_DHAM_SERVICE: ServiceDefinition = {
   slug: "do-dham",
   title: "Do Dham Yatra",
@@ -400,6 +430,7 @@ const CORPORATE_SERVICE: ServiceDefinition = {
 
 const SERVICE_OPTIONS = [
   JIM_CORBETT_SERVICE,
+  VACATIONS_SERVICE,
   DO_DHAM_SERVICE,
   CHAR_DHAM_SERVICE,
   PILGRIMAGE_SERVICE,
@@ -515,6 +546,19 @@ export default function WebsiteServicesPage() {
     error: jimCorbettDetailError,
     mutate: mutateJimCorbettDetail,
   } = useSWR<ServiceDetailResponse>(jimCorbettDetailKey, fetcher);
+  const vacationsRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === VACATIONS_SERVICE.slug,
+  );
+  const vacationsDetailKey =
+    activeCityId && vacationsRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${VACATIONS_SERVICE.slug}`
+      : null;
+  const {
+    data: vacationsDetailData,
+    isLoading: vacationsDetailLoading,
+    error: vacationsDetailError,
+    mutate: mutateVacationsDetail,
+  } = useSWR<ServiceDetailResponse>(vacationsDetailKey, fetcher);
   const doDhamDetailKey =
     activeCityId && doDhamRow
       ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${DO_DHAM_SERVICE.slug}`
@@ -579,6 +623,10 @@ export default function WebsiteServicesPage() {
     jimCorbettDetailData?.vehicle.sections?.ourservices,
     JIM_CORBETT_SERVICE.defaultContent,
   );
+  const vacationsContent = normalizeContent(
+    vacationsDetailData?.vehicle.sections?.ourservices,
+    VACATIONS_SERVICE.defaultContent,
+  );
   const doDhamContent = normalizeContent(
     doDhamDetailData?.vehicle.sections?.ourservices,
     DO_DHAM_SERVICE.defaultContent,
@@ -614,6 +662,22 @@ export default function WebsiteServicesPage() {
         jimCorbettContent.cards[0]?.image ||
         JIM_CORBETT_SERVICE.defaultContent.cards[0]?.image ||
         "",
+    },
+    {
+      definition: VACATIONS_SERVICE,
+      row: vacationsRow,
+      detailData: vacationsDetailData,
+      detailLoading: vacationsDetailLoading,
+      detailError: vacationsDetailError,
+      storedService: vacationsRow
+        ? vacationsDetailData?.vehicle ?? vacationsRow
+        : undefined,
+      content: vacationsContent,
+      image:
+        vacationsContent.cards[0]?.image ||
+        (isRecord(vacationsDetailData?.vehicle.sections?.hero)
+          ? readText(vacationsDetailData?.vehicle.sections?.hero.backgroundImage)
+          : ""),
     },
     {
       definition: DO_DHAM_SERVICE,
@@ -756,7 +820,9 @@ export default function WebsiteServicesPage() {
       });
       await mutate();
       if (row) {
-        if (service.slug === "do-dham") {
+        if (service.slug === VACATIONS_SERVICE.slug) {
+          await mutateVacationsDetail();
+        } else if (service.slug === "do-dham") {
           await mutateDoDhamDetail();
         } else if (service.slug === "char-dham") {
           await mutateCharDhamDetail();
@@ -1382,6 +1448,16 @@ function ServiceSectionEditor({
     );
   }
 
+  if (serviceSlug === "vacations" && sectionKey === "vacationpackages") {
+    return (
+      <DoDhamCardSectionEditor
+        sectionKey={sectionKey}
+        section={isRecord(value) ? value : {}}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (serviceSlug === "pilgrimage" && sectionKey === "places") {
     return (
       <PilgrimagePlacesEditor
@@ -1646,19 +1722,25 @@ function ServiceSectionEditor({
           value={section}
           onChange={onChange}
           eyebrowPlaceholder={
-            serviceSlug === "char-dham"
-              ? "EXPLORE THE CHAR DHAM"
-              : "EXPLORE JUNGLE SAFARI ZONES"
+            serviceSlug === "vacations"
+              ? "EXPLORE VACATION DESTINATIONS"
+              : serviceSlug === "char-dham"
+                ? "EXPLORE THE CHAR DHAM"
+                : "EXPLORE JUNGLE SAFARI ZONES"
           }
           titlePlaceholder={
-            serviceSlug === "char-dham"
-              ? "The Four Sacred Dhams of Uttarakhand"
-              : "Jim Corbett National Park, Uttarakhand"
+            serviceSlug === "vacations"
+              ? "Popular Vacation Destinations"
+              : serviceSlug === "char-dham"
+                ? "The Four Sacred Dhams of Uttarakhand"
+                : "Jim Corbett National Park, Uttarakhand"
           }
           subtitlePlaceholder={
-            serviceSlug === "char-dham"
-              ? "Yamunotri, Gangotri, Kedarnath & Badrinath"
-              : "Discover the Best Safari Zones in Jim Corbett"
+            serviceSlug === "vacations"
+              ? "Discover memorable destinations across India"
+              : serviceSlug === "char-dham"
+                ? "Yamunotri, Gangotri, Kedarnath & Badrinath"
+                : "Discover the Best Safari Zones in Jim Corbett"
           }
         />
         {serviceSlug === "char-dham" && (
@@ -1692,7 +1774,7 @@ function ServiceSectionEditor({
           />
         </Field>
         <RichList<SafariZone>
-          label="Safari Zones"
+          label={serviceSlug === "vacations" ? "Vacation Destinations" : "Safari Zones"}
           items={readArray<SafariZone>(section.zones)}
           onChange={(zones) => onChange({ ...section, zones })}
           emptyItem={{
@@ -2155,6 +2237,8 @@ function JsonSectionEditor({
       "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
     pilgrimagepackages:
       "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
+    vacationpackages:
+      "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
     majorstartingpoints:
       "Use cards: [{ id, name, place, description: [{ title, detail }], images: [url] }], plus optional eyebrow, title, subtitle, and description.",
     othertourpackages:
@@ -2548,7 +2632,13 @@ function DoDhamCardSectionEditor({
   const update = (key: string, value: unknown) =>
     onChange({ ...section, [key]: value });
   const heading =
-    sectionKey === "pilgrimagepackages"
+    sectionKey === "vacationpackages"
+      ? {
+          eyebrow: "VACATION PACKAGES",
+          title: "Vacation Travel Packages",
+          subtitle: "Choose the Right Vacation Package for You",
+        }
+      : sectionKey === "pilgrimagepackages"
       ? {
           eyebrow: "PILGRIMAGE PACKAGES",
           title: "Pilgrimage Tour Packages",

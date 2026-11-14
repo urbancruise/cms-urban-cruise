@@ -176,6 +176,9 @@ export async function PUT(request: NextRequest) {
     if (citySlug === "global" && vehicleSlug === "jim-corbett") {
       paths.push("/jim-corbett");
     }
+    if (citySlug === "global" && vehicleSlug === "vacations") {
+      paths.push("/vacations");
+    }
     if (vehicleSlug === "do-dham") {
       paths.push(
         citySlug === "global"
@@ -262,6 +265,9 @@ export async function DELETE(request: NextRequest) {
     const paths = [`/${citySlug}/${slug}`];
     if (citySlug === "global" && slug === "jim-corbett") {
       paths.push("/jim-corbett");
+    }
+    if (citySlug === "global" && slug === "vacations") {
+      paths.push("/vacations");
     }
     if (slug === "do-dham") {
       paths.push(
