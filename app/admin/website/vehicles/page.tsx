@@ -112,6 +112,11 @@ const VEHICLE_SLUGS = [
     label: "Sleeper | Semi Sleeper Bus",
     perm: "urbancruise.vehicles.sleeper.view",
   },
+  {
+    slug: "local-travel",
+    label: "Local Travel",
+    perm: "urbancruise.services.localtravel.view",
+  },
 ];
 
 // ============================================================
@@ -124,10 +129,18 @@ const VEHICLE_SECTIONS = [
     hint: "Eyebrow, Title, Subtitle, Description, Price, Seats, Hero Image",
   },
   { key: "hero", label: "Hero" },
-  { key: "quickcall", label: "Get a Quick Call" },
+  {
+    key: "quickcall",
+    label: "Get a Quick Call",
+    hiddenFor: ["local-travel"],
+  },
   { key: "about", label: "About" },
   { key: "howitworks", label: "How It Works" },
-  { key: "vehiclebudget", label: "Vehicle For Every Budget" },
+  {
+    key: "vehiclebudget",
+    label: "Vehicle For Every Budget",
+    hiddenFor: ["local-travel"],
+  },
   { key: "groupsize", label: "Vehicle For Every Group Size" },
   {
     key: "occasion",
@@ -141,12 +154,18 @@ const VEHICLE_SECTIONS = [
       "sleeper-bus",
     ],
   },
+  { key: "aboutservice", label: "About Service" },
   { key: "lookingvehicle", label: "Looking For Other Vehicle" },
-  { key: "servicesincities", label: "Our Services In Various Cities" },
+  {
+    key: "servicesincities",
+    label: "Our Services In Various Cities",
+    hiddenFor: ["local-travel"],
+  },
   {
     key: "compare",
     label: "Compare With Vehicles",
     hiddenFor: [
+      "local-travel",
       "car-suvs",
       "luxury-cars-suvs",
       "mercedes-sprinter",
@@ -157,6 +176,7 @@ const VEHICLE_SECTIONS = [
     key: "prices",
     label: "Prices & Charges",
     hiddenFor: [
+      "local-travel",
       "car-suvs",
       "luxury-cars-suvs",
       "hycross",
@@ -171,6 +191,7 @@ const VEHICLE_SECTIONS = [
     key: "discover",
     label: "Discover Your Next Adventure",
     hiddenFor: [
+      "local-travel",
       "ertiga",
       "innova-crysta",
       "hycross",
@@ -186,7 +207,11 @@ const VEHICLE_SECTIONS = [
   { key: "faq", label: "FAQs" },
   { key: "servicelocations", label: "Vehicle Rental Service In India" },
   { key: "partners", label: "Our Trusted Partners" },
-  { key: "downloadapp", label: "Download App" },
+  {
+    key: "downloadapp",
+    label: "Download App",
+    hiddenFor: ["local-travel"],
+  },
 ] as const;
 
 const CONTENT_SECTIONS = VEHICLE_SECTIONS.filter((s) => s.key !== "meta");

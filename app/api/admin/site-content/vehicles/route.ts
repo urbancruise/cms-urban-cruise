@@ -55,6 +55,8 @@ async function requireSiteContentAccess(request: NextRequest) {
     "urbancruisewebsite.view",
     "urbancruise.home.view",
     "urbancruise.vehicles.view",
+    "urbancruise.services.view",
+    "urbancruise.services.localtravel.view",
   ];
 
   if (!allowed.some((p) => permissionSet.has(p))) {

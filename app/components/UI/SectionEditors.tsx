@@ -585,6 +585,74 @@ export function FormEditor({
   }
 
   // ============================================================
+  // ABOUT SERVICE
+  // ============================================================
+  if (sectionKey === "aboutservice") {
+    return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Eyebrow">
+            <input
+              type="text"
+              value={value.eyebrow || ""}
+              onChange={(e) => set("eyebrow", e.target.value)}
+              className={inputCls}
+              placeholder="About Us"
+            />
+          </Field>
+          <Field label="Title">
+            <input
+              type="text"
+              value={value.title || ""}
+              onChange={(e) => set("title", e.target.value)}
+              className={inputCls}
+              placeholder="URBAN CRUISE"
+            />
+          </Field>
+        </div>
+
+        <Field label="Tagline">
+          <input
+            type="text"
+            value={value.tagline || ""}
+            onChange={(e) => set("tagline", e.target.value)}
+            className={inputCls}
+            placeholder="Your Journey, Our Passion"
+          />
+        </Field>
+
+        <Field label="Image">
+          <ImageUpload
+            value={value.imageUrl || value.image || null}
+            publicId={value.imagePublicId || null}
+            onChange={(url, publicId) => {
+              set("imageUrl", url || "");
+              set("imagePublicId", publicId || "");
+            }}
+            scope="vehicle"
+            aspect="16 / 9"
+          />
+        </Field>
+
+        <RichList<string>
+          label="Paragraphs"
+          items={value.paragraphs || []}
+          onChange={(items) => set("paragraphs", items)}
+          emptyItem=""
+          renderItem={(item, update) => (
+            <RichEditor
+              value={normalizeToEditorDoc(item)}
+              onChange={(data) => update(editorDocToPlain(data))}
+              placeholder="Write a paragraph..."
+              minHeight={140}
+            />
+          )}
+        />
+      </div>
+    );
+  }
+
+  // ============================================================
   // HOW IT WORKS
   // ============================================================
   if (sectionKey === "howitworks") {

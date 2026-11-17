@@ -230,6 +230,19 @@ export const WEBSITE_PERMISSION_TREE: PermissionGroup[] = [
         ],
       },
       {
+        key: "urbancruise.services.view",
+        label: "Website Services",
+        icon: MdOutlinePublic,
+        permKey: "urbancruise.services.view",
+        children: [
+          {
+            key: "urbancruise.services.localtravel.view",
+            label: "Local Travel",
+            permKey: "urbancruise.services.localtravel.view",
+          },
+        ],
+      },
+      {
         key: "urbancruise.quotes.view",
         label: "Get a Quote",
         icon: MdOutlineContactSupport,
