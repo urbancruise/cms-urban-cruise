@@ -1,4 +1,4 @@
-"use client";
+/*  */"use client";
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
@@ -291,6 +291,21 @@ const CORPORATE_SECTIONS = [
   { key: "partners", label: "Our Trusted Partner" },
 ] as const;
 
+const LOCAL_TRAVEL_SECTIONS = [
+  { key: "hero", label: "Hero" },
+  { key: "about", label: "About" },
+  { key: "howitworks", label: "How It Works" },
+  { key: "groupsize", label: "Vehicle For Every Group Size" },
+  { key: "occasion", label: "Vehicle For Every Occasion" },
+  { key: "vacationpackages", label: "Vacation Page Sections" },
+  { key: "aboutservice", label: "About Service" },
+  { key: "whychoose", label: "Why Choose Urban Cruise" },
+  { key: "testimonials", label: "Testimonial" },
+  { key: "faq", label: "FAQs" },
+  { key: "servicelocations", label: "Vehicle Rental Service In India" },
+  { key: "partners", label: "Our Trusted Partner" },
+] as const;
+
 const DEFAULT_CONTENT: OurServicesContent = {
   eyebrow: "Jim Corbett Vehicle Rental",
   title: "Our Services",
@@ -329,6 +344,14 @@ const VACATIONS_DEFAULT_CONTENT: OurServicesContent = {
   title: "Vacation Travel",
   description:
     "Manage the Vacation Travel page content shown on the Urban Cruise website.",
+  cards: [],
+};
+
+const LOCAL_TRAVEL_DEFAULT_CONTENT: OurServicesContent = {
+  eyebrow: "Local Vehicle Rental",
+  title: "Local Travel",
+  description:
+    "Book reliable local cabs and outstation rides across the city with Urban Cruise.",
   cards: [],
 };
 
@@ -393,6 +416,13 @@ const VACATIONS_SERVICE: ServiceDefinition = {
   defaultContent: VACATIONS_DEFAULT_CONTENT,
 };
 
+const LOCAL_TRAVEL_SERVICE: ServiceDefinition = {
+  slug: "local-travel",
+  title: "Local Travel",
+  sections: LOCAL_TRAVEL_SECTIONS,
+  defaultContent: LOCAL_TRAVEL_DEFAULT_CONTENT,
+};
+
 const DO_DHAM_SERVICE: ServiceDefinition = {
   slug: "do-dham",
   title: "Do Dham Yatra",
@@ -431,6 +461,7 @@ const CORPORATE_SERVICE: ServiceDefinition = {
 const SERVICE_OPTIONS = [
   JIM_CORBETT_SERVICE,
   VACATIONS_SERVICE,
+  LOCAL_TRAVEL_SERVICE,
   DO_DHAM_SERVICE,
   CHAR_DHAM_SERVICE,
   PILGRIMAGE_SERVICE,
@@ -619,6 +650,20 @@ export default function WebsiteServicesPage() {
     mutate: mutateCorporateDetail,
   } = useSWR<ServiceDetailResponse>(corporateDetailKey, fetcher);
 
+  const localTravelRow = vehicles.find(
+    (vehicle) => vehicle.vehicle_slug === LOCAL_TRAVEL_SERVICE.slug,
+  );
+  const localTravelDetailKey =
+    activeCityId && localTravelRow
+      ? `/api/admin/site-content/vehicles?city_id=${activeCityId}&slug=${LOCAL_TRAVEL_SERVICE.slug}`
+      : null;
+  const {
+    data: localTravelDetailData,
+    isLoading: localTravelDetailLoading,
+    error: localTravelDetailError,
+    mutate: mutateLocalTravelDetail,
+  } = useSWR<ServiceDetailResponse>(localTravelDetailKey, fetcher);
+
   const jimCorbettContent = normalizeContent(
     jimCorbettDetailData?.vehicle.sections?.ourservices,
     JIM_CORBETT_SERVICE.defaultContent,
@@ -646,6 +691,10 @@ export default function WebsiteServicesPage() {
   const corporateContent = normalizeContent(
     corporateDetailData?.vehicle.sections?.ourservices,
     CORPORATE_SERVICE.defaultContent,
+  );
+  const localTravelContent = normalizeContent(
+    localTravelDetailData?.vehicle.sections?.ourservices,
+    LOCAL_TRAVEL_SERVICE.defaultContent,
   );
   const serviceEntries: ServiceCardEntry[] = [
     {
@@ -763,6 +812,24 @@ export default function WebsiteServicesPage() {
             )
           : ""),
     },
+    {
+      definition: LOCAL_TRAVEL_SERVICE,
+      row: localTravelRow,
+      detailData: localTravelDetailData,
+      detailLoading: localTravelDetailLoading,
+      detailError: localTravelDetailError,
+      storedService: localTravelRow
+        ? localTravelDetailData?.vehicle ?? localTravelRow
+        : undefined,
+      content: localTravelContent,
+      image:
+        localTravelContent.cards[0]?.image ||
+        (isRecord(localTravelDetailData?.vehicle.sections?.hero)
+          ? readText(
+              localTravelDetailData?.vehicle.sections?.hero.backgroundImage,
+            )
+          : ""),
+    },
   ];
   const selectedEntry =
     serviceEntries.find(
@@ -832,6 +899,8 @@ export default function WebsiteServicesPage() {
           await mutateWeddingDetail();
         } else if (service.slug === "corporate") {
           await mutateCorporateDetail();
+        } else if (service.slug === "local-travel") {
+          await mutateLocalTravelDetail();
         } else {
           await mutateJimCorbettDetail();
         }
@@ -1448,7 +1517,10 @@ function ServiceSectionEditor({
     );
   }
 
-  if (serviceSlug === "vacations" && sectionKey === "vacationpackages") {
+  if (
+    (serviceSlug === "vacations" || serviceSlug === "local-travel") &&
+    sectionKey === "vacationpackages"
+  ) {
     return (
       <DoDhamCardSectionEditor
         sectionKey={sectionKey}
@@ -1607,7 +1679,9 @@ function ServiceSectionEditor({
                   ? "About Wedding Travel"
                   : serviceSlug === "corporate"
                     ? "About Corporate Travel"
-                    : "About Jim Corbett"
+                    : serviceSlug === "local-travel"
+                      ? "About Local Travel"
+                      : "About Jim Corbett"
               }
             />
           </Field>
@@ -1621,7 +1695,9 @@ function ServiceSectionEditor({
                   ? "Wedding Travel Service"
                   : serviceSlug === "corporate"
                     ? "Corporate Travel Service"
-                    : "Jim Corbett National Park"
+                    : serviceSlug === "local-travel"
+                      ? "Local Travel Service"
+                      : "Jim Corbett National Park"
               }
             />
           </Field>

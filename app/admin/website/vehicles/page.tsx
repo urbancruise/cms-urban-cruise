@@ -112,11 +112,6 @@ const VEHICLE_SLUGS = [
     label: "Sleeper | Semi Sleeper Bus",
     perm: "urbancruise.vehicles.sleeper.view",
   },
-  {
-    slug: "local-travel",
-    label: "Local Travel",
-    perm: "urbancruise.services.localtravel.view",
-  },
 ];
 
 // ============================================================

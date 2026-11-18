@@ -123,11 +123,13 @@ export async function GET(request: NextRequest) {
       [city.id]
     )) as any;
 
-    const vehicles = (rows as any[]).map((r) => ({
-      slug: r.vehicle_slug,
-      ...(typeof r.meta === "string" ? JSON.parse(r.meta) : r.meta),
-      updatedAt: r.updated_at,
-    }));
+    const vehicles = (rows as any[])
+      .filter((r) => r.vehicle_slug !== "local-travel")
+      .map((r) => ({
+        slug: r.vehicle_slug,
+        ...(typeof r.meta === "string" ? JSON.parse(r.meta) : r.meta),
+        updatedAt: r.updated_at,
+      }));
 
     return withCors(
       NextResponse.json(
