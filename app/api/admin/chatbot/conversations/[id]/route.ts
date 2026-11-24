@@ -9,6 +9,7 @@ import {
   getChatbotId,
   getCurrentChatbotServiceMode,
 } from "@/lib/chatbot-admin";
+import { publishChatbotRealtimeEvent } from "@/lib/chatbot-realtime";
 
 interface SessionRow extends RowDataPacket {
   id: number;
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         [sessionId, JSON.stringify({ cmsUserId: actor.userId, messageId: messageResult.insertId })],
       );
       await connection.commit();
+      await publishChatbotRealtimeEvent(sessionId, "message", messageResult.insertId);
       return NextResponse.json({
         message: {
           id: String(messageResult.insertId),
@@ -169,6 +171,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       await connection.rollback();
       throw error;
     }
+    await publishChatbotRealtimeEvent(sessionId, "status");
     return NextResponse.json({ success: true });
   } catch (error) {
     return respondError(error, "admin/chatbot conversation close");

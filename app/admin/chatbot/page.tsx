@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
+import { io } from "socket.io-client";
 import { api } from "@/lib/api";
 import { fetcher } from "@/lib/swr-config";
 import {
@@ -119,6 +120,10 @@ export default function ChatbotAdminPage() {
   const [conversationStatus, setConversationStatus] = useState("waiting");
   const [reply, setReply] = useState("");
   const [savingReply, setSavingReply] = useState(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
+  const typingTimerRef = useRef<number | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
 
   const { data: overview, error: overviewError, mutate: refreshOverview } = useSWR<Overview>("/api/admin/chatbot/overview", fetcher, {
     refreshInterval: 15000,
@@ -139,14 +144,14 @@ export default function ChatbotAdminPage() {
     conversations: Conversation[];
     locationCounts: { locationSlug: string; count: number }[];
     statusCounts: Record<string, number>;
-  }>(conversationsKey, fetcher, { refreshInterval: 8000 });
+  }>(conversationsKey, fetcher, { refreshInterval: realtimeConnected ? 30000 : 8000 });
   const { data: threadData, error: threadError, mutate: refreshThread } = useSWR<{
     messages: ChatMessage[];
     status: string;
   }>(
     selectedConversation === null ? null : `/api/admin/chatbot/conversations/${selectedConversation}`,
     fetcher,
-    { refreshInterval: 5000 },
+    { refreshInterval: realtimeConnected ? 30000 : 5000 },
   );
   const { data: agentData, error: agentsError, mutate: refreshAgents } = useSWR<{ agents: Agent[] }>(
     "/api/admin/chatbot/agents",
@@ -176,6 +181,74 @@ export default function ChatbotAdminPage() {
     ["Holiday settings", holidaysError],
   ].filter((entry): entry is [string, Error] => entry[1] instanceof Error);
 
+  const selectedConversationRef = useRef(selectedConversation);
+  const refreshActionsRef = useRef({ refreshConversations, refreshOverview, refreshThread });
+
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
+
+  useEffect(() => {
+    refreshActionsRef.current = { refreshConversations, refreshOverview, refreshThread };
+  }, [refreshConversations, refreshOverview, refreshThread]);
+
+  useEffect(() => {
+    const realtimeUrl = process.env.NEXT_PUBLIC_CHAT_REALTIME_URL;
+    if (!realtimeUrl) return;
+
+    const socket = io(realtimeUrl, {
+      auth: (callback) => {
+        void api<{ ticket: string }>("/api/admin/chatbot/realtime-token")
+          .then(({ ticket }) => callback({ cmsTicket: ticket }))
+          .catch((error: unknown) => {
+            console.error("Could not obtain chatbot realtime ticket.", error);
+            callback({});
+          });
+      },
+      reconnection: true,
+      timeout: 5000,
+    });
+    socketRef.current = socket;
+    socket.on("connect", () => {
+      setRealtimeConnected(true);
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    });
+    socket.on("disconnect", () => setRealtimeConnected(false));
+    socket.on("connect_error", () => setRealtimeConnected(false));
+    socket.on("realtime:reauthenticate", () => {
+      if (reconnectTimerRef.current !== null) window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = window.setTimeout(() => {
+        socket.connect();
+        reconnectTimerRef.current = null;
+      }, 5000);
+    });
+    socket.on("conversation:updated", (event: unknown) => {
+      const sessionId = getEventSessionId(event);
+      void refreshActionsRef.current.refreshConversations();
+      void refreshActionsRef.current.refreshOverview();
+      if (sessionId !== null && sessionId === selectedConversationRef.current) {
+        void refreshActionsRef.current.refreshThread();
+      }
+    });
+    socket.on("agent:message", (event: unknown) => {
+      const sessionId = getEventSessionId(event);
+      if (sessionId === null || sessionId !== selectedConversationRef.current) return;
+      void refreshActionsRef.current.refreshThread();
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+  }, []);
+
   async function refreshAll() {
     await Promise.all([
       refreshOverview(),
@@ -200,6 +273,11 @@ export default function ChatbotAdminPage() {
         body: { text: reply },
       });
       setReply("");
+      socketRef.current?.emit("agent:typing", { sessionId: selectedConversation, typing: false });
+      if (typingTimerRef.current !== null) {
+        window.clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
       await Promise.all([refreshThread(), refreshConversations(), refreshOverview()]);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not send reply.");
@@ -220,6 +298,23 @@ export default function ChatbotAdminPage() {
     }
   }
 
+  function updateReply(value: string) {
+    setReply(value);
+    if (selectedConversation === null) return;
+    const typing = Boolean(value.trim());
+    socketRef.current?.emit("agent:typing", { sessionId: selectedConversation, typing });
+    if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
+    if (typing) {
+      const sessionId = selectedConversation;
+      typingTimerRef.current = window.setTimeout(() => {
+        socketRef.current?.emit("agent:typing", { sessionId, typing: false });
+        typingTimerRef.current = null;
+      }, 1800);
+    } else {
+      typingTimerRef.current = null;
+    }
+  }
+
   return (
     <div className="min-h-full bg-slate-50 p-4 sm:p-8">
       <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
@@ -227,6 +322,9 @@ export default function ChatbotAdminPage() {
           <h1 className="text-3xl font-bold text-slate-900">Chatbot operations</h1>
           <p className="mt-1 text-sm text-slate-500">
             Manage live customer conversations, FAQ answers, agent access, and service hours.
+          </p>
+          <p className="mt-1 text-xs text-slate-500" role="status" aria-live="polite">
+            {realtimeConnected ? "Live updates connected." : "Live updates disconnected; automatic refresh is active."}
           </p>
         </div>
         <button className={secondaryButtonClass} onClick={() => void refreshAll()}>
@@ -366,7 +464,7 @@ export default function ChatbotAdminPage() {
                       className={`${inputClass} min-h-11 resize-y`}
                       value={reply}
                       maxLength={2000}
-                      onChange={(event) => setReply(event.target.value)}
+                      onChange={(event) => updateReply(event.target.value)}
                       placeholder="Write a reply..."
                       aria-label="Reply to customer"
                     />
@@ -845,6 +943,14 @@ function SettingsPanel({
 
 function updateHours(days: BusinessDay[], weekday: number, patch: Partial<BusinessDay>) {
   return days.map((day) => day.weekday === weekday ? { ...day, ...patch } : day);
+}
+
+function getEventSessionId(event: unknown) {
+  if (!event || typeof event !== "object") return null;
+  const sessionId = (event as { sessionId?: unknown }).sessionId;
+  return typeof sessionId === "number" && Number.isSafeInteger(sessionId) && sessionId > 0
+    ? sessionId
+    : null;
 }
 
 function formatLocation(slug: string) {

@@ -91,6 +91,13 @@ accounts through CMS Users; only users with the `Agent` role are listed in the r
 replies are available according to the chatbot schedule in Asia/Kolkata, and conversations are
 retained for 90 days.
 
+Live inbox updates and agent replies use the separate Socket.IO process in the chatbot repository.
+Set the same server-only `CHATBOT_REALTIME_SECRET` in the CMS and chatbot environments, and set
+`CHATBOT_REALTIME_URL` to the internal realtime service URL in both. Set
+`NEXT_PUBLIC_CHAT_REALTIME_URL` to the browser-reachable Socket.IO URL in the CMS, chatbot, and
+website environments. Start the chatbot's `npm run dev:realtime` process alongside its Next.js
+server for local development. The CMS retains polling as a fallback.
+
 The public SEO API (`/api/public/seo?path=/your-page`) returns page metadata,
 global defaults, active structured data, saved page content and image SEO data,
 robots directives, and public verification/tracking IDs. The Urban Cruise
