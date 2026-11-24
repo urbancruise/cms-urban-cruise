@@ -14,6 +14,7 @@ import {
   MdOutlinePhone,
   MdOutlineSearch,
   MdOutlineArticle,
+  MdOutlineChat,
 } from "react-icons/md";
 
 export interface PermissionGroup {
@@ -361,6 +362,12 @@ export const FULL_PERMISSION_TREE: PermissionGroup[] = [
     label: "Cities",
     icon: MdOutlineLocationCity,
     permKey: "cities.view",
+  },
+  {
+    key: "chatbot.manage",
+    label: "Chatbot",
+    icon: MdOutlineChat,
+    permKey: "chatbot.manage",
   },
   ...WEBSITE_PERMISSION_TREE,
   ...SEO_PERMISSION_TREE,

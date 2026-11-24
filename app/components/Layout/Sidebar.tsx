@@ -22,6 +22,7 @@ import {
   MdOutlinePhone,
   MdOutlineSearch,
   MdOutlineArticle,
+  MdOutlineChat,
 } from "react-icons/md";
 
 import { useAuth } from "@/app/context/AuthContext";
@@ -77,6 +78,12 @@ const menuItems: MenuItem[] = [
     label: "Cities",
     href: "/admin/cities",
     perm: "cities.view",
+  },
+  {
+    icon: MdOutlineChat,
+    label: "Chatbot",
+    href: "/admin/chatbot",
+    perm: "chatbot.manage",
   },
 
   // ============================================================

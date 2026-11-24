@@ -29,6 +29,7 @@ import {
   MdOutlineKeyboardArrowRight,
   MdOutlineSearch,
   MdOutlineArticle,
+  MdOutlineChat,
 } from "react-icons/md";
 import { TableSkeleton } from "@/app/components/UI/PageSkeletons";
 
@@ -99,6 +100,12 @@ const PERMISSION_TREE: PermissionGroup[] = [
     label: "Cities",
     icon: MdOutlineLocationCity,
     permKey: "cities.view",
+  },
+  {
+    key: "chatbot.manage",
+    label: "Chatbot",
+    icon: MdOutlineChat,
+    permKey: "chatbot.manage",
   },
   {
     key: "urbancruisewebsite.view",

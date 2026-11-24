@@ -80,6 +80,17 @@ appear on assigned city blog pages; the global `/blog` page continues to show
 all published posts. The Urban Cruise website uses its server-side
 `CMS_API_URL` and `CMS_API_KEY` to load them.
 
+## Chatbot operations
+
+The top-level **Chatbot** page manages the shared chatbot FAQs, categories, daytime conversation
+inbox, CMS Agent roster, business hours, and holiday overrides. It uses the chatbot schema in the
+existing `urban_cruise` database. Apply chatbot database changes from the chatbot repository with
+`npm run db:migrate`; migration `006_cms_chatbot_operations.sql` links conversations to CMS users
+and grants `chatbot.manage` to the existing `Agent` role. Create, activate, and deactivate agent
+accounts through CMS Users; only users with the `Agent` role are listed in the roster. Daytime agent
+replies are available according to the chatbot schedule in Asia/Kolkata, and conversations are
+retained for 90 days.
+
 The public SEO API (`/api/public/seo?path=/your-page`) returns page metadata,
 global defaults, active structured data, saved page content and image SEO data,
 robots directives, and public verification/tracking IDs. The Urban Cruise

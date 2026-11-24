@@ -4,7 +4,16 @@ import pool from "@/lib/db";
 // Types
 // ============================================
 export type ActionType = "create" | "update" | "delete";
-export type EntityType = "user" | "role" | "city" | "profile" | "blog";
+export type EntityType =
+  | "user"
+  | "role"
+  | "city"
+  | "profile"
+  | "blog"
+  | "chatbot_faq"
+  | "chatbot_faq_category"
+  | "chatbot_settings"
+  | "chatbot_holiday";
 
 export interface ActorInfo {
   userId: number;
@@ -36,6 +45,10 @@ const ENTITY_LABEL: Record<EntityType, string> = {
   city: "City",
   profile: "Profile",
   blog: "Blog post",
+  chatbot_faq: "Chatbot FAQ",
+  chatbot_faq_category: "Chatbot FAQ category",
+  chatbot_settings: "Chatbot settings",
+  chatbot_holiday: "Chatbot holiday",
 };
 
 const ENTITY_LINK: Record<EntityType, string> = {
@@ -44,6 +57,10 @@ const ENTITY_LINK: Record<EntityType, string> = {
   city: "/admin/cities",
   profile: "/admin/profile",
   blog: "/admin/website/blog",
+  chatbot_faq: "/admin/chatbot",
+  chatbot_faq_category: "/admin/chatbot",
+  chatbot_settings: "/admin/chatbot",
+  chatbot_holiday: "/admin/chatbot",
 };
 
 // ============================================
