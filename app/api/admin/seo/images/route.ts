@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -152,6 +153,8 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    await revalidateWebsite({});
+
     return NextResponse.json(
       { success: true, id: (result as any).insertId },
       { status: 201 }
@@ -179,6 +182,8 @@ export async function DELETE(request: NextRequest) {
     if ((result as any).affectedRows === 0) {
       return NextResponse.json({ error: "Image not found." }, { status: 404 });
     }
+    await revalidateWebsite({});
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     if (err.status) {
@@ -210,6 +215,8 @@ export async function PATCH(request: NextRequest) {
        WHERE id = ?`,
       [alt_text || null, title_text || null, caption || null, hasAlt, id]
     );
+
+    await revalidateWebsite({});
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

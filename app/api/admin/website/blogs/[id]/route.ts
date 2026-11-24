@@ -6,12 +6,17 @@ import { respondError } from "@/lib/api-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity";
 import {
+  getWebsiteBlogRevalidationPaths,
+  revalidateWebsite,
+} from "@/lib/revalidate";
+import {
   hasWebsiteBlogText,
   sanitizeWebsiteBlogHtml,
 } from "@/lib/website-blog-html";
 import {
   areWebsiteBlogCitiesActive,
   isDuplicateWebsiteBlogSlugError,
+  parseBlogCitySlugs,
   WebsiteBlogInputSchema,
   WebsiteBlogSlugSchema,
 } from "@/lib/website-blogs";
@@ -19,10 +24,18 @@ import {
 interface BlogIdRow extends RowDataPacket {
   id: number;
   title: string;
+  slug: string;
+  cities: unknown;
 }
 
 interface BlogSlugRow extends RowDataPacket {
   id: number;
+}
+
+interface BlogStateRow extends RowDataPacket {
+  title: string;
+  slug: string;
+  cities: unknown;
 }
 
 interface ActiveCityRow extends RowDataPacket {
@@ -67,7 +80,7 @@ export async function PATCH(
     }
 
     const [existing] = await pool.query<BlogIdRow[]>(
-      "SELECT id, title FROM website_blogs WHERE id = ? LIMIT 1",
+      "SELECT id, title, slug, cities FROM website_blogs WHERE id = ? LIMIT 1",
       [blogId]
     );
     if (!existing[0]) {
@@ -89,6 +102,13 @@ export async function PATCH(
       "UPDATE website_blogs SET slug = ?, updated_by = ? WHERE id = ?",
       [parsed.data, actor.userId, blogId]
     );
+
+    await revalidateWebsite({
+      paths: getWebsiteBlogRevalidationPaths(
+        [existing[0].slug, parsed.data],
+        parseBlogCitySlugs(existing[0].cities)
+      ),
+    });
 
     await logActivity({
       actor: {
@@ -142,6 +162,15 @@ export async function PUT(
         { status: 400 }
       );
     }
+    const [existingRows] = await pool.query<BlogStateRow[]>(
+      "SELECT title, slug, cities FROM website_blogs WHERE id = ? LIMIT 1",
+      [blogId]
+    );
+    const existing = existingRows[0];
+    if (!existing) {
+      return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
+    }
+
     const paragraph = sanitizeWebsiteBlogHtml(parsed.data.paragraph);
     if (!hasWebsiteBlogText(paragraph)) {
       return NextResponse.json(
@@ -174,7 +203,7 @@ export async function PUT(
       );
     }
 
-    const [result] = await pool.query<ResultSetHeader>(
+    await pool.query<ResultSetHeader>(
       `UPDATE website_blogs
        SET title = ?, slug = ?, paragraph = ?, image_url = ?, image_public_id = ?,
            categories = ?, cities = ?, status = ?, updated_by = ?
@@ -192,17 +221,19 @@ export async function PUT(
         blogId,
       ]
     );
-    let previousTitle = parsed.data.title;
-    if (result.affectedRows === 0) {
-      const [existing] = await pool.query<BlogIdRow[]>(
-        "SELECT id, title FROM website_blogs WHERE id = ?",
-        [blogId]
-      );
-      if (!existing[0]) {
-        return NextResponse.json({ error: "Blog post not found" }, { status: 404 });
-      }
-      previousTitle = existing[0].title;
-    }
+    const previousTitle = existing.title;
+
+    await revalidateWebsite({
+      paths: getWebsiteBlogRevalidationPaths(
+        [existing.slug, parsed.data.slug],
+        [
+          ...new Set([
+            ...parseBlogCitySlugs(existing.cities),
+            ...parsed.data.citySlugs,
+          ]),
+        ]
+      ),
+    });
 
     await logActivity({
       actor: {
@@ -249,7 +280,7 @@ export async function DELETE(
     }
 
     const [existing] = await pool.query<BlogIdRow[]>(
-      "SELECT id, title FROM website_blogs WHERE id = ?",
+      "SELECT id, title, slug, cities FROM website_blogs WHERE id = ?",
       [blogId]
     );
     if (!existing[0]) {
@@ -257,6 +288,13 @@ export async function DELETE(
     }
 
     await pool.query("DELETE FROM website_blogs WHERE id = ?", [blogId]);
+    await revalidateWebsite({
+      paths: getWebsiteBlogRevalidationPaths(
+        [existing[0].slug],
+        parseBlogCitySlugs(existing[0].cities)
+      ),
+    });
+
     await logActivity({
       actor: {
         userId: actor.userId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -92,6 +93,8 @@ export async function PUT(request: NextRequest) {
         [key, value == null ? "" : String(value)]
       );
     }
+
+    await revalidateWebsite({});
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
         body.is_active ? 1 : 0,
       ]
     );
+    await revalidateWebsite({});
+
     return NextResponse.json(
       { success: true, id: (result as any).insertId },
       { status: 201 }

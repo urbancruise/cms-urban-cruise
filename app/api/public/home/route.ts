@@ -136,10 +136,7 @@ export async function GET(request: NextRequest) {
           updatedAt: latestUpdate.toISOString(),
         },
         {
-          headers: {
-            "Cache-Control":
-              "public, max-age=60, s-maxage=120, stale-while-revalidate=300",
-          },
+          headers: { "Cache-Control": "no-store" },
         }
       )
     );

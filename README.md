@@ -107,6 +107,17 @@ website's server-only `CMS_API_URL` and `CMS_API_KEY` to connect it to this CMS.
 The CMS sitemap and `robots.txt` routes use the SEO records and saved robots
 directives from the database.
 
+## Website cache revalidation
+
+After a successful CMS website-content change, the CMS calls the website's
+`/api/revalidate` endpoint to immediately expire the website's tagged content
+and affected paths. Configure `WEBSITE_ORIGIN` and `REVALIDATE_SECRET` in the
+CMS server environment, and configure the exact same `REVALIDATE_SECRET` in
+the website server environment. Keep this secret server-only; do not use a
+`NEXT_PUBLIC_*` variable. For local development, set `WEBSITE_ORIGIN` to the
+website's local origin, such as `http://localhost:3000`, and restart both apps
+after changing the environment.
+
 ## Get a Quote API
 
 Run the `quote_requests` section in `database.sql` to create the table before

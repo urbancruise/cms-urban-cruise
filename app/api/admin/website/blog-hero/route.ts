@@ -6,6 +6,11 @@ import { requirePermission } from "@/lib/auth-guard";
 import { respondError } from "@/lib/api-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity";
+import { getWebsiteBlogCitySlug } from "@/lib/website-blogs";
+import {
+  getWebsiteBlogRevalidationPaths,
+  revalidateWebsite,
+} from "@/lib/revalidate";
 
 interface BlogHeroRow extends RowDataPacket {
   city_id: number;
@@ -16,6 +21,7 @@ interface BlogHeroRow extends RowDataPacket {
 
 interface ActiveCityRow extends RowDataPacket {
   id: number;
+  name: string;
 }
 
 const BlogHeroSchema = z.object({
@@ -80,7 +86,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const [cities] = await pool.query<ActiveCityRow[]>(
-      "SELECT id FROM cities WHERE id = ? AND is_active = 1 LIMIT 1",
+      "SELECT id, name FROM cities WHERE id = ? AND is_active = 1 LIMIT 1",
       [parsed.data.cityId]
     );
     if (cities.length === 0) {
@@ -104,6 +110,13 @@ export async function PUT(request: NextRequest) {
         actor.userId,
       ]
     );
+
+    await revalidateWebsite({
+      paths: getWebsiteBlogRevalidationPaths(
+        [],
+        [getWebsiteBlogCitySlug(cities[0].name)]
+      ),
+    });
 
     await logActivity({
       actor: {

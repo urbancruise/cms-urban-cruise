@@ -6,6 +6,10 @@ import { respondError } from "@/lib/api-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity";
 import {
+  getWebsiteBlogRevalidationPaths,
+  revalidateWebsite,
+} from "@/lib/revalidate";
+import {
   hasWebsiteBlogText,
   sanitizeWebsiteBlogHtml,
 } from "@/lib/website-blog-html";
@@ -222,6 +226,13 @@ export async function POST(request: NextRequest) {
         actor.userId,
       ]
     );
+
+    await revalidateWebsite({
+      paths: getWebsiteBlogRevalidationPaths(
+        [parsed.data.slug],
+        parsed.data.citySlugs
+      ),
+    });
 
     await logActivity({
       actor: {

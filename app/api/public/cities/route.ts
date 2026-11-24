@@ -41,10 +41,7 @@ export async function GET(request: NextRequest) {
       NextResponse.json(
         { cities },
         {
-          headers: {
-            "Cache-Control":
-              "public, max-age=300, s-maxage=600, stale-while-revalidate=1200",
-          },
+          headers: { "Cache-Control": "no-store" },
         }
       )
     );

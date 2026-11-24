@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import pool from "@/lib/db";
+import { revalidateWebsite } from "@/lib/revalidate";
 
 async function requireAuth(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -57,6 +58,8 @@ export async function PUT(
         id,
       ]
     );
+    await revalidateWebsite({});
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     if (err.status)
@@ -73,6 +76,8 @@ export async function DELETE(
     await requireSeoAccess(request);
     const { id } = await params;
     await pool.query("DELETE FROM seo_schemas WHERE id = ?", [id]);
+    await revalidateWebsite({});
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     if (err.status)

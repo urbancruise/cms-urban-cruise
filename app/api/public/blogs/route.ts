@@ -91,9 +91,7 @@ export async function GET(request: NextRequest) {
           categories: WEBSITE_BLOG_CATEGORIES,
         },
         {
-          headers: {
-            "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300",
-          },
+          headers: { "Cache-Control": "no-store" },
         }
       )
     );
